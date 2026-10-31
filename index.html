@@ -2,64 +2,59 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse</title>
+
 <style>
-  * { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-  html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    background: #08040f;
-  }
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #08050f;
+}
 
-  body {
-    display: grid;
-    place-items: center;
-    padding: 8px;
-  }
+#vhouse {
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
 
-  /* Main VHouse map container; fits the screen without scrolling. */
-  #map-container {
-    width: min(calc(100vw - 16px), calc((100dvh - 16px) * 16 / 9));
-    aspect-ratio: 16 / 9;
-    position: relative;
-    overflow: hidden;
-    background: #140823 url("assets/Vcontainer.png") center / 100% 100% no-repeat;
-  }
+#map-container {
+  position: relative;
+  width: 100%;
+  max-width: 1600px;
+  aspect-ratio: 16 / 9;
+  max-height: 100%;
+  overflow: hidden;
+  background: #17101f;
+}
 
-  /* Empty map canvas. Town artwork and map interactions go here next. */
-  #map {
-    position: absolute;
-    inset: 17% 10% 17%;
-    overflow: hidden;
-    isolation: isolate;
-  }
-
-  /* Ready for the outdoor map asset when added. */
-  #map > .scene {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  @media (max-aspect-ratio: 3/4) {
-    #map {
-      inset: 18% 9% 17%;
-    }
-  }
+#map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 </style>
 </head>
+
 <body>
-<main id="map-container" aria-label="VHouse game map">
-  <div id="map" aria-label="Map canvas">
-    <!-- Town scene and interactive map locations will go here. -->
+
+<main id="vhouse">
+
+  <div id="map-container">
+    <div id="map"></div>
   </div>
+
 </main>
+
 </body>
 </html>
