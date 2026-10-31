@@ -1,0 +1,1105 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Team Rocket Mini Map Mayhem</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#141414;--panel:#202532;--yellow:#ffda45;--blue:#54b9ff;--red:#e63946}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:#fff;font-family:Arial,sans-serif}
+[hidden]{display:none!important}
+button{border:0;border-radius:9px;background:var(--red);color:white;font-weight:bold;font-size:15px;padding:10px 20px;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:hover:not(:disabled){background:#ff5260}
+h1{margin:0;text-align:center;font-size:clamp(18px,2.5vw,28px)}
+.screen{width:100%;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;overflow:hidden}
+.purchase-box,.selection-box{width:min(94vw,700px);padding:20px;background:var(--panel);border:2px solid #777;border-radius:15px;text-align:center}
+.turn-amount{font-size:45px;font-weight:900;color:var(--yellow)}
+.small{font-size:12px;color:#aaa}
+.image-container{width:min(80vw,400px);height:min(24dvh,200px);margin:15px 0;border:2px dashed #777;border-radius:12px;display:grid;place-items:center}
+.image-container img{width:100%;height:100%;object-fit:contain}
+select{background:#141b29;color:white;border:1px solid #777;border-radius:8px;padding:10px;font-size:15px}
+
+/* GAME */
+#gameScreen{padding:clamp(4px,1vh,10px)}
+.game-shell{width:min(100%,1100px);height:100%;min-height:0;display:flex;flex-direction:column;margin:auto}
+.game-shell h1{flex:none;font-size:clamp(15px,2.2vh,25px);line-height:1.1;margin:0 0 clamp(3px,.7vh,8px)}
+.board{position:relative;flex:1;min-height:0;display:grid;grid-template-rows:minmax(0,1.15fr) minmax(0,1fr) minmax(0,5.3fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,1.25fr);gap:clamp(2px,.5vh,7px)}
+.trainer-area{min-height:0;width:100%;display:flex;align-items:center;gap:clamp(5px,1vw,12px)}
+.trainer{height:100%;flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:clamp(4px,1vw,12px);padding:3px 10px;border:2px solid #777;background:var(--panel);font-size:clamp(11px,1.6vw,18px);font-weight:bold}
+.top-trainer{border-radius:35px 35px 0 0}
+.bottom-trainer{border-radius:0 0 35px 35px}
+.trainer-identity{display:flex;align-items:center;gap:clamp(5px,1vw,12px);flex:1;min-width:0}
+.trainer-avatar{height:min(90%,70px);aspect-ratio:1;flex-shrink:0;border:2px solid var(--yellow);border-radius:50%;background:#101522;position:relative;display:grid;place-items:center;overflow:hidden;text-align:center;font-size:clamp(8px,1vw,11px)}
+.trainer-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+#cpuAvatar{background:radial-gradient(circle,#46516a,#101522)}
+#playerAvatar{cursor:pointer}
+#playerImageInput{display:none}
+.trainer-start{height:min(90%,70px);width:clamp(44px,7vw,80px);flex-shrink:0;display:grid;place-items:center}
+.trainer-start .map-marker{position:relative;left:auto!important;top:auto!important;transform:none!important;margin:auto}
+.trainer-name{white-space:nowrap;text-align:center;min-width:0}
+.trainer-stats{height:85%;min-width:clamp(115px,23%,225px);display:flex;align-items:stretch;gap:clamp(3px,.6vw,8px);flex-shrink:0}
+.trainer-stat{min-width:0;flex:1;border:1px solid #666;border-radius:7px;background:#121824;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 4px;overflow:hidden}
+.stat-label{font-size:clamp(8px,1.2vh,11px);font-weight:900;color:#aaa}
+.stat-value{font-size:clamp(9px,1.6vh,16px);font-weight:900;text-align:center;overflow-wrap:anywhere}
+.status-value.affected{color:var(--yellow)}
+.hits-value{color:#ff6464;letter-spacing:2px}
+.hits-value.no-hits{color:#aaa;letter-spacing:0}
+.trapped-pkm{height:min(90%,75px);aspect-ratio:1;flex-shrink:0;border:2px solid var(--red);border-radius:50%;background:var(--panel);display:grid;place-items:center;padding:3px;font-size:clamp(7px,.95vw,11px);font-weight:bold;text-align:center;overflow:hidden}
+.trapped-pkm img{width:100%;height:100%;object-fit:contain}
+.player-pokemon,.cpu-pokemon{display:flex;justify-content:center;align-items:center;gap:clamp(5px,1vw,12px);min-height:0}
+.selected-pokemon{display:flex;justify-content:center;gap:10px;padding:14px 0;flex-wrap:wrap}
+.pokemon-slot{height:100%;width:min(17%,105px);min-width:0;padding:2px;border:2px solid #777;border-radius:9px;background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;font-size:clamp(8px,1vw,12px);font-weight:bold;text-align:center}
+.pokemon-slot img{min-height:0;max-height:75%;width:auto;max-width:100%;aspect-ratio:1;object-fit:contain}
+.selected-pokemon .pokemon-slot{width:100px;height:115px}
+.pokemon-slot.active{border-color:var(--yellow);box-shadow:0 0 9px #ffda4555}
+.pokemon-slot.cpu-active{border-color:var(--blue);box-shadow:0 0 9px #54b9ff55}
+.pokemon-slot.unavailable{opacity:.4}
+.pokemon-slot.selectable{cursor:pointer}
+.pokemon-slot.selectable:hover{border-color:var(--yellow)}
+.pokemon-slot.chosen{border-color:#4ade80;background:#234335}
+.map{min-height:0;width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:clamp(2px,.5vw,5px);padding:clamp(2px,.5vw,5px);background:#ddd;border:2px solid #ddd}
+.square{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#252a36;text-align:center;position:relative}
+.top,.bottom{flex:0 0 24%;min-height:0;display:grid;place-items:center;padding:1px 3px;font-size:clamp(8px,1.4vh,15px);font-weight:bold;overflow-wrap:anywhere}
+.top{border-bottom:1px solid #777}
+.bottom{border-top:1px solid #777;color:#ff8b8b}
+.number{flex:1;min-height:0;display:grid;place-items:center;color:var(--yellow);font-size:clamp(20px,4vh,48px);font-weight:900}
+.square.landed-player{outline:3px solid var(--yellow);outline-offset:-3px;background:#424b61}
+.square.landed-cpu{box-shadow:inset 0 0 0 3px var(--blue)}
+.map-marker{width:clamp(38px,6vh,70px);height:clamp(38px,6vh,70px);border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:10;overflow:hidden;pointer-events:none}
+.map-marker img{width:100%;height:100%;object-fit:contain}
+.player-marker{background:var(--red);box-shadow:0 0 12px var(--yellow)}
+.cpu-marker{background:#236cb6;border-color:var(--blue);box-shadow:0 0 12px var(--blue)}
+.map-marker.on-map{position:absolute;top:0;left:0;transform:translate(-50%,-50%);transition:left .55s ease-in-out,top .55s ease-in-out}
+.dice-controls{min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;gap:2px;padding:1px 0}
+.turn-counter{font-size:clamp(11px,1.7vh,18px);font-weight:bold}
+.turn-counter strong{color:var(--yellow)}
+.roll-display{display:flex;justify-content:center;gap:clamp(20px,5vw,55px);text-align:center}
+.roll-display div{font-size:clamp(9px,1.3vh,13px)}
+.roll-display strong{display:block;font-size:clamp(17px,2.7vh,28px)}
+.player-roll{color:var(--yellow)}
+.cpu-roll{color:var(--blue)}
+.turn-status{font-size:clamp(10px,1.5vh,14px);font-weight:bold;color:var(--yellow);text-align:center}
+#rollBtn{font-size:clamp(12px,1.8vh,17px);padding:clamp(6px,1vh,12px) 25px}
+
+/* RULES + LOG TABS */
+.side-tab{position:fixed;right:0;z-index:1100;background:var(--yellow);color:#171717;border:2px solid white;border-right:0;border-radius:12px 0 0 12px;padding:14px 9px;font-size:12px;font-weight:900;writing-mode:vertical-rl;letter-spacing:2px;cursor:pointer}
+#rulesTab{top:40%}
+#logTab{top:55%;background:var(--blue)}
+.side-overlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.78);display:flex;justify-content:flex-end}
+.side-panel{width:min(92vw,430px);height:100%;background:#1a2030;border-left:3px solid var(--yellow);display:flex;flex-direction:column}
+#logOverlay .side-panel{border-color:var(--blue)}
+.side-header{flex:none;display:flex;align-items:center;justify-content:space-between;padding:15px;background:#111723;border-bottom:2px solid #555}
+.side-header h2{margin:0;color:var(--yellow);font-size:22px}
+#logOverlay .side-header h2{color:var(--blue)}
+.side-close{background:#333b4c;font-size:23px;padding:5px 13px}
+.side-content{flex:1;min-height:0;overflow-y:auto;padding:18px;line-height:1.5}
+.side-content h3{color:var(--yellow);margin:20px 0 8px;font-size:16px}
+.side-content p{margin:7px 0 12px}
+.side-content ol{padding-left:23px}
+.side-content li{margin-bottom:6px}
+.rules-table{width:100%;border-collapse:collapse;font-size:13px}
+.rules-table th,.rules-table td{padding:9px 7px;border-bottom:1px solid #454c5a;text-align:left;vertical-align:top}
+.rules-table th{color:var(--yellow);background:#101521}
+.rules-table td:first-child{font-weight:bold;white-space:nowrap}
+.rules-note{background:#252e42;border-left:3px solid var(--yellow);padding:10px;margin-top:12px;font-size:13px}
+.log-entry{padding:12px;margin-bottom:10px;border:1px solid #465065;border-left:4px solid var(--yellow);border-radius:8px;background:#242c3c}
+.log-entry.cpu{border-left-color:var(--blue)}
+.log-entry strong{display:block;margin-bottom:5px}
+.log-entry p{margin:4px 0;font-size:13px}
+.log-entry small{color:#aeb8cb}
+.log-empty{color:#aaa;text-align:center;padding:25px 0}
+
+/* D12 */
+.dice-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:12px}
+.dice-panel{width:min(92vw,430px);max-height:95dvh;padding:clamp(10px,2vh,22px);border:3px solid var(--yellow);border-radius:18px;background:radial-gradient(circle,#283449,#10151e 75%);box-shadow:0 0 40px black;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.dice-panel.cpu{border-color:var(--blue)}
+.dice-title{font-size:clamp(17px,3vh,23px);font-weight:900;color:var(--yellow)}
+.dice-panel.cpu .dice-title{color:var(--blue)}
+.dice-stage{width:100%;height:min(28dvh,230px);display:grid;place-items:center;perspective:600px;position:relative;overflow:hidden}
+.dice-stage::after{content:"";position:absolute;bottom:10px;width:110px;height:15px;border-radius:50%;background:rgba(0,0,0,.55);filter:blur(10px)}
+.d12-die{width:min(20dvh,150px);height:min(20dvh,150px);position:relative;z-index:1;display:grid;place-items:center;transform-style:preserve-3d;filter:drop-shadow(0 10px 8px black)}
+.d12-body{position:absolute;inset:0;background:linear-gradient(135deg,#fff4a6,#ffcd32 25%,#df8c0a 70%,#8a4900);clip-path:polygon(50% 0%,85% 10%,100% 42%,89% 80%,50% 100%,11% 80%,0% 42%,15% 10%)}
+.d12-body::before{content:"";position:absolute;inset:9px;background:linear-gradient(145deg,rgba(255,255,255,.6),transparent 55%);clip-path:inherit}
+.d12-number{position:relative;font-size:clamp(42px,8vh,66px);font-weight:900;color:#432000;text-shadow:0 1px 1px #fff6b0}
+.dice-panel.cpu .d12-body{background:linear-gradient(135deg,#c6f1ff,#4bbcff 30%,#1465ad 75%,#072950)}
+.dice-panel.cpu .d12-number{color:#052b55;text-shadow:0 1px 1px #d8f5ff}
+.d12-die.rolling{animation:d12Tumble .5s linear infinite}
+.d12-die.landing{animation:d12Land .5s ease-out forwards}
+@keyframes d12Tumble{
+0%{transform:translateY(-20px) rotateX(0) rotateY(0) rotateZ(0) scale(.9)}
+25%{transform:translateY(12px) rotateX(100deg) rotateY(65deg) rotateZ(45deg) scale(1.05)}
+50%{transform:translateY(-13px) rotateX(200deg) rotateY(160deg) rotateZ(110deg) scale(.95)}
+75%{transform:translateY(9px) rotateX(290deg) rotateY(260deg) rotateZ(210deg) scale(1.05)}
+100%{transform:translateY(-20px) rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(.9)}
+}
+@keyframes d12Land{
+0%{transform:translateY(-40px) rotateX(30deg) rotateZ(-25deg) scale(.85)}
+50%{transform:translateY(12px) rotateX(-10deg) rotateZ(8deg) scale(1.13)}
+75%{transform:translateY(-7px) rotateX(4deg) rotateZ(-3deg) scale(.97)}
+100%{transform:translateY(0) rotateX(0) rotateZ(0) scale(1)}
+}
+.dice-caption{font-size:clamp(12px,2vh,17px);font-weight:bold;color:#ddd}
+.dice-final{min-height:24px;font-size:clamp(17px,3vh,24px);font-weight:900;color:var(--yellow)}
+.dice-panel.cpu .dice-final{color:var(--blue)}
+
+@media(max-width:600px){
+.board{grid-template-rows:minmax(0,1fr) minmax(0,.95fr) minmax(0,5.6fr) minmax(0,.95fr) minmax(0,1fr) minmax(0,1.35fr)}
+.trainer{font-size:clamp(9px,2.8vw,13px);gap:4px;padding:2px 5px}
+.trainer-identity{gap:3px}
+.trainer-avatar{height:min(85%,55px)}
+.trainer-start{height:min(85%,55px);width:clamp(34px,9vw,55px)}
+.trapped-pkm{height:min(85%,55px);font-size:clamp(6px,1.8vw,9px)}
+.trainer-stats{min-width:100px;gap:3px}
+.trainer-stat{padding:1px 2px}
+.stat-label{font-size:clamp(7px,1vh,9px)}
+.stat-value{font-size:clamp(8px,1.4vh,12px)}
+.trainer-name{font-size:clamp(7px,1.8vw,12px)}
+.pokemon-slot{width:min(25%,90px);font-size:clamp(8px,2.2vw,11px)}
+.top,.bottom{font-size:clamp(7px,1.15vh,11px)}
+.number{font-size:clamp(20px,3.6vh,35px)}
+.map-marker{width:clamp(30px,5vh,55px);height:clamp(30px,5vh,55px)}
+}
+</style>
+</head>
+<body>
+
+<section id="startScreen" class="screen">
+<h1>TEAM ROCKET<br>MINI MAP MAYHEM</h1>
+<div class="image-container">
+<img src="game-cover.png" alt="Game Cover" onerror="this.style.display='none'">
+</div>
+<div class="purchase-box">
+<div class="turn-amount">50</div>
+<h2>GAME TURNS</h2>
+<p>Purchase 50 turns to enter the game.</p>
+<button id="purchaseBtn">BUY 50 TURNS</button>
+<p class="small">Demo purchase. Crypto integration later.</p>
+</div>
+</section>
+
+<section id="selectScreen" class="screen" hidden>
+<h1>CHOOSE YOUR STARTERS</h1>
+<div class="selection-box">
+<h2>SELECT GENERATION</h2>
+<select id="generationSelect">
+<option value="1">Generation 1</option>
+<option value="2">Generation 2</option>
+<option value="3">Generation 3</option>
+<option value="4">Generation 4</option>
+</select>
+<p>Choose which Pokémon starts the battle:</p>
+<div class="selected-pokemon" id="selectedPokemon"></div>
+<p class="small" id="starterStatus">SELECT YOUR STARTING POKÉMON</p>
+<button id="beginBattleBtn" disabled>START BATTLE</button>
+</div>
+</section>
+
+<section id="gameScreen" class="screen" hidden>
+<div class="game-shell">
+<h1>TEAM ROCKET MINI MAP MAYHEM</h1>
+<div class="board" id="board">
+
+<div class="trainer-area">
+<div class="trainer top-trainer">
+<div class="trainer-identity">
+<div class="trainer-avatar" id="cpuAvatar">
+<img id="cpuImage" alt="CPU Trainer">
+</div>
+<div class="trainer-start" id="cpuStart">
+<div class="map-marker cpu-marker" id="cpuMarker" hidden></div>
+</div>
+<span class="trainer-name">CPU TRAINER</span>
+</div>
+<div class="trainer-stats">
+<div class="trainer-stat">
+<span class="stat-label">STATUS</span>
+<span class="stat-value status-value" id="cpuStatus">NONE</span>
+</div>
+<div class="trainer-stat">
+<span class="stat-label">HITS</span>
+<span class="stat-value hits-value no-hits" id="cpuHits">NONE</span>
+</div>
+</div>
+</div>
+<div class="trapped-pkm" id="trappedCPU">TM RKT<br>TRAPPED PKM</div>
+</div>
+
+<div class="cpu-pokemon" id="cpuPokemon"></div>
+<div class="map" id="map"></div>
+<div class="player-pokemon" id="playerPokemon"></div>
+
+<div class="trainer-area">
+<div class="trainer bottom-trainer">
+<div class="trainer-identity">
+<div class="trainer-avatar" id="playerAvatar" title="Click to upload trainer image">
+<span id="playerPlaceholder">ADD<br>IMAGE</span>
+<img id="playerImage" alt="Player Trainer" hidden>
+</div>
+<div class="trainer-start" id="playerStart">
+<div class="map-marker player-marker" id="playerMarker" hidden></div>
+</div>
+<span class="trainer-name">PLAYER TRAINER</span>
+</div>
+<div class="trainer-stats">
+<div class="trainer-stat">
+<span class="stat-label">STATUS</span>
+<span class="stat-value status-value" id="playerStatus">NONE</span>
+</div>
+<div class="trainer-stat">
+<span class="stat-label">HITS</span>
+<span class="stat-value hits-value no-hits" id="playerHits">NONE</span>
+</div>
+</div>
+</div>
+<div class="trapped-pkm" id="trappedPlayer">TM RKT<br>TRAPPED PKM</div>
+</div>
+
+<div class="dice-controls">
+<div class="turn-counter">TURNS REMAINING: <strong id="turnCount">50</strong></div>
+<div class="roll-display">
+<div class="player-roll">PLAYER D12<strong id="playerDice">D12</strong></div>
+<div class="cpu-roll">CPU D12<strong id="cpuDice">D12</strong></div>
+</div>
+<div class="turn-status" id="turnStatus">READY TO ROLL</div>
+<button id="rollBtn">ROLL D12</button>
+</div>
+
+<input type="file" id="playerImageInput" accept="image/*">
+</div>
+</div>
+</section>
+
+<section id="rebuyScreen" class="screen" hidden>
+<h1>TEAM ROCKET<br>MINI MAP MAYHEM</h1>
+<div class="purchase-box">
+<h2>OUT OF TURNS</h2>
+<p>Your 50 turns have been used.</p>
+<div class="turn-amount">50</div>
+<p>Purchase another 50 turns to restart.</p>
+<button id="rebuyBtn">REBUY 50 TURNS</button>
+<p class="small">Demo purchase. Crypto integration later.</p>
+</div>
+</section>
+
+<!-- SIDE TABS -->
+<button id="rulesTab" class="side-tab">RULES</button>
+<button id="logTab" class="side-tab">LOG</button>
+
+<!-- RULES PANEL -->
+<div id="rulesOverlay" class="side-overlay" hidden>
+<div class="side-panel">
+<div class="side-header">
+<h2>GAME RULES</h2>
+<button id="rulesClose" class="side-close">×</button>
+</div>
+<div class="side-content">
+<h3>TURN ORDER</h3>
+<ol>
+<li>Roll the D12.</li>
+<li>Move your active Pokémon to the numbered square.</li>
+<li>Activate the TOP effect.</li>
+<li>Activate the BOTTOM effect.</li>
+<li>Activate the MIDDLE effect, if applicable.</li>
+<li>End the turn.</li>
+</ol>
+<p>Both Player and CPU follow the same turn order.</p>
+<p>FREEZE, PARALYZED, and SLEEP prevent the affected Pokémon's next action. The previous square does not activate again.</p>
+
+<h3>MAP MOVES & EFFECTS</h3>
+<table class="rules-table">
+<thead><tr><th>MOVE</th><th>EFFECT</th></tr></thead>
+<tbody>
+<tr><td>ATK</td><td>Add 1 HIT to the opposing Pokémon.</td></tr>
+<tr><td>POISON</td><td>Add 1 HIT to the affected Pokémon.</td></tr>
+<tr><td>BURN</td><td>Add 1 HIT to the affected Pokémon.</td></tr>
+<tr><td>FREEZE</td><td>Prevent the next action.</td></tr>
+<tr><td>PARALYZE</td><td>Add 1 HIT and prevent the next action.</td></tr>
+<tr><td>HEAL</td><td>Remove 1 HIT.</td></tr>
+<tr><td>SLEEP</td><td>Prevent the next action.</td></tr>
+<tr><td>CONFUSED</td><td>Add 1 HIT.</td></tr>
+<tr><td>SWAP PKM</td><td>Switch active Pokémon.</td></tr>
+<tr><td>TEAM ROCKET ROLL</td><td>Trap the Pokémon. On a later landing, roll EVEN to recover it.</td></tr>
+<tr><td>FLY</td><td>Inactive for 1 turn, then travel to the other FLY square.</td></tr>
+<tr><td>DIG</td><td>Inactive for 1 turn, then travel to the other DIG square.</td></tr>
+</tbody>
+</table>
+
+<h3>TRAINER & POKÉMON RULES</h3>
+<p><strong>FAINT:</strong> A Pokémon faints at 3 HITS.</p>
+<p><strong>HITS:</strong> Each Pokémon keeps its own HIT count.</p>
+<p><strong>STATUS:</strong> The banner shows the active Pokémon's condition.</p>
+<p><strong>SWAPPING:</strong> Incoming Pokémon retain their HITS and STATUS.</p>
+<p><strong>TM RKT:</strong> A trapped Pokémon remains in the TM RKT spot. Landing on TEAM ROCKET ROLL again gives a recovery attempt. EVEN succeeds; ODD fails.</p>
+
+<h3>FLY & DIG</h3>
+<ol>
+<li>Land on a FLY or DIG square.</li>
+<li>Resolve its effects.</li>
+<li>Remain inactive for one turn.</li>
+<li>Move to the matching destination.</li>
+</ol>
+<div class="rules-note">
+<strong>COLLISION:</strong> If both Pokémon land on the same square, move them to squares 5 and 8 without activating those squares again.
+</div>
+</div>
+</div>
+</div>
+
+<!-- LAST FIVE MOVES PANEL -->
+<div id="logOverlay" class="side-overlay" hidden>
+<div class="side-panel">
+<div class="side-header">
+<h2>LAST 5 MOVES</h2>
+<button id="logClose" class="side-close">×</button>
+</div>
+<div class="side-content" id="moveLog">
+<div class="log-empty">NO MOVES YET</div>
+</div>
+</div>
+</div>
+
+<!-- D12 OVERLAY -->
+<div id="diceOverlay" class="dice-overlay" hidden>
+<div id="dicePanel" class="dice-panel">
+<div id="diceOverlayTitle" class="dice-title">PLAYER ROLLING D12</div>
+<div class="dice-stage">
+<div id="d12Die" class="d12-die">
+<div class="d12-body"></div>
+<div id="d12Number" class="d12-number">12</div>
+</div>
+</div>
+<div id="diceCaption" class="dice-caption">ROLLING...</div>
+<div id="diceFinal" class="dice-final"></div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const random=(min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+const image=id=>"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/"+id+".png";
+
+const STARTERS={
+1:[{id:1,name:"Bulbasaur"},{id:4,name:"Charmander"},{id:7,name:"Squirtle"}],
+2:[{id:152,name:"Chikorita"},{id:155,name:"Cyndaquil"},{id:158,name:"Totodile"}],
+3:[{id:252,name:"Treecko"},{id:255,name:"Torchic"},{id:258,name:"Mudkip"}],
+4:[{id:387,name:"Turtwig"},{id:390,name:"Chimchar"},{id:393,name:"Piplup"}]
+};
+
+const squares=[
+{number:9,top:"ATK",bottom:"FLY"},
+{number:10,top:"POISON",bottom:"HEAL"},
+{number:11,top:"ATK",bottom:"SLEEP"},
+{number:12,top:"FREEZE",bottom:"DIG"},
+{number:5,top:"ATK",bottom:"HEAL / SLEEP"},
+{number:6,top:"FREEZE",bottom:"FREEZE"},
+{number:7,top:"SLEEP",bottom:"TEAM ROCKET ROLL"},
+{number:8,top:"ATK",bottom:"SWAP PKM / CONFUSED"},
+{number:1,top:"ATK",bottom:"DIG"},
+{number:2,top:"BURN",bottom:"PARALYZE"},
+{number:3,top:"ATK",bottom:"BURN"},
+{number:4,top:"HEAL",bottom:"FLY"}
+];
+
+const game={
+turnsRemaining:50,
+active:false,
+resolving:false,
+playerParty:[],
+cpuParty:[],
+playerActiveIndex:null,
+cpuActiveIndex:0,
+playerSquare:null,
+cpuSquare:null,
+pendingReplacement:false,
+generation:1,
+moves:[]
+};
+
+const TRAINER_BASE="https://play.pokemonshowdown.com/sprites/trainers/";
+const TRAINERS=["rocketgrunt.png","rocketgruntf.png","giovanni.png","archer.png","ariana.png","proton.png","petrel.png"];
+let trainerIndex=-1;
+
+function rotateTrainer(){
+trainerIndex=(trainerIndex+1)%TRAINERS.length;
+$("cpuImage").src=TRAINER_BASE+TRAINERS[trainerIndex];
+$("cpuImage").style.display="block";
+}
+$("cpuImage").onerror=()=>{$("cpuImage").style.display="none"};
+
+/* SIDE PANELS */
+function closePanels(){
+$("rulesOverlay").hidden=true;
+$("logOverlay").hidden=true;
+}
+$("rulesTab").onclick=()=>{
+closePanels();
+$("rulesOverlay").hidden=false;
+};
+$("logTab").onclick=()=>{
+closePanels();
+renderLog();
+$("logOverlay").hidden=false;
+};
+$("rulesClose").onclick=closePanels;
+$("logClose").onclick=closePanels;
+for(const id of ["rulesOverlay","logOverlay"]){
+$(id).onclick=e=>{if(e.target===$(id))closePanels()};
+}
+document.addEventListener("keydown",e=>{
+if(e.key==="Escape")closePanels();
+});
+
+/* MOVE LOG */
+let currentMove=null;
+
+function beginLog(owner,pokemon){
+currentMove={
+owner,
+pokemon:pokemon?.name||"NONE",
+roll:null,
+square:null,
+effects:[],
+details:[]
+};
+}
+
+function logDetail(message){
+if(currentMove)currentMove.details.push(message);
+}
+
+function finishLog(){
+if(!currentMove)return;
+game.moves.unshift(currentMove);
+game.moves.length=Math.min(game.moves.length,5);
+currentMove=null;
+renderLog();
+}
+
+function renderLog(){
+const container=$("moveLog");
+container.replaceChildren();
+
+if(!game.moves.length){
+container.innerHTML='<div class="log-empty">NO MOVES YET</div>';
+return;
+}
+
+for(const move of game.moves){
+const entry=document.createElement("div");
+entry.className="log-entry"+(move.owner==="cpu"?" cpu":"");
+
+const heading=document.createElement("strong");
+heading.textContent=move.owner.toUpperCase()+" • "+move.pokemon;
+
+const location=document.createElement("p");
+location.textContent=
+move.roll!==null
+?"D12: "+move.roll+" • SQUARE "+move.square
+:"NO D12 ROLL";
+
+const effects=document.createElement("p");
+effects.textContent=move.effects.length
+?"EFFECTS: "+move.effects.join(" / ")
+:"EFFECTS: NONE";
+
+const details=document.createElement("small");
+details.textContent=move.details.join(" • ")||"No additional effects";
+
+entry.append(heading,location,effects,details);
+container.appendChild(entry);
+}
+}
+
+/* TRAINER IMAGE */
+$("playerAvatar").onclick=()=>$("playerImageInput").click();
+$("playerImageInput").onchange=e=>{
+const file=e.target.files[0];
+if(!file||!file.type.startsWith("image/"))return;
+const reader=new FileReader();
+reader.onload=event=>{
+$("playerImage").src=event.target.result;
+$("playerImage").hidden=false;
+$("playerPlaceholder").hidden=true;
+};
+reader.readAsDataURL(file);
+};
+
+/* MAP */
+for(const square of squares){
+const el=document.createElement("div");
+el.className="square";
+el.dataset.number=square.number;
+el.innerHTML=`
+<div class="top">${square.top}</div>
+<div class="number">${square.number}</div>
+<div class="bottom">${square.bottom}</div>`;
+$("map").appendChild(el);
+}
+
+function makePokemon(p){
+return {...p,status:"available",hits:0,conditions:[],skipNextMove:{},travel:null};
+}
+function party(owner){return game[owner+"Party"]}
+function activeIndex(owner){return game[owner+"ActiveIndex"]}
+function active(owner){
+const i=activeIndex(owner);
+return i===null?null:party(owner)[i]||null;
+}
+function opponent(owner){return owner==="player"?"cpu":"player"}
+function available(owner){return party(owner).some(p=>p.status==="available")}
+function trapped(owner){return party(owner).find(p=>p.status==="trapped")||null}
+
+function showScreen(id){
+for(const screen of document.querySelectorAll(".screen")){
+screen.hidden=screen.id!==id;
+}
+}
+
+function selectGeneration(gen){
+game.generation=Number(gen);
+game.playerParty=STARTERS[game.generation].map(makePokemon);
+game.playerActiveIndex=null;
+renderStarters();
+}
+
+function renderStarters(){
+$("selectedPokemon").innerHTML=game.playerParty.map((p,i)=>`
+<div class="pokemon-slot selectable ${i===game.playerActiveIndex?"chosen":""}" data-index="${i}">
+<img src="${image(p.id)}" alt="${p.name}">
+<span>${p.name}</span>
+</div>`).join("");
+
+for(const card of $("selectedPokemon").children){
+card.onclick=()=>{
+game.playerActiveIndex=Number(card.dataset.index);
+renderStarters();
+};
+}
+$("beginBattleBtn").disabled=game.playerActiveIndex===null;
+$("starterStatus").textContent=game.playerActiveIndex===null
+?"SELECT YOUR STARTING POKÉMON"
+:active("player").name.toUpperCase()+" WILL START";
+}
+
+$("generationSelect").onchange=e=>selectGeneration(e.target.value);
+
+function randomCPUStarters(){
+const pool=Object.values(STARTERS).flat().slice();
+for(let i=pool.length-1;i>0;i--){
+const j=random(0,i);
+[pool[i],pool[j]]=[pool[j],pool[i]];
+}
+return pool.slice(0,3).map(makePokemon);
+}
+
+function pokemonCard(p,i,owner){
+const selected=i===activeIndex(owner);
+const selectable=owner==="player"&&game.pendingReplacement&&p.status==="available";
+return `
+<div class="pokemon-slot ${selected?(owner==="cpu"?"cpu-active":"active"):""} ${p.status!=="available"?"unavailable":""} ${selectable?"selectable":""}" data-index="${i}">
+<img src="${image(p.id)}" alt="${p.name}">
+<span>${p.name}</span>
+${p.status!=="available"?"<small>"+p.status.toUpperCase()+"</small>":""}
+</div>`;
+}
+
+function renderPokemon(){
+for(const owner of ["player","cpu"]){
+$(owner+"Pokemon").innerHTML=party(owner).map((p,i)=>pokemonCard(p,i,owner)).join("");
+}
+for(const card of $("playerPokemon").querySelectorAll(".selectable")){
+card.onclick=()=>chooseReplacement(Number(card.dataset.index));
+}
+updateStats();
+updateTraps();
+}
+
+function updateStats(){
+for(const owner of ["player","cpu"]){
+const p=active(owner);
+const status=$(owner+"Status");
+const hits=$(owner+"Hits");
+status.textContent=p?(p.conditions.join(" / ")||"NONE"):"NONE";
+hits.textContent=p&&p.hits?"X".repeat(p.hits):"NONE";
+status.classList.toggle("affected",!!p?.conditions.length);
+hits.classList.toggle("no-hits",!p?.hits);
+}
+}
+
+function updateTraps(){
+for(const owner of ["player","cpu"]){
+const el=$("trapped"+(owner==="cpu"?"CPU":"Player"));
+const p=trapped(owner);
+el.innerHTML=p
+?`<img src="${image(p.id)}" alt="${p.name}" title="${p.name} TRAPPED">`
+:"TM RKT<br>TRAPPED PKM";
+}
+}
+
+/* POKÉMON POSITION */
+function centerInBoard(el){
+const a=el.getBoundingClientRect();
+const b=$("board").getBoundingClientRect();
+return {x:a.left-b.left+a.width/2,y:a.top-b.top+a.height/2};
+}
+
+function placeBesideTrainer(owner){
+const p=active(owner);
+const marker=$(owner+"Marker");
+marker.classList.remove("on-map");
+marker.style.left="";
+marker.style.top="";
+marker.style.transition="";
+$(owner+"Start").appendChild(marker);
+
+if(!p){
+marker.hidden=true;
+return;
+}
+marker.innerHTML=`<img src="${image(p.id)}" alt="${p.name}">`;
+marker.hidden=false;
+}
+
+function moveMarkerIntoBoard(owner){
+const marker=$(owner+"Marker");
+if(marker.classList.contains("on-map"))return;
+const position=centerInBoard(marker);
+$("board").appendChild(marker);
+marker.classList.add("on-map");
+marker.style.transition="none";
+marker.style.left=position.x+"px";
+marker.style.top=position.y+"px";
+marker.getBoundingClientRect();
+marker.style.transition="";
+}
+
+function refreshHighlights(){
+for(const el of document.querySelectorAll(".square")){
+const n=Number(el.dataset.number);
+el.classList.toggle("landed-player",game.playerSquare===n);
+el.classList.toggle("landed-cpu",game.cpuSquare===n);
+}
+}
+
+async function moveToSquare(owner,number){
+const p=active(owner);
+if(!p)return;
+moveMarkerIntoBoard(owner);
+const square=document.querySelector(`.square[data-number="${number}"]`);
+if(!square)return;
+const position=centerInBoard(square);
+const marker=$(owner+"Marker");
+marker.style.left=position.x+"px";
+marker.style.top=position.y+"px";
+game[owner+"Square"]=number;
+refreshHighlights();
+await wait(600);
+}
+
+async function resolveCollision(){
+if(game.playerSquare===null||game.cpuSquare===null)return;
+if(game.playerSquare!==game.cpuSquare)return;
+logDetail("COLLISION: Player to 5, CPU to 8");
+$("turnStatus").textContent="COLLISION!";
+await Promise.all([
+moveToSquare("player",5),
+moveToSquare("cpu",8)
+]);
+}
+
+/* HITS AND STATUS */
+function removeActive(owner,status){
+const p=active(owner);
+if(!p)return;
+p.status=status;
+p.travel=null;
+game[owner+"ActiveIndex"]=null;
+game[owner+"Square"]=null;
+$(owner+"Marker").hidden=true;
+
+logDetail(p.name+" "+status.toUpperCase());
+
+if(owner==="player"){
+game.pendingReplacement=available("player");
+}else{
+const next=party("cpu").findIndex(x=>x.status==="available");
+if(next>=0)game.cpuActiveIndex=next;
+}
+
+renderPokemon();
+refreshHighlights();
+
+if(owner==="cpu"&&active("cpu"))placeBesideTrainer("cpu");
+if(owner==="player"&&game.pendingReplacement){
+$("turnStatus").textContent="CHOOSE YOUR NEXT ACTIVE POKÉMON";
+}
+}
+
+function addHit(owner,count=1){
+const p=active(owner);
+if(!p||p.status!=="available")return;
+const before=p.hits;
+p.hits=Math.min(3,p.hits+count);
+logDetail(p.name+" +"+(p.hits-before)+" HIT");
+updateStats();
+if(p.hits>=3){
+p.conditions=[];
+p.skipNextMove={};
+removeActive(owner,"fainted");
+}
+}
+
+function heal(owner,count=1){
+const p=active(owner);
+if(!p)return;
+const before=p.hits;
+p.hits=Math.max(0,p.hits-count);
+logDetail(p.name+" HEALED "+(before-p.hits)+" HIT");
+updateStats();
+}
+
+const IMMOBILE=["FREEZE","PARALYZED","SLEEP"];
+
+function addCondition(owner,condition){
+const p=active(owner);
+if(!p)return;
+if(IMMOBILE.includes(condition)&&p.conditions.some(c=>IMMOBILE.includes(c)))return;
+if(!p.conditions.includes(condition))p.conditions.push(condition);
+if(IMMOBILE.includes(condition))p.skipNextMove[condition]=true;
+logDetail(p.name+" "+condition);
+updateStats();
+}
+
+function skipDisabled(owner){
+const p=active(owner);
+if(!p)return false;
+const blocked=IMMOBILE.filter(c=>p.skipNextMove[c]);
+if(!blocked.length)return false;
+for(const c of blocked){
+delete p.skipNextMove[c];
+p.conditions=p.conditions.filter(x=>x!==c);
+}
+$("turnStatus").textContent=p.name.toUpperCase()+" CANNOT GO: "+blocked.join(" / ");
+logDetail("TURN SKIPPED: "+blocked.join(" / "));
+updateStats();
+return true;
+}
+
+function chooseReplacement(index){
+const p=game.playerParty[index];
+if(!p||p.status!=="available")return;
+game.playerActiveIndex=index;
+game.playerSquare=null;
+game.pendingReplacement=false;
+renderPokemon();
+refreshHighlights();
+placeBesideTrainer("player");
+$("turnStatus").textContent=p.name.toUpperCase()+" READY";
+$("rollBtn").disabled=game.resolving;
+}
+
+function swapPokemon(owner){
+const choices=party(owner)
+.map((p,i)=>({p,i}))
+.filter(x=>x.p.status==="available"&&x.i!==activeIndex(owner));
+if(!choices.length){
+logDetail("SWAP: NO AVAILABLE REPLACEMENT");
+return;
+}
+const next=choices[0];
+game[owner+"ActiveIndex"]=next.i;
+game[owner+"Square"]=null;
+renderPokemon();
+refreshHighlights();
+placeBesideTrainer(owner);
+logDetail("SWAP TO "+next.p.name);
+}
+
+function trapPokemon(owner){
+const p=active(owner);
+if(!p)return;
+p.conditions=[];
+p.skipNextMove={};
+removeActive(owner,"trapped");
+$("turnStatus").textContent=p.name.toUpperCase()+" SENT TO TM RKT!";
+}
+
+function recoverPokemon(owner){
+const p=trapped(owner);
+if(!p)return;
+p.status="available";
+p.conditions=[];
+p.skipNextMove={};
+p.travel=null;
+logDetail(p.name+" RECOVERED FROM TM RKT");
+renderPokemon();
+}
+
+/* MAP EFFECTS */
+function matchingTravelSquare(type,from){
+const pair=type==="FLY"?[4,9]:[1,12];
+return from===pair[0]?pair[1]:pair[0];
+}
+
+async function resolveEffect(effect,target,source){
+const p=active(target);
+if(!p)return;
+
+switch(effect){
+case "ATK":
+addHit(target);
+break;
+case "POISON":
+addCondition(target,"POISON");
+addHit(target);
+break;
+case "BURN":
+addCondition(target,"BURN");
+addHit(target);
+break;
+case "FREEZE":
+addCondition(target,"FREEZE");
+break;
+case "PARALYZE":
+addCondition(target,"PARALYZED");
+addHit(target);
+break;
+case "SLEEP":
+addCondition(target,"SLEEP");
+break;
+case "HEAL":
+heal(target);
+break;
+case "CONFUSED":
+addCondition(target,"CONFUSED");
+addHit(target);
+break;
+case "SWAP PKM":
+swapPokemon(target);
+break;
+case "FLY":
+case "DIG":
+p.travel={type:effect,waiting:true};
+logDetail(p.name+" STARTED "+effect);
+break;
+case "TEAM ROCKET ROLL":
+if(trapped(target)){
+const roll=random(1,12);
+logDetail("TM RKT RECOVERY D12: "+roll);
+if(roll%2===0)recoverPokemon(target);
+else logDetail("RECOVERY FAILED");
+}else{
+trapPokemon(target);
+}
+break;
+}
+await wait(180);
+}
+
+async function resolveEffects(text,target,source){
+for(const effect of text.split("/").map(x=>x.trim())){
+if(!active(target))break;
+await resolveEffect(effect,target,source);
+}
+}
+
+async function resolveSquare(owner,square){
+if(!square)return;
+const enemy=opponent(owner);
+currentMove.effects=[square.top,square.bottom];
+
+if(active(enemy))await resolveEffects(square.top,enemy,owner);
+if(active(owner))await resolveEffects(square.bottom,owner,owner);
+}
+
+/* D12 ANIMATION */
+async function showDiceRoll(owner,result){
+$("dicePanel").classList.toggle("cpu",owner==="cpu");
+$("diceOverlayTitle").textContent=owner.toUpperCase()+" ROLLING D12";
+$("diceCaption").textContent="ROLLING...";
+$("diceFinal").textContent="";
+$("diceOverlay").hidden=false;
+
+const die=$("d12Die");
+die.className="d12-die rolling";
+
+const timer=setInterval(()=>{
+$("d12Number").textContent=random(1,12);
+},65);
+
+await wait(1650);
+clearInterval(timer);
+$("d12Number").textContent=result;
+die.className="d12-die landing";
+$("diceCaption").textContent="D12 RESULT";
+$("diceFinal").textContent=result;
+await wait(850);
+$("diceOverlay").hidden=true;
+die.className="d12-die";
+}
+
+/* TURNS */
+async function performTurn(owner){
+const p=active(owner);
+if(!p)return;
+
+if(owner==="cpu")rotateTrainer();
+beginLog(owner,p);
+
+if(skipDisabled(owner)){
+finishLog();
+await wait(500);
+return;
+}
+
+if(p.travel){
+const travel=p.travel;
+if(travel.waiting){
+travel.waiting=false;
+logDetail(travel.type+" INACTIVE TURN");
+$("turnStatus").textContent=p.name.toUpperCase()+" "+travel.type+": INACTIVE TURN";
+finishLog();
+await wait(650);
+return;
+}
+const from=game[owner+"Square"];
+const destination=matchingTravelSquare(travel.type,from);
+p.travel=null;
+logDetail(travel.type+" TO SQUARE "+destination);
+currentMove.square=destination;
+currentMove.effects=["TRAVEL"];
+await moveToSquare(owner,destination);
+await resolveCollision();
+finishLog();
+return;
+}
+
+const roll=random(1,12);
+const square=squares.find(s=>s.number===roll);
+currentMove.roll=roll;
+currentMove.square=roll;
+
+$("turnStatus").textContent=owner.toUpperCase()+" ROLLING D12";
+await showDiceRoll(owner,roll);
+$(owner+"Dice").textContent=roll;
+
+$("turnStatus").textContent=owner.toUpperCase()+" ROLLED "+roll;
+await moveToSquare(owner,roll);
+
+$("turnStatus").textContent=owner.toUpperCase()+" RESOLVING TURN";
+await resolveSquare(owner,square);
+updateStats();
+await resolveCollision();
+finishLog();
+await wait(450);
+}
+
+async function rollD12(){
+if(!game.active||game.resolving||game.turnsRemaining<=0||game.pendingReplacement||!active("player"))return;
+game.resolving=true;
+$("rollBtn").disabled=true;
+
+try{
+await performTurn("player");
+
+if(game.active&&active("cpu")){
+$("turnStatus").textContent="CPU TURN";
+await wait(600);
+await performTurn("cpu");
+}
+
+game.turnsRemaining--;
+$("turnCount").textContent=game.turnsRemaining;
+
+if(game.turnsRemaining<=0){
+game.active=false;
+showScreen("rebuyScreen");
+return;
+}
+
+if(!available("cpu")&&!trapped("cpu")){
+game.active=false;
+$("turnStatus").textContent="CPU HAS NO POKÉMON REMAINING";
+return;
+}
+
+if(!available("player")&&!trapped("player")){
+game.active=false;
+$("turnStatus").textContent="PLAYER HAS NO POKÉMON REMAINING";
+return;
+}
+
+if(game.pendingReplacement){
+$("turnStatus").textContent="CHOOSE YOUR NEXT ACTIVE POKÉMON";
+return;
+}
+
+const p=active("player");
+if(p){
+const blocked=IMMOBILE.filter(c=>p.skipNextMove[c]);
+$("turnStatus").textContent=blocked.length
+?p.name.toUpperCase()+" CANNOT GO: "+blocked.join(" / ")
+:"PLAYER TURN";
+}else{
+$("turnStatus").textContent="NO ACTIVE POKÉMON";
+}
+
+}finally{
+game.resolving=false;
+$("rollBtn").disabled=!game.active||game.pendingReplacement||!active("player");
+}
+}
+
+/* GAME SETUP */
+function startPurchase(){
+selectGeneration($("generationSelect").value);
+showScreen("selectScreen");
+}
+
+function beginBattle(){
+if(game.playerActiveIndex===null)return;
+game.cpuParty=randomCPUStarters();
+game.cpuActiveIndex=0;
+game.playerSquare=null;
+game.cpuSquare=null;
+game.pendingReplacement=false;
+game.turnsRemaining=50;
+game.moves=[];
+game.active=true;
+game.resolving=false;
+game.playerParty.forEach(p=>{
+p.status="available";
+p.hits=0;
+p.conditions=[];
+p.skipNextMove={};
+p.travel=null;
+});
+
+$("turnCount").textContent=50;
+$("playerDice").textContent="D12";
+$("cpuDice").textContent="D12";
+$("turnStatus").textContent="PLAYER TURN";
+$("rollBtn").disabled=false;
+
+renderPokemon();
+renderLog();
+refreshHighlights();
+rotateTrainer();
+showScreen("gameScreen");
+placeBesideTrainer("player");
+placeBesideTrainer("cpu");
+}
+
+$("purchaseBtn").onclick=startPurchase;
+$("rebuyBtn").onclick=startPurchase;
+$("beginBattleBtn").onclick=beginBattle;
+$("rollBtn").onclick=rollD12;
+
+selectGeneration(1);
+</script>
+</body>
+</html>
