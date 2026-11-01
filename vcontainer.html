@@ -13,43 +13,28 @@ html, body {
   background: transparent;
 }
 .container-stage {
-  position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .container-image {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
+  border: 3px solid white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
   user-select: none;
   -webkit-user-drag: none;
-}
-.frame-outline {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-.frame-outline path {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 3;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 5px #fff);
 }
 </style>
 </head>
 <body>
 <div class="container-stage">
   <img class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
-  <!-- White border following the pictured container's ornamental frame. -->
-  <svg class="frame-outline" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <path d="M 161 245 L 212 185 L 687 185 L 728 186 L 823 219 L 918 186 L 954 185 L 1433 185 L 1504 245 L 1504 726 L 1437 798 L 917 798 L 890 810 L 745 810 L 727 789 L 218 789 L 161 725 Z" />
-  </svg>
 </div>
 </body>
 </html>
