@@ -95,25 +95,12 @@ html, body {
 .map-hotspot {
   position: absolute;
   display: block;
-  border: 2px solid rgba(255, 220, 95, 0.85);
-  border-radius: 8px;
+  border: none;
   background: transparent;
-  box-shadow: 0 0 8px rgba(255, 212, 65, 0.8),
-              0 0 18px rgba(255, 190, 35, 0.42),
-              inset 0 0 8px rgba(255, 212, 65, 0.35);
   cursor: pointer;
   padding: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-.map-hotspot:hover,
-.map-hotspot:focus-visible {
-  border-color: #fff3b0;
-  box-shadow: 0 0 13px rgba(255, 233, 120, 1),
-              0 0 27px rgba(255, 211, 65, 0.7),
-              inset 0 0 12px rgba(255, 225, 110, 0.55);
 }
 
 /* HOVER LABEL */
@@ -183,6 +170,8 @@ html, body {
   top: 9.14%;
   width: 50.90%;
   height: 63.55%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.85);
 }
 .journey-window iframe {
   display: block;
