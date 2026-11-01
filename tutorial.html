@@ -5,69 +5,166 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to VHouse — Tutorial</title>
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: Arial, Helvetica, sans-serif; color: #fff; }
-  .rotate-screen {
-    display: none; position: fixed; inset: 0; z-index: 10;
-    background: #000; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px; padding: 24px; text-align: center;
-  }
-  .rotate-screen .icon { font-size: 60px; }
-  .rotate-screen h2, .rotate-screen p { margin: 0; }
-  .rotate-screen p { color: #bbb; }
-  .game-container { width: 100vw; height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .map-container { position: relative; width: min(100vw, 200dvh); aspect-ratio: 2 / 1; flex-shrink: 0; isolation: isolate; }
-  .game-map { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; pointer-events: none; }
-  .map-container::after { content: ""; position: absolute; inset: 0; background: rgba(5, 3, 15, .55); z-index: 0; pointer-events: none; }
-  .tutorial-panel {
-    position: absolute; z-index: 1;
-    inset: 5.5% 10%; overflow-y: auto;
-    padding: clamp(15px, 2.2vw, 30px) clamp(17px, 3vw, 42px);
-    background: linear-gradient(150deg, rgba(27, 15, 53, .96), rgba(6, 6, 18, .95) 65%, rgba(31, 14, 52, .96));
-    border: 2px solid #d6b76b; border-radius: 15px;
-    box-shadow: 0 0 20px rgba(242, 214, 136, .45), inset 0 0 35px rgba(134, 91, 202, .15);
-    scrollbar-color: #9372cf #191326;
-    text-align: center;
-  }
-  .eyebrow { color: #e9d59e; letter-spacing: .22em; font-weight: bold; font-size: clamp(10px, .9vw, 13px); margin-bottom: 6px; }
-  h1 { color: #fff2c6; text-shadow: 0 0 13px #c9a2ff; font-size: clamp(24px, 3vw, 46px); margin: 0 0 4px; letter-spacing: .03em; }
-  .subtitle { color: #e5d8ff; font-size: clamp(13px, 1.15vw, 18px); margin: 0 0 14px; }
-  .intro, .goal { font-size: clamp(12px, 1.05vw, 17px); line-height: 1.5; max-width: 830px; margin: 0 auto 12px; }
-  .goal { color: #ffe9af; font-weight: bold; }
-  h2 { font-size: clamp(16px, 1.5vw, 22px); color: #f5db9a; margin: 14px 0 10px; }
-  .steps {
-    list-style: none; margin: 0 auto 14px; padding: 0;
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px; max-width: 900px; text-align: left;
-  }
-  .steps li { border: 1px solid rgba(204, 176, 255, .3); border-radius: 8px; background: rgba(103, 70, 156, .16); padding: 9px 12px; font-size: clamp(11px, .96vw, 15px); line-height: 1.4; }
-  .steps strong { color: #ffe3a5; }
-  .note { font-size: clamp(11px, .88vw, 14px); color: #d5ccea; line-height: 1.4; margin: 8px auto 12px; }
-  .ready { color: #fff3c9; font-weight: bold; margin: 9px 0 8px; font-size: clamp(12px, 1.1vw, 17px); }
-  .button {
-    display: inline-block; text-decoration: none; color: #241129; font-weight: 900;
-    font-size: clamp(12px, 1.15vw, 17px); letter-spacing: .08em;
-    padding: 12px 32px; border-radius: 8px; border: 2px solid #fff0c1;
-    background: linear-gradient(180deg, #ffe9b2, #c99f4a);
-    box-shadow: 0 0 18px rgba(245, 208, 119, .48);
-    transition: transform .12s ease, box-shadow .12s ease;
-  }
-  .button:hover, .button:focus-visible { transform: translateY(-2px); box-shadow: 0 0 25px rgba(255, 232, 159, .9); }
-  .button:active { transform: translateY(1px); }
-  @media (orientation: portrait) and (pointer: coarse) {
-    .rotate-screen { display: flex; }
-    .game-container { display: none; }
-  }
-  @media (max-width: 750px) {
-    .tutorial-panel { inset: 3% 5%; padding: 12px 15px; }
-    .subtitle { margin-bottom: 7px; }
-    .intro, .goal { margin-bottom: 8px; }
-    h2 { margin: 9px 0 6px; }
-    .steps { gap: 5px; margin-bottom: 8px; }
-    .steps li { padding: 6px 8px; }
-    .button { padding: 9px 24px; }
-  }
-  @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Same portrait rotation behavior as the game map. */
+.rotate-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  padding: 24px;
+}
+.rotate-screen .icon { font-size: 64px; }
+.rotate-screen h2 { font-size: 24px; }
+.rotate-screen p { font-size: 16px; color: #bbb; }
+
+/* Exactly the same 2:1 screen fit and centering as index.html. */
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.map-container {
+  position: relative;
+  width: min(100vw, 200dvh);
+  aspect-ratio: 2 / 1;
+  flex-shrink: 0;
+  isolation: isolate;
+  container-type: inline-size;
+}
+.game-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.map-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 3, 15, .55);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Every tutorial element scales WITH the map, not with the browser width.
+   No independent panel scrolling or mismatched movement when resizing/rotating. */
+.tutorial-panel {
+  position: absolute;
+  z-index: 1;
+  inset: 4% 7%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: .25cqw;
+  padding: .9cqw 2.4cqw;
+  text-align: center;
+  background: linear-gradient(150deg, rgba(27, 15, 53, .96), rgba(6, 6, 18, .95) 65%, rgba(31, 14, 52, .96));
+  border: .16cqw solid #d6b76b;
+  border-radius: 1.2cqw;
+  box-shadow: 0 0 1.8cqw rgba(242, 214, 136, .45), inset 0 0 3cqw rgba(134, 91, 202, .15);
+}
+.eyebrow {
+  color: #e9d59e;
+  letter-spacing: .22em;
+  font-weight: bold;
+  font-size: .96cqw;
+  line-height: 1.2;
+}
+h1 {
+  color: #fff2c6;
+  text-shadow: 0 0 1cqw #c9a2ff;
+  font-size: 2.8cqw;
+  line-height: 1.12;
+  letter-spacing: .03em;
+}
+.subtitle { color: #e5d8ff; font-size: 1.22cqw; line-height: 1.3; }
+.intro, .goal {
+  font-size: 1.1cqw;
+  line-height: 1.35;
+  max-width: 77cqw;
+}
+.goal { color: #ffe9af; font-weight: bold; }
+.tutorial-panel h2 {
+  color: #f5db9a;
+  font-size: 1.5cqw;
+  line-height: 1.2;
+}
+.steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65cqw;
+  width: 100%;
+  max-width: 80cqw;
+  text-align: left;
+}
+.steps li {
+  border: .09cqw solid rgba(204, 176, 255, .3);
+  border-radius: .65cqw;
+  background: rgba(103, 70, 156, .16);
+  padding: .52cqw .72cqw;
+  font-size: .96cqw;
+  line-height: 1.28;
+}
+.steps strong { color: #ffe3a5; }
+.note {
+  font-size: .94cqw;
+  line-height: 1.32;
+  color: #d5ccea;
+  max-width: 79cqw;
+}
+.ready { font-size: 1.04cqw; line-height: 1.32; color: #fff3c9; font-weight: bold; }
+.button {
+  display: inline-block;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: #241129;
+  font-weight: 900;
+  font-size: 1.1cqw;
+  line-height: 1.2;
+  letter-spacing: .08em;
+  padding: .75cqw 2.2cqw;
+  border-radius: .7cqw;
+  border: .16cqw solid #fff0c1;
+  background: linear-gradient(180deg, #ffe9b2, #c99f4a);
+  box-shadow: 0 0 1.5cqw rgba(245, 208, 119, .48);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.button:hover, .button:focus-visible {
+  transform: translateY(-.16cqw);
+  box-shadow: 0 0 2cqw rgba(255, 232, 159, .9);
+}
+.button:active { transform: translateY(.08cqw); }
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-screen { display: flex; }
+  .game-container { display: none !important; }
+}
 </style>
 </head>
 <body>
