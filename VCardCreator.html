@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VCard Creator — VHouse</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: Arial, sans-serif;
+}
+.rotate-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  padding: 24px;
+}
+.rotate-icon { font-size: 64px; }
+.rotate-screen h2 { font-size: 24px; }
+.rotate-screen p { font-size: 16px; color: #bbb; }
+/* Match the existing VHouse landscape-only game pages. */
+@media (orientation: portrait) {
+  .rotate-screen { display: flex; }
+  .game-container { display: none !important; }
+}
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.map-container {
+  position: relative;
+  width: min(100vw, 200dvh);
+  aspect-ratio: 2 / 1;
+  flex-shrink: 0;
+  container-type: inline-size;
+  overflow: hidden;
+}
+/* Vcontainer is the creator page's background, not an iframe. */
+.creator-background {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.creator-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.creator-heading {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  width: 70%;
+  text-align: center;
+  color: #ffe5ad;
+  font-weight: bold;
+  font-size: 2.8cqw;
+  line-height: 1.15;
+  text-shadow: 0 0 1cqw rgba(255, 213, 113, .65);
+}
+</style>
+</head>
+<body>
+<div class="rotate-screen">
+  <div class="rotate-icon">↻</div>
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+<main class="game-container">
+  <div class="map-container">
+    <img class="creator-background" src="assets/Vcontainer.png" alt="VCard Creator Menu" draggable="false">
+    <div class="creator-hud">
+      <h1 class="creator-heading">VCARD CREATOR</h1>
+    </div>
+  </div>
+</main>
+</body>
+</html>
