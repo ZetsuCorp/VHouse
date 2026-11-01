@@ -89,6 +89,160 @@ html, body {
   background: #36204e;
   box-shadow: 0 0 1.5cqw #ffb62d99;
 }
+
+/* Three centered VCard frames, independent of the background sizing. */
+.closet-showcase {
+  position: absolute;
+  left: 9%;
+  top: 8%;
+  width: 82%;
+  height: 64%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5%;
+  z-index: 2;
+}
+.closet-slot {
+  appearance: none;
+  position: relative;
+  flex: 0 0 24%;
+  aspect-ratio: 415 / 601;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: scale(.94);
+  opacity: .86;
+  transition: transform .2s ease, opacity .2s ease, filter .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.closet-slot.is-center {
+  transform: scale(1.04);
+  opacity: 1;
+  filter: drop-shadow(0 0 .7cqw #a442ff75);
+}
+.closet-slot:hover,
+.closet-slot:focus-visible {
+  opacity: 1;
+  filter: drop-shadow(0 0 .8cqw #c888ff88);
+}
+.closet-slot:focus-visible { outline: 2px solid #ffb62d; outline-offset: 2px; }
+.closet-slot .card-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.stored-vcard {
+  --card-accent: #2d7bdc;
+  position: absolute;
+  left: 17.5%;
+  top: 16.8%;
+  width: 65%;
+  height: 67%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid var(--card-accent);
+  border-radius: .25cqw;
+  background: #08111b;
+  box-shadow: 0 0 .65cqw #000b;
+  color: white;
+  pointer-events: none;
+}
+.stored-vcard .stored-name {
+  padding: .45cqw .15cqw;
+  text-align: center;
+  font-size: 1cqw;
+  font-weight: 900;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #070b13;
+}
+.stored-vcard .stored-art {
+  display: block;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: cover;
+}
+.stored-vcard .stored-level {
+  padding: .3cqw .15cqw;
+  border-top: 2px solid var(--card-accent);
+  background: #08111b;
+  font-size: .75cqw;
+  font-weight: 900;
+  text-align: center;
+}
+.stored-vcard .stored-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: .35cqw .15cqw;
+  border-top: 2px solid var(--card-accent);
+  background: #03070d;
+  font-size: .75cqw;
+  font-weight: 900;
+}
+.carousel-arrow {
+  position: absolute;
+  top: 37%;
+  z-index: 5;
+  width: 3.5cqw;
+  height: 3.5cqw;
+  border: 2px solid #ffb62d;
+  border-radius: .6cqw;
+  background: #160d27de;
+  color: #fff;
+  font: 900 2cqw Arial, sans-serif;
+  box-shadow: 0 0 1cqw #ff9d2955;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carousel-arrow:hover,
+.carousel-arrow:focus-visible { background: #36204e; }
+.carousel-prev { left: 12%; }
+.carousel-next { right: 12%; }
+.closet-message {
+  position: absolute;
+  left: 50%;
+  top: 73%;
+  transform: translateX(-50%);
+  width: 55.99%;
+  height: 22.81%;
+  z-index: 3;
+  pointer-events: none;
+}
+.closet-message img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  filter: drop-shadow(0 0 5px #ffffff55);
+}
+.closet-message-content {
+  position: absolute;
+  inset: 20% 13% 19%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .35cqw;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 2px 7px #000;
+}
+.closet-message-content strong { font-size: 1.45cqw; }
+.closet-message-content p { font-size: 1.1cqw; line-height: 1.25; max-height: 65%; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .closet-slot { transition: none; }
+}
+
 </style>
 </head>
 <body>
@@ -100,8 +254,132 @@ html, body {
 <main class="game-container">
   <div class="map-container">
     <img class="game-map" src="assets/VCloset.png" alt="VCloset Interior" draggable="false">
+
+    <div class="closet-showcase" id="closetShowcase" aria-label="VCard carousel">
+      <button class="closet-slot" type="button" data-position="-1" aria-label="Previous VCard">
+        <img class="card-frame" src="assets/VCardContainer-removebg-preview.png" alt="" draggable="false">
+      </button>
+      <button class="closet-slot is-center" type="button" data-position="0" aria-label="Selected VCard" aria-current="true">
+        <img class="card-frame" src="assets/VCardContainer-removebg-preview.png" alt="" draggable="false">
+      </button>
+      <button class="closet-slot" type="button" data-position="1" aria-label="Next VCard">
+        <img class="card-frame" src="assets/VCardContainer-removebg-preview.png" alt="" draggable="false">
+      </button>
+    </div>
+    <button class="carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
+    <button class="carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
+    <div class="closet-message" aria-live="polite">
+      <img src="assets/Message Frame.png" alt="" draggable="false">
+      <div class="closet-message-content">
+        <strong id="closetItemName">VCard Closet</strong>
+        <p id="closetItemDescription">Finished VCards and outfits are displayed here.</p>
+      </div>
+    </div>
     <a class="back-button" href="./Vhouse.html">← BACK</a>
   </div>
 </main>
+
+<script>
+(() => {
+  // The VCard Creator currently saves one completed card under this key.
+  // Empty positions remain available for future VCards/outfits.
+  let savedCard = null;
+  try {
+    const value = JSON.parse(localStorage.getItem("vhouse-vcard") || "null");
+    if (value && typeof value === "object" && !Array.isArray(value)) savedCard = value;
+  } catch (error) {
+    console.warn("Could not read saved VCard:", error);
+  }
+  const items = [savedCard, null, null];
+  const slots = [...document.querySelectorAll(".closet-slot")];
+  const showcase = document.getElementById("closetShowcase");
+  const nameLabel = document.getElementById("closetItemName");
+  const descriptionLabel = document.getElementById("closetItemDescription");
+  const colors = {R: "#2d7bdc", P: "#1abf96", S: "#b16df4"};
+  let selected = 0;
+
+  function textElement(tag, className, value) {
+    const el = document.createElement(tag);
+    el.className = className;
+    el.textContent = value;
+    return el;
+  }
+  function render() {
+    slots.forEach((slot, position) => {
+      const offset = position - 1;
+      const index = (selected + offset + items.length) % items.length;
+      const card = items[index];
+      slot.querySelector(".stored-vcard")?.remove();
+      slot.setAttribute("aria-label", card
+        ? String(card.name || "VCard") + (offset === 0 ? ", selected" : ", select")
+        : "Empty VCard slot " + (index + 1));
+      if (!card) return;
+      const preview = document.createElement("div");
+      preview.className = "stored-vcard";
+      preview.style.setProperty("--card-accent", colors[card.team] || colors.R);
+      preview.appendChild(textElement("div", "stored-name", String(card.name || "VCARD")));
+      if (typeof card.image === "string" && card.image.length) {
+        const art = document.createElement("img");
+        art.className = "stored-art";
+        art.src = card.image;
+        art.alt = "";
+        preview.appendChild(art);
+      }
+      preview.appendChild(textElement("div", "stored-level", "LEVEL " + (card.level || 1)));
+      preview.appendChild(textElement("div", "stored-stats",
+        "ATK " + (card.atk ?? 100) + "    DEF " + (card.def ?? 100)));
+      slot.appendChild(preview);
+    });
+    const current = items[selected];
+    nameLabel.textContent = current ? String(current.name || "VCard") : "Empty VCard Slot";
+    descriptionLabel.textContent = current
+      ? String(current.description || "No description entered.")
+      : "Finished VCards and outfits can be viewed here.";
+  }
+  function move(direction) {
+    selected = (selected + direction + items.length) % items.length;
+    render();
+  }
+  document.querySelector(".carousel-prev").addEventListener("click", () => move(-1));
+  document.querySelector(".carousel-next").addEventListener("click", () => move(1));
+  slots.forEach(slot => slot.addEventListener("click", () => {
+    move(Number(slot.dataset.position));
+  }));
+  let startX = null;
+  showcase.addEventListener("pointerdown", event => { startX = event.clientX; });
+  showcase.addEventListener("pointerup", event => {
+    if (startX === null) return;
+    const distance = event.clientX - startX;
+    startX = null;
+    if (Math.abs(distance) > 35) {
+      // Ignore the click synthesized after a swipe.
+      ignoreNextClick = true;
+      move(distance < 0 ? 1 : -1);
+    }
+  });
+  let ignoreNextClick = false;
+  showcase.addEventListener("click", event => {
+    if (ignoreNextClick) {
+      event.stopPropagation();
+      event.preventDefault();
+      ignoreNextClick = false;
+    }
+  }, true);
+  let lastWheel = 0;
+  showcase.addEventListener("wheel", event => {
+    event.preventDefault();
+    const now = Date.now();
+    if (now - lastWheel < 280) return;
+    lastWheel = now;
+    move((event.deltaX || event.deltaY) > 0 ? 1 : -1);
+  }, {passive: false});
+  document.addEventListener("keydown", event => {
+    if (event.key === "ArrowLeft") move(-1);
+    if (event.key === "ArrowRight") move(1);
+  });
+  render();
+})();
+</script>
+
 </body>
 </html>
