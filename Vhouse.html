@@ -72,13 +72,13 @@ html, body {
   width: 88.888889%;
   pointer-events: none;
 }
-/* Fireplace: a restrained, uneven white-and-amber ambient flicker. */
+/* Larger, brighter uneven yellow-and-white fireplace ambience. */
 .fireplace-light {
   position: absolute;
-  left: 43%;
-  top: 57%;
-  width: 14%;
-  height: 19%;
+  left: 38.5%;
+  top: 53%;
+  width: 23%;
+  height: 27%;
   pointer-events: none;
   z-index: 0;
   mix-blend-mode: screen;
@@ -93,36 +93,36 @@ html, body {
 }
 .fireplace-light::before {
   background: radial-gradient(ellipse at 50% 64%,
-    rgba(255, 248, 200, .45) 0%,
-    rgba(255, 213, 92, .26) 25%,
-    rgba(255, 158, 41, .09) 52%,
-    transparent 76%);
-  filter: blur(6px);
+    rgba(255, 255, 234, .82) 0%,
+    rgba(255, 218, 99, .60) 25%,
+    rgba(255, 166, 48, .27) 52%,
+    transparent 78%);
+  filter: blur(9px);
   animation: ember-breathe 4.7s ease-in-out infinite;
 }
 .fireplace-light::after {
-  inset: 16% 24% 10%;
+  inset: 13% 22% 8%;
   background: radial-gradient(ellipse at 50% 65%,
-    rgba(255, 255, 248, .52) 0%,
-    rgba(255, 235, 161, .24) 34%,
-    transparent 74%);
-  filter: blur(4px);
+    rgba(255, 255, 250, .90) 0%,
+    rgba(255, 237, 169, .50) 34%,
+    transparent 76%);
+  filter: blur(7px);
   animation: ember-flicker 2.3s ease-in-out infinite;
 }
 @keyframes ember-breathe {
-  0%, 100% { opacity: .46; transform: scale(.98, 1); }
-  13% { opacity: .67; transform: scale(1.02, 1.05); }
-  32% { opacity: .42; transform: scale(.97, 1.01); }
-  53% { opacity: .78; transform: scale(1.05, 1.08); }
-  69% { opacity: .50; transform: scale(.99, 1.03); }
-  86% { opacity: .70; transform: scale(1.03, 1.07); }
+  0%, 100% { opacity: .65; transform: scale(.98, 1); }
+  13% { opacity: .86; transform: scale(1.02, 1.05); }
+  32% { opacity: .59; transform: scale(.97, 1.01); }
+  53% { opacity: 1; transform: scale(1.05, 1.08); }
+  69% { opacity: .69; transform: scale(.99, 1.03); }
+  86% { opacity: .93; transform: scale(1.03, 1.07); }
 }
 @keyframes ember-flicker {
-  0%, 100% { opacity: .54; transform: translateY(0) scale(1); }
-  18% { opacity: .82; transform: translateY(-1%) scale(1.03, 1.06); }
-  37% { opacity: .47; transform: translateY(1%) scale(.96, 1.01); }
-  61% { opacity: .90; transform: translateY(-2%) scale(1.05, 1.08); }
-  79% { opacity: .58; transform: translateY(0) scale(.99, 1.03); }
+  0%, 100% { opacity: .70; transform: translateY(0) scale(1); }
+  18% { opacity: 1; transform: translateY(-1%) scale(1.03, 1.06); }
+  37% { opacity: .62; transform: translateY(1%) scale(.96, 1.01); }
+  61% { opacity: 1; transform: translateY(-2%) scale(1.05, 1.08); }
+  79% { opacity: .75; transform: translateY(0) scale(.99, 1.03); }
 }
 @media (prefers-reduced-motion: reduce) {
   .fireplace-light::before,
