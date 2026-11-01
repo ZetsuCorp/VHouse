@@ -117,9 +117,9 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .finish-button:hover,.finish-button:focus-visible { background:linear-gradient(100deg,#197687,#13445e); outline:none; box-shadow:0 0 16px #00eaff66; }
 .finish-button:active { transform:translateY(1px); }
 /* The same message-frame graphic used by the Journey screen. */
-.finish-overlay { position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
-.finish-message { position:relative; width:56%; }
-.finish-message img { display:block; width:100%; height:auto; filter:drop-shadow(0 0 5px #ffffff6b) drop-shadow(0 0 11px #ffffff38); pointer-events:none; }
+.finish-overlay { position:absolute; inset:0; z-index:30; }
+.finish-message { position:absolute; left:50%; top:74.72%; width:55.99%; height:22.81%; transform:translateX(-50%); }
+.finish-message img { display:block; width:100%; height:100%; object-fit:fill; filter:drop-shadow(0 0 5px #ffffff6b) drop-shadow(0 0 11px #ffffff38); pointer-events:none; }
 .finish-message-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:2.6cqw; font-weight:900; text-shadow:0 2px 8px #000; pointer-events:none; }
 
 [hidden] { display:none!important; }
