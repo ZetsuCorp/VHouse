@@ -164,19 +164,20 @@ html, body {
   z-index: 20;
 }
 .journey-overlay[hidden] { display: none; }
-.journey-window {
+.journey-window,
+.message-window {
   position: absolute;
-  left: 24.83%;
-  top: 9.14%;
+  left: 50%;
   width: 50.90%;
+  transform: translateX(-50%);
+}
+.journey-window {
+  top: 9.14%;
   height: 63.55%;
 }
 /* MESSAGE CONTAINER */
 .message-window {
-  position: absolute;
-  left: 24.25%;
   top: 75.76%;
-  width: 50%;
   height: 20.74%;
 }
 .journey-window iframe,
