@@ -45,7 +45,14 @@ html, body {
 </head>
 <body>
 <div class="container-stage">
-  <img class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
+  <img id="containerImage" class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
+  <script>
+  if (document.documentElement.classList.contains("message-mode")) {
+    const image = document.getElementById("containerImage");
+    image.src = "assets/Message Frame.png";
+    image.alt = "VHouse Message Frame";
+  }
+  </script>
 </div>
 </body>
 </html>
