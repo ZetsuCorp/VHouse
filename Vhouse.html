@@ -217,6 +217,63 @@ html, body {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
   pointer-events: none;
 }
+/* Reuse the same Vcontainer frame as the Journey menu. */
+.login-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+.login-overlay[hidden] { display: none; }
+.login-window {
+  position: absolute;
+  top: 9.14%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50.90%;
+  height: 63.55%;
+}
+.login-window iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+.login-options {
+  position: absolute;
+  inset: 17% 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(7px, 1vw, 16px);
+}
+.login-options h2 {
+  color: #ffe9a4;
+  font-size: clamp(14px, 2vw, 28px);
+  text-shadow: 0 0 12px rgba(255, 210, 105, .65);
+  letter-spacing: .06em;
+}
+.login-options button {
+  display: block;
+  width: 82%;
+  max-width: 300px;
+  padding: clamp(7px, .9vw, 12px) 10px;
+  border: 1px solid #ffd77b;
+  border-radius: 6px;
+  background: rgba(22, 8, 49, .92);
+  color: #fff;
+  font: bold clamp(11px, 1.3vw, 18px) Arial, sans-serif;
+  text-shadow: 0 0 6px rgba(255, 235, 150, .38);
+  box-shadow: 0 0 10px rgba(255, 194, 87, .3);
+  cursor: pointer;
+}
+.login-options button:hover,
+.login-options button:focus-visible {
+  background: rgba(79, 39, 126, .95);
+  box-shadow: 0 0 15px rgba(255, 216, 132, .6);
+}
 </style>
 </head>
 <body>
@@ -241,7 +298,36 @@ html, body {
         <img src="assets/PlayerHolder-removebg-preview.png" alt="Player Placeholder" draggable="false">
       </div>
     </div>
+    <div id="loginOverlay" class="login-overlay" hidden>
+      <div class="login-window" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <iframe src="vcontainer.html" title="VHouse Login Menu" tabindex="-1" aria-hidden="true"></iframe>
+        <div class="login-options">
+          <h2 id="loginTitle">LOG IN</h2>
+          <button type="button">Log In with Email</button>
+          <button type="button">Log In with Discord</button>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
+<script>
+const loginButton = document.querySelector(".hotspot-login");
+const loginOverlay = document.getElementById("loginOverlay");
+const loginWindow = loginOverlay.querySelector(".login-window");
+
+loginButton.addEventListener("click", () => {
+  loginOverlay.hidden = false;
+});
+
+loginOverlay.addEventListener("click", (event) => {
+  if (!loginWindow.contains(event.target)) {
+    loginOverlay.hidden = true;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") loginOverlay.hidden = true;
+});
+</script>
 </body>
 </html>
