@@ -157,6 +157,28 @@ html, body {
   height: 32.69%;
 }
 
+/* Journey overlay, aligned to the second marked rectangle. */
+.journey-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+.journey-overlay[hidden] { display: none; }
+.journey-window {
+  position: absolute;
+  left: 24.83%;
+  top: 9.14%;
+  width: 50.90%;
+  height: 63.55%;
+}
+.journey-window iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
 </style>
 </head>
 
@@ -192,6 +214,7 @@ html, body {
     <!-- 2. JOURNEY -->
     <button
       type="button"
+      id="journeyButton"
       class="map-hotspot hotspot-journey"
       data-label="Journey"
       aria-label="Journey">
@@ -205,9 +228,37 @@ html, body {
       aria-label="Shop">
     </button>
 
+    <!-- JOURNEY OVERLAY -->
+    <div id="journeyOverlay" class="journey-overlay" hidden>
+      <div class="journey-window">
+        <iframe src="vcontainer.html" title="Journey Container"></iframe>
+      </div>
+    </div>
+
   </div>
 
 </main>
 
+<script>
+const journeyButton = document.getElementById("journeyButton");
+const journeyOverlay = document.getElementById("journeyOverlay");
+const journeyWindow = journeyOverlay.querySelector(".journey-window");
+
+journeyButton.addEventListener("click", () => {
+  journeyOverlay.hidden = false;
+});
+
+journeyOverlay.addEventListener("click", (event) => {
+  if (!journeyWindow.contains(event.target)) {
+    journeyOverlay.hidden = true;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    journeyOverlay.hidden = true;
+  }
+});
+</script>
 </body>
 </html>
