@@ -116,6 +116,9 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .finish-button { width:100%; height:38px; border:1px solid #00eaff; border-radius:7px; background:linear-gradient(100deg,#164b55,#0e263b); color:#fff; font-size:13px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 12px #00eaff33; }
 .finish-button:hover,.finish-button:focus-visible { background:linear-gradient(100deg,#197687,#13445e); outline:none; box-shadow:0 0 16px #00eaff66; }
 .finish-button:active { transform:translateY(1px); }
+/* Finished VCard takes the creation controls' place. */
+.saved-card-display { width:438px; height:530px; display:flex; align-items:center; justify-content:center; }
+.saved-card-inner { width:336px; max-width:100%; }
 /* The same message-frame graphic used by the Journey screen. */
 .finish-overlay { position:absolute; inset:0; z-index:30; }
 .finish-message { position:absolute; left:50%; top:74.72%; width:55.99%; height:22.81%; transform:translateX(-50%); }
@@ -203,6 +206,9 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
               <button type="button" class="finish-button" id="finishButton">FINISH</button>
             </div>
           </section>
+          <div class="saved-card-display" id="savedCardDisplay" hidden>
+            <div class="saved-card-inner" id="savedCardInner"></div>
+          </div>
           <section class="preview-wrap">
             <div class="preview-top">
               <strong>YOUR VCARD</strong>
@@ -328,7 +334,60 @@ document.querySelectorAll(".mode-button").forEach(button=>button.addEventListene
   updateDescription();
 }));
 $("descriptionInput").addEventListener("input",updateDescription);
-$("finishButton").addEventListener("click",()=>{ $("finishOverlay").hidden=false; });
+// Save the actual selections first; only close the creation unit after local storage succeeds.
+async function saveCardAndFinish() {
+  const imageElement=$("cardImage");
+  let savedImage=imageElement.src;
+
+  // Blob URLs from PC uploads only last for this browser session.
+  // Store a compact image data URL so the saved card contains its artwork.
+  if (uploadedImage) {
+    await imageElement.decode();
+    const canvas=document.createElement("canvas");
+    canvas.width=640;
+    canvas.height=480;
+    const context=canvas.getContext("2d");
+    const width=imageElement.naturalWidth;
+    const height=imageElement.naturalHeight;
+    const ratio=Math.max(640/width,480/height);
+    const scaledWidth=width*ratio;
+    const scaledHeight=height*ratio;
+    context.drawImage(imageElement,(640-scaledWidth)/2,(480-scaledHeight)/2,scaledWidth,scaledHeight);
+    savedImage=canvas.toDataURL("image/jpeg",0.8);
+  }
+
+  const savedCard={
+    team:$("teamBadge").textContent,
+    name:$("cardName").textContent,
+    image:savedImage,
+    description:$("cardDescription").textContent,
+    level:1,
+    atk:100,
+    def:100,
+    footer:document.querySelector(".meta-footer-text").textContent
+  };
+
+  localStorage.setItem("vhouse-vcard",JSON.stringify(savedCard));
+
+  // Display the completed card itself in place of the editor.
+  const completedCard=$("vcard").cloneNode(true);
+  completedCard.removeAttribute("id");
+  completedCard.querySelectorAll("[id]").forEach(node=>node.removeAttribute("id"));
+  completedCard.querySelector(".card-art img").src=savedImage;
+  $("savedCardInner").replaceChildren(completedCard);
+  document.querySelector(".editor").hidden=true;
+  $("savedCardDisplay").hidden=false;
+  $("finishOverlay").hidden=false;
+}
+
+$("finishButton").addEventListener("click",async()=>{
+  try {
+    await saveCardAndFinish();
+  } catch(error) {
+    console.error("Could not save VCard locally:",error);
+    alert("Card could not be saved locally.");
+  }
+});
 $("finishOverlay").addEventListener("click",e=>{ if(e.target===$("finishOverlay")) $("finishOverlay").hidden=true; });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("finishOverlay").hidden=true; });
 setTeam("R");
