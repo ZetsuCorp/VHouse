@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VCloset — VHouse</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: Arial, sans-serif;
+}
+.rotate-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  padding: 24px;
+}
+.rotate-icon { font-size: 64px; }
+.rotate-screen h2 { font-size: 24px; }
+.rotate-screen p { font-size: 16px; color: #bbb; }
+@media (orientation: portrait) {
+  .rotate-screen { display: flex; }
+  .game-container { display: none !important; }
+}
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.map-container {
+  position: relative;
+  width: min(100vw, 200dvh);
+  aspect-ratio: 2 / 1;
+  flex-shrink: 0;
+  container-type: inline-size;
+}
+.game-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+<div class="rotate-screen">
+  <div class="rotate-icon">↻</div>
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+<main class="game-container">
+  <div class="map-container">
+    <img class="game-map" src="assets/VCloset.png" alt="VCloset Interior" draggable="false">
+  </div>
+</main>
+</body>
+</html>
