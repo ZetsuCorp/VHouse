@@ -63,6 +63,32 @@ html, body {
   -webkit-user-drag: none;
   pointer-events: none;
 }
+.back-button {
+  position: absolute;
+  left: 1.5%;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8%;
+  padding: .7cqw 1cqw;
+  border: 2px solid #ffb62d;
+  border-radius: .6cqw;
+  background: #160d27;
+  color: #fff;
+  box-shadow: 0 0 1cqw #ff9d2966;
+  text-decoration: none;
+  font-size: 1.25cqw;
+  font-weight: 900;
+  letter-spacing: .07em;
+}
+.back-button:hover,
+.back-button:focus-visible {
+  background: #36204e;
+  box-shadow: 0 0 1.5cqw #ffb62d99;
+}
 </style>
 </head>
 <body>
@@ -74,6 +100,7 @@ html, body {
 <main class="game-container">
   <div class="map-container">
     <img class="game-map" src="assets/VCloset.png" alt="VCloset Interior" draggable="false">
+    <a class="back-button" href="./Vhouse.html">← BACK</a>
   </div>
 </main>
 </body>
