@@ -369,13 +369,12 @@ async function saveCardAndFinish() {
 
   localStorage.setItem("vhouse-vcard",JSON.stringify(savedCard));
 
-  // Display the completed card itself in place of the editor.
-  const completedCard=$("vcard").cloneNode(true);
-  completedCard.removeAttribute("id");
-  completedCard.querySelectorAll("[id]").forEach(node=>node.removeAttribute("id"));
+  // Move the original card into the space formerly occupied by the creator.
+  const completedCard=$("vcard");
   completedCard.querySelector(".card-art img").src=savedImage;
   $("savedCardInner").replaceChildren(completedCard);
   document.querySelector(".editor").hidden=true;
+  document.querySelector(".preview-wrap").hidden=true;
   $("savedCardDisplay").hidden=false;
   $("finishOverlay").hidden=false;
 }
