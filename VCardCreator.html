@@ -5,63 +5,138 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VCard Creator — VHouse</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #000;
-  font-family: Arial, sans-serif;
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
+.rotate-screen { display:none; position:fixed; inset:0; z-index:9999; background:#000; color:#fff; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:24px; }
+.rotate-icon { font-size:64px; }
+.rotate-screen h2 { font-size:24px; }
+.rotate-screen p { font-size:16px; color:#bbb; }
+@media (orientation:portrait) {
+  .rotate-screen { display:flex; }
+  .game-container { display:none!important; }
 }
-.rotate-screen {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: #000;
-  color: #fff;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  text-align: center;
-  padding: 24px;
+.game-container { width:100vw; height:100vh; height:100dvh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.map-container { position:relative; width:min(100vw,200dvh); aspect-ratio:2/1; flex-shrink:0; container-type:inline-size; overflow:hidden; }
+.creator-background { display:block; width:100%; height:100%; object-fit:fill; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+
+/* Interactive creator lives entirely inside the white rectangle in Vcontainer.png. */
+.creator-region {
+  position:absolute;
+  left:12.55%;
+  top:19.85%;
+  width:48.3%;
+  height:63%;
+  overflow:hidden;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
-.rotate-icon { font-size: 64px; }
-.rotate-screen h2 { font-size: 24px; }
-.rotate-screen p { font-size: 16px; color: #bbb; }
-/* Match the existing VHouse landscape-only game pages. */
-@media (orientation: portrait) {
-  .rotate-screen { display: flex; }
-  .game-container { display: none !important; }
+.creator-content {
+  --cyan:#00eaff;
+  width:790px;
+  height:530px;
+  flex:0 0 790px;
+  transform-origin:center center;
+  color:#eaf9ff;
+  font-family:Arial,Helvetica,sans-serif;
 }
-.game-container {
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+.workspace {
+  display:grid;
+  grid-template-columns:438px 336px;
+  gap:16px;
+  height:530px;
+  align-items:start;
 }
-.map-container {
-  position: relative;
-  width: min(100vw, 200dvh);
-  aspect-ratio: 2 / 1;
-  flex-shrink: 0;
-  container-type: inline-size;
-  overflow: hidden;
+/* Creation controls */
+.editor {
+  height:530px;
+  background:linear-gradient(145deg,#131d2a,#0a1018);
+  border:1px solid #355066;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 12px 35px #0007;
 }
-/* Vcontainer is the creator page's background, not an iframe. */
-.creator-background {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
+.editor-head {
+  height:42px;
+  padding:0 16px;
+  border-bottom:1px solid #294050;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
 }
+.editor-title { font-size:15px; font-weight:900; letter-spacing:1.8px; }
+.editor-head small { color:#6b9dab; font-size:10px; letter-spacing:1px; }
+.group { padding:11px 16px; border-bottom:1px solid #253644; }
+.group:last-child { border-bottom:0; }
+.group-label { display:flex; align-items:center; gap:9px; margin-bottom:9px; font-size:11px; font-weight:900; letter-spacing:1.1px; }
+.group-label b { color:var(--cyan); font-size:11px; }
+.name-input,.description-input {
+  display:block;
+  width:100%;
+  background:#080f18;
+  color:white;
+  border:1px solid #385567;
+  border-radius:7px;
+  padding:10px 11px;
+  outline:none;
+  font:inherit;
+  font-size:13px;
+}
+.name-input:focus,.description-input:focus { border-color:var(--cyan); box-shadow:0 0 0 2px #00eaff18; }
+.description-input { height:68px; min-height:68px; resize:none; line-height:1.4; }
+.team-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.team-button {
+  appearance:none;
+  border:1px solid #345163;
+  background:linear-gradient(#1a2a39,#111a25);
+  color:#b9ced7;
+  border-radius:9px;
+  height:68px;
+  cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.team-button .symbol { display:block; font-size:25px; margin-bottom:4px; }
+.team-button .team-name { display:block; font-size:10px; letter-spacing:1px; font-weight:900; }
+.team-button:hover { border-color:#a1e6eb; }
+.team-button.active { background:linear-gradient(#123c48,#11232f); color:#fff; border-color:var(--cyan); box-shadow:inset 0 0 14px #00eaff20,0 0 12px #00eaff29; }
+.gallery { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.gallery-tile { appearance:none; text-align:center; background:#080f17; border:2px solid #293f50; padding:4px 4px 6px; border-radius:8px; color:#a9bbc9; cursor:pointer; overflow:hidden; }
+.gallery-tile img { width:100%; height:69px; object-fit:cover; border-radius:4px; display:block; margin-bottom:4px; background:#172633; }
+.gallery-tile span { font-size:9px; font-weight:bold; }
+.gallery-tile.selected { border-color:var(--cyan); box-shadow:0 0 13px #00eaff28; color:#fff; }
+.gallery-tile:hover { border-color:#7acbd8; }
+.upload { margin-top:8px; height:30px; border:1px dashed #4b6977; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#b1ccd7; font-size:10px; cursor:pointer; }
+.upload:hover,.upload.selected { background:#102531; border-color:var(--cyan); }
+.upload input { display:none; }
+.mode-row { display:flex; gap:8px; margin-bottom:8px; }
+.mode-button { flex:1; height:28px; border:1px solid #355266; border-radius:6px; background:#0b141e; color:#9fb4c3; font-size:10px; font-weight:800; cursor:pointer; }
+.mode-button.active { border-color:var(--cyan); background:#11303c; color:#fff; }
+.default-preview { padding:9px; border-left:2px solid var(--cyan); background:#0b141e; color:#a8c0c9; font-size:11px; line-height:1.4; }
+[hidden] { display:none!important; }
+/* Live card preview */
+.preview-wrap { width:336px; }
+.preview-top { height:26px; display:flex; justify-content:space-between; align-items:center; padding:0 3px; }
+.preview-top strong { font-size:11px; letter-spacing:1.6px; color:#a3b7c3; }
+.live { color:#6be5b4; font-size:9px; letter-spacing:1px; font-weight:bold; }
+.live:before { content:""; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:#4dffc0; box-shadow:0 0 8px #4dffc0; }
+.card-stand { padding:8px; border:1px solid #294355; border-radius:12px; background:radial-gradient(circle at 50% 35%,#19364a,#080e15 73%); box-shadow:0 12px 35px #0007; }
+.vcard { --accent:#00eaff; --accent-glow:#00eaff44; width:100%; border:8px solid #020305; border-radius:12px; overflow:hidden; background:#080808; box-shadow:0 0 20px var(--accent-glow); color:#e0fefe; container-type:inline-size; }
+.vcard-inner { border:4px solid var(--accent); border-radius:6px; overflow:hidden; background:radial-gradient(circle at 50% 5%,#1c2832,#090d13 60%); }
+.card-header { border-bottom:2px solid var(--accent); background:#03070c; padding:10px 7px; text-align:center; }
+.card-name { font-size:clamp(14px,6cqw,22px); line-height:1.1; font-weight:900; letter-spacing:1px; text-transform:uppercase; overflow-wrap:anywhere; }
+.card-art { margin:7px; position:relative; aspect-ratio:4/3; border:3px solid var(--accent); border-radius:6px; background:#0b1620; overflow:hidden; }
+.card-art img { width:100%; height:100%; object-fit:cover; display:block; }
+.card-art:after { content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 32px #0008; }
+.card-info { padding:8px 13px; border-top:2px solid var(--accent); font-weight:900; font-size:13px; background:#0b131b; letter-spacing:1px; }
+.card-description { padding:9px 13px; border-top:2px solid var(--accent); background:#10161b; min-height:58px; font-size:11px; line-height:1.4; color:#b8d7d7; white-space:pre-wrap; overflow-wrap:anywhere; }
+.card-stats { display:flex; justify-content:space-around; border-top:2px solid var(--accent); padding:10px 8px; background:#020508; }
+.stat { flex:1; text-align:center; }
+.stat+.stat { border-left:1px solid #34414b; }
+.stat-label { display:block; font-weight:900; font-size:11px; color:#9abbbe; margin-bottom:2px; }
+.stat-value { font-size:24px; font-weight:900; color:#fff; }
+.meta-bottom { position:relative; border-top:2px solid var(--accent); background:#111; padding:10px 32px 10px 3px; text-align:center; }
+.meta-footer-text { color:#cfcfcf; font-size:clamp(4px,1.6cqw,6px); line-height:1; white-space:nowrap; letter-spacing:-.08px; }
+.rarity { position:absolute; right:6px; top:50%; transform:translateY(-50%); min-width:25px; text-align:center; padding:3px 5px; border-radius:4px; border:1px solid #ffffff50; color:#fff; background:var(--accent); font-size:11px; font-weight:900; text-shadow:0 1px 2px #0008; }
 </style>
 </head>
 <body>
@@ -73,7 +148,171 @@ html, body {
 <main class="game-container">
   <div class="map-container">
     <img class="creator-background" src="assets/Vcontainer.png" alt="VCard Creator Menu" draggable="false">
+    <div class="creator-region" id="creatorRegion">
+      <div class="creator-content" id="creatorContent">
+        <div class="workspace">
+          <section class="editor">
+            <div class="editor-head">
+              <span class="editor-title">VCARD CREATION</span>
+              <small>LEVEL 01</small>
+            </div>
+            <div class="group">
+              <div class="group-label"><b>01</b><span>CHOOSE YOUR TEAM</span></div>
+              <div class="team-grid">
+                <button class="team-button active" data-team="R" type="button"><span class="symbol">🪨</span><span class="team-name">STONE</span></button>
+                <button class="team-button" data-team="P" type="button"><span class="symbol">🌬️</span><span class="team-name">WIND</span></button>
+                <button class="team-button" data-team="S" type="button"><span class="symbol">🗡️</span><span class="team-name">BLADE</span></button>
+              </div>
+            </div>
+            <div class="group">
+              <div class="group-label"><b>02</b><span>ENTER A NAME</span></div>
+              <input class="name-input" id="nameInput" type="text" maxlength="40" placeholder="Enter a name" value="Johnny J">
+            </div>
+            <div class="group">
+              <div class="group-label"><b>03</b><span>CHOOSE YOUR IMAGE</span></div>
+              <div class="gallery">
+                <button class="gallery-tile selected" data-art="0" type="button"><img id="thumb0" alt="Traveler demo art"><span>TRAVELER</span></button>
+                <button class="gallery-tile" data-art="1" type="button"><img id="thumb1" alt="Guardian demo art"><span>GUARDIAN</span></button>
+                <button class="gallery-tile" data-art="2" type="button"><img id="thumb2" alt="Rebel demo art"><span>REBEL</span></button>
+              </div>
+              <label class="upload" id="uploadLabel">
+                <span id="uploadText">＋ &nbsp; CHOOSE IMAGE FROM PC</span>
+                <input type="file" id="fileInput" accept="image/*">
+              </label>
+            </div>
+            <div class="group">
+              <div class="group-label"><b>04</b><span>CHARACTER DESCRIPTION</span></div>
+              <div class="mode-row">
+                <button class="mode-button active" data-mode="default" type="button">DEFAULT</button>
+                <button class="mode-button" data-mode="custom" type="button">WRITE MY OWN</button>
+              </div>
+              <div class="default-preview" id="defaultText">A traveler beginning their journey into the unknown.</div>
+              <textarea class="description-input" id="descriptionInput" maxlength="300" placeholder="Write your character's description..." hidden></textarea>
+            </div>
+          </section>
+          <section class="preview-wrap">
+            <div class="preview-top">
+              <strong>YOUR VCARD</strong>
+              <span class="live">LIVE PREVIEW</span>
+            </div>
+            <div class="card-stand">
+              <div class="vcard" id="vcard">
+                <div class="vcard-inner">
+                  <header class="card-header"><h2 class="card-name" id="cardName">Johnny J</h2></header>
+                  <div class="card-art"><img id="cardImage" alt="Selected VCard artwork"></div>
+                  <div class="card-info">LEVEL 1</div>
+                  <div class="card-description" id="cardDescription">A traveler beginning their journey into the unknown.</div>
+                  <div class="card-stats">
+                    <div class="stat"><span class="stat-label">ATK</span><span class="stat-value">100</span></div>
+                    <div class="stat"><span class="stat-label">DEF</span><span class="stat-value">100</span></div>
+                  </div>
+                  <div class="meta-bottom">
+                    <div class="meta-footer-text">Play directly inside the Zetsu Wall feed. No downloads. No account needed. Uploaded Nov 2025</div>
+                    <div class="rarity" id="teamBadge">R</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
+<script>
+const $ = id => document.getElementById(id);
+const defaultDescription = "A traveler beginning their journey into the unknown.";
+const teamColors = { R:"#2d7bdc", P:"#1abf96", S:"#b16df4" };
+let descriptionMode="default", artIndex=0, uploadedImage=null, uploadedUrl=null;
+
+/* Keep the full editor and card inside the image's white rectangle at every landscape size. */
+function fitCreator() {
+  const r=$("creatorRegion").getBoundingClientRect();
+  const scale=Math.min(r.width/790,r.height/530);
+  $("creatorContent").style.transform="scale("+scale+")";
+}
+new ResizeObserver(fitCreator).observe($("creatorRegion"));
+window.addEventListener("resize",fitCreator);
+
+/* Embedded demo character images; replace with in-game files when ready. */
+const palettes=[
+  {bg:"#152b40",light:"#2c9bd7",suit:"#124362",armor:"#347b99",face:"#d6a47c",visor:"#62f0ff"},
+  {bg:"#30263c",light:"#aa67dd",suit:"#39304d",armor:"#8276ac",face:"#b98979",visor:"#ffc4ff"},
+  {bg:"#42282d",light:"#ff815f",suit:"#4c2635",armor:"#bb6056",face:"#bc8667",visor:"#ffd18a"}
+];
+function portraitSVG(p,index) {
+  const headpieces=[
+    '<path d="M201 271 Q190 111 320 104 Q447 111 439 271 L411 234 L393 161 Q320 123 247 162 L225 243Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/><path d="M237 170 Q320 116 402 170" fill="none" stroke="LIGHT" stroke-width="6" opacity=".8"/>',
+    '<path d="M215 258 L209 154 L255 92 L385 92 L431 154 L425 258 L395 226 L380 139 L260 139 L245 226Z" fill="ARMOR" stroke="#151e2b" stroke-width="12"/><path d="M275 98 L320 60 L365 98 L354 125 L286 125Z" fill="LIGHT" opacity=".9"/>',
+    '<path d="M209 239 L188 172 L234 183 L218 109 L284 142 L330 93 L348 145 L426 115 L405 198 L440 231 L407 254 Q320 189 233 263Z" fill="#211c29" stroke="LIGHT" stroke-width="5"/>'
+  ];
+  let svg=[
+    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">',
+    '<defs><radialGradient id="sky"><stop stop-color="LIGHT" stop-opacity=".55"/><stop offset="1" stop-color="BG"/></radialGradient><linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="ARMOR"/><stop offset=".5" stop-color="SUIT"/><stop offset="1" stop-color="#0c1420"/></linearGradient><linearGradient id="skin"><stop stop-color="FACE"/><stop offset="1" stop-color="#634941"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="12"/></filter></defs>',
+    '<rect width="640" height="480" fill="url(#sky)"/>',
+    '<circle cx="320" cy="200" r="151" fill="LIGHT" opacity=".17" filter="url(#glow)"/><circle cx="320" cy="200" r="134" fill="none" stroke="LIGHT" stroke-width="2" opacity=".45"/><circle cx="320" cy="200" r="165" fill="none" stroke="LIGHT" stroke-dasharray="22 12" opacity=".2"/>',
+    '<path d="M0 332 L105 255 L180 306 L265 227 L345 315 L439 255 L526 311 L640 245 L640 480 L0 480Z" fill="#0b1524" opacity=".8"/>',
+    '<g stroke="LIGHT" opacity=".23"><path d="M0 390H640 M0 430H640"/><path d="M130 480L270 345 M510 480L370 345"/><path d="M0 458L260 345 M640 458L380 345"/><path d="M50 210H150 M490 210H590"/><path d="M90 240H160 M480 240H550"/></g>',
+    '<path d="M118 480 L138 394 Q157 351 222 330 L273 313 L368 313 L418 330 Q484 351 504 394 L522 480Z" fill="url(#metal)" stroke="#0a111b" stroke-width="13"/>',
+    '<path d="M262 327 L320 394 L378 327 L368 480 L273 480Z" fill="#07131f"/><path d="M236 334 L320 421 L404 334" fill="none" stroke="LIGHT" stroke-width="7" opacity=".85"/>',
+    '<path d="M140 404 L213 363 L252 401 L222 480 L110 480Z" fill="ARMOR" stroke="#132131" stroke-width="9"/><path d="M500 404 L427 363 L388 401 L418 480 L530 480Z" fill="ARMOR" stroke="#132131" stroke-width="9"/>',
+    '<path d="M289 286 H351 L356 353 L320 389 L284 353Z" fill="url(#skin)" stroke="#16202b" stroke-width="7"/>',
+    '<ellipse cx="320" cy="225" rx="89" ry="122" fill="url(#skin)" stroke="#16202b" stroke-width="9"/>',
+    headpieces[index],
+    '<path d="M256 230 L302 231 M338 231 L384 230" stroke="#19202a" stroke-width="14" stroke-linecap="round"/><path d="M263 232 H297 M343 232 H377" stroke="VISOR" stroke-width="5" stroke-linecap="round"/>',
+    '<path d="M288 295 Q320 312 351 295" fill="none" stroke="#46343b" stroke-width="6" opacity=".8"/>',
+    '<path d="M320 411 L338 434 L320 457 L302 434Z" fill="LIGHT" stroke="#b0e6ef" stroke-width="3"/>',
+    '<path d="M0 0H640V480H0Z" fill="none" stroke="LIGHT" stroke-width="8" opacity=".16"/>',
+    '</svg>'
+  ].join("");
+  const colors={BG:p.bg,LIGHT:p.light,SUIT:p.suit,ARMOR:p.armor,FACE:p.face,VISOR:p.visor};
+  svg=svg.replace(/\b(BG|LIGHT|SUIT|ARMOR|FACE|VISOR)\b/g,m=>colors[m]);
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+}
+const art=palettes.map(portraitSVG);
+art.forEach((src,i)=>{ $("thumb"+i).src=src; });
+function updateArt() { $("cardImage").src=uploadedImage||art[artIndex]; }
+function setTeam(value) {
+  document.querySelectorAll(".team-button").forEach(btn=>btn.classList.toggle("active",btn.dataset.team===value));
+  $("teamBadge").textContent=value;
+  $("vcard").style.setProperty("--accent",teamColors[value]);
+  $("vcard").style.setProperty("--accent-glow",teamColors[value]+"55");
+}
+document.querySelectorAll(".team-button").forEach(btn=>btn.addEventListener("click",()=>setTeam(btn.dataset.team)));
+$("nameInput").addEventListener("input",e=>{ $("cardName").textContent=e.target.value.trim()||"VCARD NAME"; });
+document.querySelectorAll(".gallery-tile").forEach(tile=>tile.addEventListener("click",()=>{
+  artIndex=Number(tile.dataset.art);
+  uploadedImage=null;
+  $("uploadLabel").classList.remove("selected");
+  document.querySelectorAll(".gallery-tile").forEach(t=>t.classList.toggle("selected",t===tile));
+  updateArt();
+}));
+$("fileInput").addEventListener("change",e=>{
+  const file=e.target.files[0];
+  if(!file||!file.type.startsWith("image/")) return;
+  if(uploadedUrl) URL.revokeObjectURL(uploadedUrl);
+  uploadedUrl=URL.createObjectURL(file);
+  uploadedImage=uploadedUrl;
+  document.querySelectorAll(".gallery-tile").forEach(t=>t.classList.remove("selected"));
+  $("uploadLabel").classList.add("selected");
+  $("uploadText").textContent="✓  "+file.name;
+  updateArt();
+});
+function updateDescription() {
+  $("cardDescription").textContent=descriptionMode==="default"?defaultDescription:$("descriptionInput").value;
+}
+document.querySelectorAll(".mode-button").forEach(button=>button.addEventListener("click",()=>{
+  descriptionMode=button.dataset.mode;
+  document.querySelectorAll(".mode-button").forEach(b=>b.classList.toggle("active",b===button));
+  $("defaultText").hidden=descriptionMode!=="default";
+  $("descriptionInput").hidden=descriptionMode!=="custom";
+  updateDescription();
+}));
+$("descriptionInput").addEventListener("input",updateDescription);
+setTeam("R");
+updateArt();
+updateDescription();
+fitCreator();
+</script>
 </body>
 </html>
