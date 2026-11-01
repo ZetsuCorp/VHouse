@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse Container</title>
+<script>
+if (new URLSearchParams(location.search).get("mode") === "message") {
+  document.documentElement.classList.add("message-mode");
+}
+</script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -29,6 +34,12 @@ html, body {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
   user-select: none;
   -webkit-user-drag: none;
+}
+/* RESIZE THE SAME IMAGE FOR MESSAGES */
+.message-mode .container-image {
+  height: 100%;
+  max-height: none;
+  object-fit: fill;
 }
 </style>
 </head>

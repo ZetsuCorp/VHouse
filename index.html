@@ -171,11 +171,20 @@ html, body {
   width: 50.90%;
   height: 63.55%;
 }
-.journey-window iframe {
+/* MESSAGE CONTAINER */
+.message-window {
+  position: absolute;
+  left: 24.25%;
+  top: 75.76%;
+  width: 50%;
+  height: 20.74%;
+}
+.journey-window iframe,
+.message-window iframe {
   display: block;
   width: 100%;
   height: 100%;
-  border: 0;
+  border: none;
   background: transparent;
 }
 
@@ -231,7 +240,10 @@ html, body {
     <!-- JOURNEY OVERLAY -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
       <div class="journey-window">
-        <iframe src="vcontainer.html" title="Journey Container"></iframe>
+        <iframe src="vcontainer.html" title="Journey Menu"></iframe>
+      </div>
+      <div class="message-window">
+        <iframe src="vcontainer.html?mode=message" title="Journey Messages"></iframe>
       </div>
     </div>
 
@@ -243,13 +255,15 @@ html, body {
 const journeyButton = document.getElementById("journeyButton");
 const journeyOverlay = document.getElementById("journeyOverlay");
 const journeyWindow = journeyOverlay.querySelector(".journey-window");
+const messageWindow = journeyOverlay.querySelector(".message-window");
 
 journeyButton.addEventListener("click", () => {
   journeyOverlay.hidden = false;
 });
 
 journeyOverlay.addEventListener("click", (event) => {
-  if (!journeyWindow.contains(event.target)) {
+  if (!journeyWindow.contains(event.target) &&
+      !messageWindow.contains(event.target)) {
     journeyOverlay.hidden = true;
   }
 });
