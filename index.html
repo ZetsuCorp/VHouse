@@ -171,9 +171,15 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+.player-icon::after {
+  content: "";
+  position: absolute;
+  inset: 5%;
   border: 3px solid white;
   border-radius: 50%;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
 }
 
 /* Journey overlay, aligned to the second marked rectangle. */
