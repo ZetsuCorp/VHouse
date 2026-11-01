@@ -258,20 +258,7 @@ html, body {
   width: 55.99%;
   height: 22.81%;
 }
-/* White circular backlight behind the message frame only. */
-.message-window::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 55%;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.9);
-  filter: blur(clamp(18px, 3vw, 55px));
-  pointer-events: none;
-}
+/* Soft white backlight follows the image's actual transparent outline. */
 .message-window img {
   position: relative;
   z-index: 1;
@@ -280,6 +267,8 @@ html, body {
   height: 100%;
   object-fit: fill;
   border: none;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, .42))
+          drop-shadow(0 0 11px rgba(255, 255, 255, .22));
   user-select: none;
   -webkit-user-drag: none;
 }
