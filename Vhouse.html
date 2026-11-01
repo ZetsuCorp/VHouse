@@ -160,15 +160,24 @@ html, body {
   line-height: 1.3;
   white-space: normal;
   text-align: center;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity .15s ease;
+  opacity: .52;
+  visibility: visible;
+  pointer-events: auto;
+  animation: house-button-float 3.4s ease-in-out infinite;
+  transition: opacity .15s ease, background .15s ease;
+}
+@keyframes house-button-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -.25cqw; }
 }
 .house-hotspot:hover::after,
 .house-hotspot:focus-visible::after {
+  animation: none;
+  translate: 0 0;
   opacity: 1;
-  visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  .house-hotspot::after { animation: none; }
 }
 .house-hotspot:focus-visible { outline: 2px solid #ffd54a; }
 .hotspot-closet { left: 5.5%; top: 13.8%; width: 6.5%; height: 20.1%; }
@@ -178,13 +187,11 @@ html, body {
 .hotspot-login { left: 6.5%; top: 70.7%; width: 15%; height: 28%; }
 .hotspot-closet::after { left: 0; transform: translate(0, -50%); }
 .hotspot-travel::after { left: auto; right: 0; transform: translate(0, -50%); }
-/* Always-visible Log In box positioned on the lower-left table. */
+/* Log In label stays on the lower-left table and shares the same idle effect. */
 .hotspot-login::after {
   left: 50%;
   top: 34%;
   transform: translate(-50%, -50%);
-  opacity: 1;
-  visibility: visible;
   white-space: nowrap;
 }
 /* HUD LAYER: player placeholder matches the index's circular white border. */
