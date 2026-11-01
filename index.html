@@ -91,7 +91,7 @@ html, body {
   pointer-events: none;
 }
 
-/* Gentle drifting map twinkles — CSS only, no interaction cost. */
+/* Visible white twinkles drifting softly over the map. */
 .map-mist {
   position: absolute;
   inset: 0;
@@ -101,21 +101,27 @@ html, body {
 }
 .mist-spark {
   position: absolute;
-  width: clamp(9px, 1.1vw, 18px);
+  width: clamp(12px, 1.2vw, 20px);
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,250,235,.95) 0 5%, rgba(255,220,180,.45) 17%, rgba(187,132,255,.17) 46%, transparent 76%);
-  opacity: 0;
+  background: radial-gradient(circle,
+    #fff 0 18%,
+    rgba(255,255,255,.95) 19% 26%,
+    rgba(255,255,255,.45) 36%,
+    rgba(255,255,255,.13) 58%,
+    transparent 78%);
+  filter: drop-shadow(0 0 4px rgba(255,255,255,.9));
+  opacity: .82;
   animation: mist-drift var(--pace, 20s) ease-in-out infinite alternate;
   animation-delay: var(--delay, 0s);
 }
 @keyframes mist-drift {
-  0%   { transform: translate3d(-8px, 5px, 0); opacity: .16; }
-  50%  { transform: translate3d(4px, -10px, 0); opacity: .5; }
-  100% { transform: translate3d(12px, -18px, 0); opacity: .22; }
+  0%   { transform: translate3d(-8px, 5px, 0); opacity: .72; }
+  50%  { transform: translate3d(4px, -10px, 0); opacity: 1; }
+  100% { transform: translate3d(12px, -18px, 0); opacity: .8; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mist-spark { animation: none; opacity: .25; }
+  .mist-spark { animation: none; opacity: .9; }
 }
 
 /* CLICKABLE MAP AREAS */
