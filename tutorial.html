@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to VHouse — Tutorial</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: Arial, Helvetica, sans-serif; color: #fff; }
+  .rotate-screen {
+    display: none; position: fixed; inset: 0; z-index: 10;
+    background: #000; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; padding: 24px; text-align: center;
+  }
+  .rotate-screen .icon { font-size: 60px; }
+  .rotate-screen h2, .rotate-screen p { margin: 0; }
+  .rotate-screen p { color: #bbb; }
+  .game-container { width: 100vw; height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .map-container { position: relative; width: min(100vw, 200dvh); aspect-ratio: 2 / 1; flex-shrink: 0; isolation: isolate; }
+  .game-map { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; pointer-events: none; }
+  .map-container::after { content: ""; position: absolute; inset: 0; background: rgba(5, 3, 15, .55); z-index: 0; pointer-events: none; }
+  .tutorial-panel {
+    position: absolute; z-index: 1;
+    inset: 5.5% 10%; overflow-y: auto;
+    padding: clamp(15px, 2.2vw, 30px) clamp(17px, 3vw, 42px);
+    background: linear-gradient(150deg, rgba(27, 15, 53, .96), rgba(6, 6, 18, .95) 65%, rgba(31, 14, 52, .96));
+    border: 2px solid #d6b76b; border-radius: 15px;
+    box-shadow: 0 0 20px rgba(242, 214, 136, .45), inset 0 0 35px rgba(134, 91, 202, .15);
+    scrollbar-color: #9372cf #191326;
+    text-align: center;
+  }
+  .eyebrow { color: #e9d59e; letter-spacing: .22em; font-weight: bold; font-size: clamp(10px, .9vw, 13px); margin-bottom: 6px; }
+  h1 { color: #fff2c6; text-shadow: 0 0 13px #c9a2ff; font-size: clamp(24px, 3vw, 46px); margin: 0 0 4px; letter-spacing: .03em; }
+  .subtitle { color: #e5d8ff; font-size: clamp(13px, 1.15vw, 18px); margin: 0 0 14px; }
+  .intro, .goal { font-size: clamp(12px, 1.05vw, 17px); line-height: 1.5; max-width: 830px; margin: 0 auto 12px; }
+  .goal { color: #ffe9af; font-weight: bold; }
+  h2 { font-size: clamp(16px, 1.5vw, 22px); color: #f5db9a; margin: 14px 0 10px; }
+  .steps {
+    list-style: none; margin: 0 auto 14px; padding: 0;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px; max-width: 900px; text-align: left;
+  }
+  .steps li { border: 1px solid rgba(204, 176, 255, .3); border-radius: 8px; background: rgba(103, 70, 156, .16); padding: 9px 12px; font-size: clamp(11px, .96vw, 15px); line-height: 1.4; }
+  .steps strong { color: #ffe3a5; }
+  .note { font-size: clamp(11px, .88vw, 14px); color: #d5ccea; line-height: 1.4; margin: 8px auto 12px; }
+  .ready { color: #fff3c9; font-weight: bold; margin: 9px 0 8px; font-size: clamp(12px, 1.1vw, 17px); }
+  .button {
+    display: inline-block; text-decoration: none; color: #241129; font-weight: 900;
+    font-size: clamp(12px, 1.15vw, 17px); letter-spacing: .08em;
+    padding: 12px 32px; border-radius: 8px; border: 2px solid #fff0c1;
+    background: linear-gradient(180deg, #ffe9b2, #c99f4a);
+    box-shadow: 0 0 18px rgba(245, 208, 119, .48);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .button:hover, .button:focus-visible { transform: translateY(-2px); box-shadow: 0 0 25px rgba(255, 232, 159, .9); }
+  .button:active { transform: translateY(1px); }
+  @media (orientation: portrait) and (pointer: coarse) {
+    .rotate-screen { display: flex; }
+    .game-container { display: none; }
+  }
+  @media (max-width: 750px) {
+    .tutorial-panel { inset: 3% 5%; padding: 12px 15px; }
+    .subtitle { margin-bottom: 7px; }
+    .intro, .goal { margin-bottom: 8px; }
+    h2 { margin: 9px 0 6px; }
+    .steps { gap: 5px; margin-bottom: 8px; }
+    .steps li { padding: 6px 8px; }
+    .button { padding: 9px 24px; }
+  }
+  @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="rotate-screen">
+  <div class="icon" aria-hidden="true">↻</div>
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+<main class="game-container">
+  <div class="map-container">
+    <img class="game-map" src="assets/VCrad Town.png" alt="VHouse Town" draggable="false">
+    <section class="tutorial-panel" aria-labelledby="welcomeTitle">
+      <div class="eyebrow">NEW PLAYER TUTORIAL</div>
+      <h1 id="welcomeTitle">WELCOME TO VHOUSE</h1>
+      <p class="subtitle">Your Journey Begins Here</p>
+      <p class="intro">VHouse is a DeFi adventure game where you create NFT-backed characters called <strong>VCards</strong>, send them on journeys, discover rewards, and level up.</p>
+      <p class="goal">Your ultimate goal is to Level up and Go on Journey Missions to collect 5 Totem Pages and assemble a Z Book, The Legendary NFT binder.</p>
+      <h2>HOW TO PLAY</h2>
+      <ol class="steps">
+        <li><strong>1. Explore the Town</strong> — Discover the VHouse, Journey, and Shop.</li>
+        <li><strong>2. Create Your VCard</strong> — Visit VHouse, sign in with Discord, link your wallet, and use a picture to create an NFT-backed character.</li>
+        <li><strong>3. Go on Journeys</strong> — Send your VCard on timed missions to search for items and face opposition.</li>
+        <li><strong>4. Collect Rewards</strong> — Find scrap, in-game money, and potentially crypto, NFTs, and Totem Pages.</li>
+        <li><strong>5. Grow Stronger</strong> — Level up your VCards, improve their stats, and explore tougher stages.</li>
+      </ol>
+      <p class="note">Remember: A VCard is temporarily unavailable while on a Journey. When it returns, VHouse records its results and rewards.</p>
+      <p class="ready">Take a look around town. When you're ready, go to <strong>VHouse</strong> to create your first VCard!</p>
+      <a class="button" id="enterTown" href="./index.html?entered=1">ENTER THE TOWN</a>
+    </section>
+  </div>
+</main>
+<script>
+  document.getElementById("enterTown").addEventListener("click", function () {
+    try { localStorage.setItem("vhouse_tutorial_seen", "yes"); } catch (error) {}
+  });
+</script>
+</body>
+</html>
