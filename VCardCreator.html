@@ -119,6 +119,28 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 /* Finished VCard takes the creation controls' place. */
 .saved-card-display { width:438px; height:530px; display:flex; align-items:center; justify-content:center; }
 .saved-card-inner { width:336px; max-width:100%; }
+.back-button {
+  position:absolute;
+  left:1.5%;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:40;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:8%;
+  padding:.7cqw 1cqw;
+  border:2px solid #ffb62d;
+  border-radius:.6cqw;
+  background:#160d27;
+  color:#fff;
+  box-shadow:0 0 1cqw #ff9d2966;
+  text-decoration:none;
+  font-size:1.25cqw;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+.back-button:hover,.back-button:focus-visible { background:#36204e; box-shadow:0 0 1.5cqw #ffb62d99; }
 /* The same message-frame graphic used by the Journey screen. */
 .finish-overlay { position:absolute; inset:0; z-index:30; }
 .finish-message { position:absolute; left:50%; top:74.72%; width:55.99%; height:22.81%; transform:translateX(-50%); }
@@ -242,6 +264,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
         <div class="finish-message-text">Card Complete</div>
       </div>
     </div>
+    <a class="back-button" id="backButton" href="./Vhouse.html" hidden>← BACK</a>
   </div>
 </main>
 <script>
@@ -377,6 +400,7 @@ async function saveCardAndFinish() {
   document.querySelector(".preview-wrap").hidden=true;
   $("savedCardDisplay").hidden=false;
   $("finishOverlay").hidden=false;
+  $("backButton").hidden=false;
 }
 
 $("finishButton").addEventListener("click",async()=>{
