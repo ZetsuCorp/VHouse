@@ -20,9 +20,10 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #000;
+  font-family: Arial, sans-serif;
 }
 
-/* MOBILE ORIENTATION CHECK */
+/* MOBILE ROTATION PROMPT */
 .rotate-screen {
   display: none;
   position: fixed;
@@ -30,15 +31,12 @@ html, body {
   z-index: 9999;
   background: #000;
   color: #fff;
-
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 20px;
-
   text-align: center;
   padding: 24px;
-  font-family: Arial, sans-serif;
 }
 
 .rotate-icon {
@@ -54,7 +52,6 @@ html, body {
   color: #bbb;
 }
 
-/* MOBILE PORTRAIT MODE */
 @media (orientation: portrait) and (pointer: coarse) {
   .rotate-screen {
     display: flex;
@@ -67,70 +64,105 @@ html, body {
 
 /* GAME CONTAINER */
 .game-container {
-  position: relative;
-  width: 100%;
+  width: 100vw;
   height: 100vh;
   height: 100dvh;
-
   display: flex;
-  justify-content: center;
   align-items: center;
-
+  justify-content: center;
   overflow: hidden;
 }
 
-/* MAP CONTAINER */
+/* RESPONSIVE MAP */
 .map-container {
   position: relative;
-  width: 100%;
-  height: 100%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  overflow: hidden;
+  width: min(100vw, 200dvh);
+  aspect-ratio: 2 / 1;
+  flex-shrink: 0;
 }
 
-/* MAP IMAGE */
 .game-map {
   display: block;
-
-  width: auto;
-  height: auto;
-
-  max-width: 100%;
-  max-height: 100%;
-
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-
   user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none;
 }
 
-/* MOBILE LANDSCAPE */
-@media (orientation: landscape) and (pointer: coarse) {
-  .game-container {
-    width: 100vw;
-    height: 100dvh;
-  }
-
-  .map-container {
-    width: 100%;
-    height: 100%;
-  }
-
-  .game-map {
-    max-width: 100%;
-    max-height: 100%;
-  }
+/* CLICKABLE MAP AREAS */
+.map-hotspot {
+  position: absolute;
+  display: block;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* HOVER LABEL */
+.map-hotspot::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #ffd54a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: clamp(12px, 1.5vw, 20px);
+  font-weight: bold;
+  white-space: nowrap;
+  text-shadow: 0 0 8px #ffcc00;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+/* SHOW LABEL ON HOVER OR TAP */
+.map-hotspot:hover::after,
+.map-hotspot:focus::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* LOCATION 1 - VHOUSE */
+.hotspot-vhouse {
+  left: 11.72%;
+  top: 22.77%;
+  width: 37.09%;
+  height: 45.10%;
+}
+
+/* LOCATION 2 - JOURNEY */
+.hotspot-journey {
+  left: 56.14%;
+  top: 46.45%;
+  width: 9.81%;
+  height: 26.61%;
+}
+
+/* LOCATION 3 - SHOP */
+.hotspot-shop {
+  left: 72.21%;
+  top: 40.14%;
+  width: 20.52%;
+  height: 32.69%;
+}
+
 </style>
 </head>
 
 <body>
 
-<!-- ROTATE PHONE MESSAGE -->
+<!-- ROTATE PHONE -->
 <div class="rotate-screen">
   <div class="rotate-icon">↻</div>
   <h2>Rotate Your Phone</h2>
@@ -148,6 +180,30 @@ html, body {
       alt="VCrad Town Game Map"
       draggable="false"
     >
+
+    <!-- 1. VHOUSE -->
+    <button
+      type="button"
+      class="map-hotspot hotspot-vhouse"
+      data-label="VHouse"
+      aria-label="VHouse">
+    </button>
+
+    <!-- 2. JOURNEY -->
+    <button
+      type="button"
+      class="map-hotspot hotspot-journey"
+      data-label="Journey"
+      aria-label="Journey">
+    </button>
+
+    <!-- 3. SHOP -->
+    <button
+      type="button"
+      class="map-hotspot hotspot-shop"
+      data-label="Shop"
+      aria-label="Shop">
+    </button>
 
   </div>
 
