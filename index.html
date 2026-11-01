@@ -7,6 +7,17 @@
       content="width=device-width, initial-scale=1.0">
 
 <title>VHouse Game Map</title>
+<script>
+// Show the tutorial before the game map on a player's first visit.
+try {
+  const enteredFromTutorial = new URLSearchParams(window.location.search).has("entered");
+  if (!enteredFromTutorial && localStorage.getItem("vhouse_tutorial_seen") !== "yes") {
+    window.location.replace("./tutorial.html");
+  }
+} catch (error) {
+  // If storage is blocked, keep the map accessible.
+}
+</script>
 
 <style>
 * {
