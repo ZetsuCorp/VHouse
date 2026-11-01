@@ -91,6 +91,33 @@ html, body {
   pointer-events: none;
 }
 
+/* Gentle drifting map twinkles — CSS only, no interaction cost. */
+.map-mist {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+.mist-spark {
+  position: absolute;
+  width: clamp(9px, 1.1vw, 18px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,250,235,.95) 0 5%, rgba(255,220,180,.45) 17%, rgba(187,132,255,.17) 46%, transparent 76%);
+  opacity: 0;
+  animation: mist-drift var(--pace, 20s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes mist-drift {
+  0%   { transform: translate3d(-8px, 5px, 0); opacity: .16; }
+  50%  { transform: translate3d(4px, -10px, 0); opacity: .5; }
+  100% { transform: translate3d(12px, -18px, 0); opacity: .22; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mist-spark { animation: none; opacity: .25; }
+}
+
 /* CLICKABLE MAP AREAS */
 .map-hotspot {
   position: absolute;
@@ -237,6 +264,20 @@ html, body {
       alt="VCrad Town Game Map"
       draggable="false"
     >
+
+    <!-- QUIET AMBIENT TWINKLES -->
+    <div class="map-mist" aria-hidden="true">
+      <span class="mist-spark" style="left:7%;top:28%;--pace:22s;--delay:-9s"></span>
+      <span class="mist-spark" style="left:19%;top:15%;--pace:24s;--delay:-16s"></span>
+      <span class="mist-spark" style="left:35%;top:34%;--pace:19s;--delay:-4s"></span>
+      <span class="mist-spark" style="left:48%;top:19%;--pace:26s;--delay:-13s"></span>
+      <span class="mist-spark" style="left:59%;top:32%;--pace:23s;--delay:-7s"></span>
+      <span class="mist-spark" style="left:79%;top:19%;--pace:27s;--delay:-19s"></span>
+      <span class="mist-spark" style="left:92%;top:43%;--pace:21s;--delay:-11s"></span>
+      <span class="mist-spark" style="left:14%;top:74%;--pace:25s;--delay:-5s"></span>
+      <span class="mist-spark" style="left:42%;top:81%;--pace:22s;--delay:-17s"></span>
+      <span class="mist-spark" style="left:72%;top:77%;--pace:28s;--delay:-15s"></span>
+    </div>
 
     <!-- 1. VHOUSE -->
     <button
