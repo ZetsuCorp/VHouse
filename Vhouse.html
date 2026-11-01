@@ -72,13 +72,13 @@ html, body {
   width: 88.888889%;
   pointer-events: none;
 }
-/* Larger, brighter uneven yellow-and-white fireplace ambience. */
+/* Moderate uneven yellow-and-white fireplace ambience. */
 .fireplace-light {
   position: absolute;
-  left: 38.5%;
-  top: 53%;
-  width: 23%;
-  height: 27%;
+  left: 40.5%;
+  top: 55%;
+  width: 19%;
+  height: 23%;
   pointer-events: none;
   z-index: 0;
   mix-blend-mode: screen;
@@ -93,9 +93,9 @@ html, body {
 }
 .fireplace-light::before {
   background: radial-gradient(ellipse at 50% 64%,
-    rgba(255, 255, 234, .82) 0%,
-    rgba(255, 218, 99, .60) 25%,
-    rgba(255, 166, 48, .27) 52%,
+    rgba(255, 255, 234, .65) 0%,
+    rgba(255, 218, 99, .43) 25%,
+    rgba(255, 166, 48, .18) 52%,
     transparent 78%);
   filter: blur(9px);
   animation: ember-breathe 4.7s ease-in-out infinite;
@@ -103,8 +103,8 @@ html, body {
 .fireplace-light::after {
   inset: 13% 22% 8%;
   background: radial-gradient(ellipse at 50% 65%,
-    rgba(255, 255, 250, .90) 0%,
-    rgba(255, 237, 169, .50) 34%,
+    rgba(255, 255, 250, .68) 0%,
+    rgba(255, 237, 169, .34) 34%,
     transparent 76%);
   filter: blur(7px);
   animation: ember-flicker 2.3s ease-in-out infinite;
