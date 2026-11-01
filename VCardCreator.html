@@ -197,7 +197,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
                 <button class="mode-button" data-mode="custom" type="button">WRITE MY OWN</button>
               </div>
               <div class="default-preview" id="defaultText">A traveler beginning their journey into the unknown.</div>
-              <textarea class="description-input" id="descriptionInput" maxlength="300" placeholder="Write your character's description..." hidden></textarea>
+              <textarea class="description-input" id="descriptionInput" maxlength="100" placeholder="Write your character's description..." hidden></textarea>
             </div>
             <div class="finish-action">
               <button type="button" class="finish-button" id="finishButton">FINISH</button>
@@ -318,7 +318,7 @@ $("fileInput").addEventListener("change",e=>{
   updateArt();
 });
 function updateDescription() {
-  $("cardDescription").textContent=descriptionMode==="default"?defaultDescription:$("descriptionInput").value;
+  $("cardDescription").textContent=descriptionMode==="default"?defaultDescription:$("descriptionInput").value.slice(0,100);
 }
 document.querySelectorAll(".mode-button").forEach(button=>button.addEventListener("click",()=>{
   descriptionMode=button.dataset.mode;
