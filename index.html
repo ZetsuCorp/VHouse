@@ -3,7 +3,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>VHouse Game Map</title>
 
@@ -21,22 +22,66 @@ html, body {
   background: #000;
 }
 
+/* MOBILE ORIENTATION CHECK */
+.rotate-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+
+  text-align: center;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+}
+
+.rotate-icon {
+  font-size: 64px;
+}
+
+.rotate-screen h2 {
+  font-size: 24px;
+}
+
+.rotate-screen p {
+  font-size: 16px;
+  color: #bbb;
+}
+
+/* MOBILE PORTRAIT MODE */
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-screen {
+    display: flex;
+  }
+
+  .game-container {
+    display: none !important;
+  }
+}
+
+/* GAME CONTAINER */
 .game-container {
+  position: relative;
   width: 100%;
   height: 100vh;
   height: 100dvh;
 
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 
   overflow: hidden;
-  position: relative;
 }
 
+/* MAP CONTAINER */
 .map-container {
   position: relative;
-
   width: 100%;
   height: 100%;
 
@@ -47,22 +92,24 @@ html, body {
   overflow: hidden;
 }
 
+/* MAP IMAGE */
 .game-map {
   display: block;
-
-  max-width: 100%;
-  max-height: 100%;
 
   width: auto;
   height: auto;
 
+  max-width: 100%;
+  max-height: 100%;
+
   object-fit: contain;
+
   user-select: none;
   -webkit-user-drag: none;
 }
 
-/* Mobile */
-@media (max-width: 768px) {
+/* MOBILE LANDSCAPE */
+@media (orientation: landscape) and (pointer: coarse) {
   .game-container {
     width: 100vw;
     height: 100dvh;
@@ -83,6 +130,14 @@ html, body {
 
 <body>
 
+<!-- ROTATE PHONE MESSAGE -->
+<div class="rotate-screen">
+  <div class="rotate-icon">↻</div>
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+
+<!-- GAME MAP -->
 <main class="game-container">
 
   <div class="map-container">
@@ -90,7 +145,7 @@ html, body {
     <img
       src="assets/VCrad Town.png"
       class="game-map"
-      alt="VHouse Game Map"
+      alt="VCrad Town Game Map"
       draggable="false"
     >
 
