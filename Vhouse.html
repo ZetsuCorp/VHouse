@@ -63,6 +63,65 @@ html, body {
   -webkit-user-drag: none;
   pointer-events: none;
 }
+/* Hotspots align to the visible 16:9 VHome image inside the 2:1 game frame. */
+.hotspot-layer {
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88.888889%;
+  pointer-events: none;
+}
+.house-hotspot {
+  position: absolute;
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.house-hotspot::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: min(27vw, 320px);
+  padding: 9px 15px;
+  background: rgba(0,0,0,.88);
+  color: #fff;
+  border: 1px solid #ffd54a;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(255, 204, 0, .4);
+  text-shadow: 0 0 8px #ffcc00;
+  font-size: clamp(11px, 1.3vw, 19px);
+  font-weight: bold;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+.house-hotspot:hover::after,
+.house-hotspot:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+.house-hotspot:focus-visible { outline: 2px solid #ffd54a; }
+.hotspot-closet { left: 5.5%; top: 13.8%; width: 6.5%; height: 20.1%; }
+.hotspot-travel { left: 88.7%; top: 15.4%; width: 7%; height: 22.1%; }
+.hotspot-create { left: 44.6%; top: 58.1%; width: 10.7%; height: 20.1%; }
+.hotspot-chest { left: 64.7%; top: 62.8%; width: 10.5%; height: 16.8%; }
+.hotspot-login { left: 6.5%; top: 70.7%; width: 15%; height: 28%; }
+.hotspot-closet::after,
+.hotspot-login::after { left: 0; transform: translate(0, -50%); }
+.hotspot-travel::after { left: auto; right: 0; transform: translate(0, -50%); }
 </style>
 </head>
 <body>
@@ -74,6 +133,13 @@ html, body {
 <main class="game-container">
   <div class="map-container">
     <img class="game-map" src="assets/Vhome1.png" alt="VHouse Interior" draggable="false">
+    <div class="hotspot-layer">
+      <button type="button" class="house-hotspot hotspot-closet" data-label="VCard Closet" aria-label="VCard Closet"></button>
+      <button type="button" class="house-hotspot hotspot-travel" data-label="Go on Journey / Go to Shop" aria-label="Go on Journey / Go to Shop"></button>
+      <button type="button" class="house-hotspot hotspot-create" data-label="Create VCard" aria-label="Create VCard"></button>
+      <button type="button" class="house-hotspot hotspot-chest" data-label="Check Stats / Player Log / Check Inventory" aria-label="Check Stats / Player Log / Check Inventory"></button>
+      <button type="button" class="house-hotspot hotspot-login" data-label="Log In / Connect Discord & Solana Wallet" aria-label="Log In / Connect Discord & Solana Wallet"></button>
+    </div>
   </div>
 </main>
 </body>
