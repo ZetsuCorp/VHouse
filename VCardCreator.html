@@ -141,11 +141,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
   letter-spacing:.07em;
 }
 .back-button:hover,.back-button:focus-visible { background:#36204e; box-shadow:0 0 1.5cqw #ffb62d99; }
-/* The same message-frame graphic used by the Journey screen. */
 .finish-overlay { position:absolute; inset:0; z-index:30; }
-.finish-message { position:absolute; left:50%; top:74.72%; width:55.99%; height:22.81%; transform:translateX(-50%); }
-.finish-message img { display:block; width:100%; height:100%; object-fit:fill; filter:drop-shadow(0 0 5px #ffffff6b) drop-shadow(0 0 11px #ffffff38); pointer-events:none; }
-.finish-message-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:2.6cqw; font-weight:900; text-shadow:0 2px 8px #000; pointer-events:none; }
 
 [hidden] { display:none!important; }
 /* Live card preview */
@@ -173,6 +169,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .meta-footer-text { color:#cfcfcf; font-size:clamp(4px,1.6cqw,6px); line-height:1; white-space:nowrap; letter-spacing:-.08px; }
 .rarity { position:absolute; right:6px; top:50%; transform:translateY(-50%); min-width:25px; text-align:center; padding:3px 5px; border-radius:4px; border:1px solid #ffffff50; color:#fff; background:var(--accent); font-size:11px; font-weight:900; text-shadow:0 1px 2px #0008; }
 </style>
+<link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
 <body>
 <div class="rotate-screen">
@@ -259,14 +256,12 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
       </div>
     </div>
     <div class="finish-overlay" id="finishOverlay" hidden>
-      <div class="finish-message" role="dialog" aria-modal="true" aria-label="Card Complete">
-        <img src="assets/Message Frame.png" alt="" draggable="false">
-        <div class="finish-message-text">Card Complete</div>
-      </div>
+      <div id="creatorMessage" class="vhouse-message--game" role="dialog" aria-modal="true" aria-label="Card Complete" data-vhouse-message data-header="VCARD CREATED" data-title="Card Complete" data-info="Your VCard has been saved."></div>
     </div>
     <a class="back-button" id="backButton" href="./Vhouse.html" hidden>← BACK</a>
   </div>
 </main>
+<script src="assets/vhouse-message.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const defaultDescription = "A traveler beginning their journey into the unknown.";
@@ -399,6 +394,7 @@ async function saveCardAndFinish() {
   document.querySelector(".editor").hidden=true;
   document.querySelector(".preview-wrap").hidden=true;
   $("savedCardDisplay").hidden=false;
+  VHouseMessage.set("creatorMessage", {header:"VCARD CREATED", title:"Card Complete", info:String(savedCard.name || "VCard") + " has been saved."});
   $("finishOverlay").hidden=false;
   $("backButton").hidden=false;
 }
