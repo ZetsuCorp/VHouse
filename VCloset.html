@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VCloset — VHouse</title>
+<link rel="stylesheet" href="assets/vhouse-buttons.css">
 <style>
 * {
   margin: 0;
@@ -63,33 +64,7 @@ html, body {
   -webkit-user-drag: none;
   pointer-events: none;
 }
-.back-button {
-  position: absolute;
-  left: 1.5%;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 8%;
-  padding: .7cqw 1cqw;
-  border: 2px solid #ffb62d;
-  border-radius: .6cqw;
-  background: #160d27;
-  color: #fff;
-  box-shadow: 0 0 1cqw #ff9d2966;
-  text-decoration: none;
-  font-size: 1.25cqw;
-  font-weight: 900;
-  letter-spacing: .07em;
-}
-.back-button:hover,
-.back-button:focus-visible {
-  background: #36204e;
-  box-shadow: 0 0 1.5cqw #ffb62d99;
-}
-
+.back-button { position:absolute; left:1.5%; top:50%; transform:translateY(-50%); z-index:10; }
 /* Three centered VCard frames, independent of the background sizing. */
 .closet-showcase {
   position: absolute;
@@ -102,38 +77,6 @@ html, body {
   justify-content: center;
   gap: 2.5%;
   z-index: 2;
-}
-.closet-slot {
-  appearance: none;
-  position: relative;
-  flex: 0 0 24%;
-  aspect-ratio: 415 / 601;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-  transform: scale(.94);
-  opacity: .86;
-  transition: transform .2s ease, opacity .2s ease, filter .2s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.closet-slot.is-center {
-  transform: scale(1.04);
-  opacity: 1;
-  filter: drop-shadow(0 0 .7cqw #a442ff75);
-}
-.closet-slot:hover,
-.closet-slot:focus-visible {
-  opacity: 1;
-  filter: drop-shadow(0 0 .8cqw #c888ff88);
-}
-.closet-slot:focus-visible { outline: 2px solid #ffb62d; outline-offset: 2px; }
-.closet-slot .card-frame {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
 }
 .stored-vcard {
   --card-accent: #2d7bdc;
@@ -187,31 +130,8 @@ html, body {
   font-size: .75cqw;
   font-weight: 900;
 }
-.carousel-arrow {
-  position: absolute;
-  top: 37%;
-  z-index: 5;
-  width: 3.5cqw;
-  height: 3.5cqw;
-  border: 2px solid #ffb62d;
-  border-radius: .6cqw;
-  background: #160d27de;
-  color: #fff;
-  font: 900 2cqw Arial, sans-serif;
-  box-shadow: 0 0 1cqw #ff9d2955;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.carousel-arrow:hover,
-.carousel-arrow:focus-visible { background: #36204e; }
-.carousel-prev { left: 12%; }
-.carousel-next { right: 12%; }
-@media (prefers-reduced-motion: reduce) {
-  .closet-slot { transition: none; }
-}
-
+.carousel-prev { left:12%; }
+.carousel-next { right:12%; }
 </style>
 <link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
@@ -226,21 +146,21 @@ html, body {
     <img class="game-map" src="assets/VCloset.png" alt="VCloset Interior" draggable="false">
 
     <div class="closet-showcase" id="closetShowcase" aria-label="VCard carousel">
-      <button class="closet-slot" type="button" data-position="-1" aria-label="Previous VCard">
+      <button class="vhouse-btn closet-slot" type="button" data-position="-1" aria-label="Previous VCard">
         <img class="card-frame" src="assets/VCardContainer-removebg-preview.png" alt="" draggable="false">
       </button>
-      <button class="closet-slot is-center" type="button" data-position="0" aria-label="Selected VCard" aria-current="true">
+      <button class="vhouse-btn closet-slot is-center" type="button" data-position="0" aria-label="Selected VCard" aria-current="true">
         <img class="card-frame" src="assets/VCardContainer-removebg-preview.png" alt="" draggable="false">
       </button>
-      <button class="closet-slot" type="button" data-position="1" aria-label="Next VCard">
+      <button class="vhouse-btn closet-slot" type="button" data-position="1" aria-label="Next VCard">
         <img class="card-frame" src="assets/VCardContainer-removebg-preview.png" alt="" draggable="false">
       </button>
     </div>
-    <button class="carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
-    <button class="carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
+    <button class="vhouse-btn carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
+    <button class="vhouse-btn carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
     <div id="closetMessage" class="vhouse-message--game" aria-live="polite" data-vhouse-message
       data-header="VCARD CLOSET" data-title="VCard Closet" data-info="Finished VCards and outfits are displayed here."></div>
-    <a class="back-button" href="./Vhouse.html">← BACK</a>
+    <a class="vhouse-btn back-button" href="./Vhouse.html">← BACK</a>
   </div>
 </main>
 
