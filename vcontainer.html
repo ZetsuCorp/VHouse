@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse Container</title>
 <script>
-if (new URLSearchParams(location.search).get("mode") === "message") {
-  document.documentElement.classList.add("message-mode");
+const containerMode = new URLSearchParams(location.search).get("mode");
+if (containerMode === "message" || containerMode === "journey") {
+  document.documentElement.classList.add(containerMode + "-mode");
 }
 </script>
 <style>
@@ -41,6 +42,78 @@ html, body {
   max-height: none;
   object-fit: fill;
 }
+
+/* Journey mode uses the VCard Creator's exact white-panel area. */
+.journey-mode .container-stage { position: relative; container-type: inline-size; }
+.journey-mode .container-image {
+  width:100%; height:100%; max-height:none; object-fit:fill;
+}
+.journey-menu {
+  position:absolute; left:16.7111%; top:19.85%;
+  width:42.9333%; height:63%; overflow:hidden;
+  display:none; flex-direction:column; align-items:center;
+  gap:2%; color:#fff; font-family:Arial,sans-serif;
+}
+.journey-mode .journey-menu { display:flex; }
+.journey-menu h1 {
+  margin:0; flex:0 0 auto; color:#ffe4a5; line-height:1.1;
+  font-size:clamp(12px,3.1cqw,26px); letter-spacing:.04em;
+  text-align:center; text-shadow:0 2px 7px #000;
+}
+.journey-hint {
+  margin:0; flex:0 0 auto; color:#d9e6f2; text-align:center;
+  font-size:clamp(9px,1.85cqw,16px);
+}
+.journey-options {
+  width:100%; flex:1; min-height:0;
+  display:flex; gap:3%; padding:0;
+}
+.journey-choice {
+  flex:1; min-width:0; cursor:pointer; border-radius:6px;
+  border:2px solid var(--edge); color:#fff;
+  background:linear-gradient(145deg,var(--light),var(--dark));
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  gap:5%; box-shadow:inset 0 0 0 2px #ffffff18;
+}
+.journey-choice:hover,.journey-choice:focus-visible { filter:brightness(1.2); }
+.journey-choice.r { --light:#e94d59; --dark:#711321; --edge:#ffc4c8; }
+.journey-choice.p { --light:#318fff; --dark:#102c85; --edge:#b9e7ff; }
+.journey-choice.s { --light:#39c872; --dark:#0e6136; --edge:#c6ffd8; }
+.journey-glyph {
+  width:min(9cqw,55px); aspect-ratio:1; display:grid; place-items:center;
+  border:2px solid var(--edge); border-radius:50%;
+  background:#0004; color:#fff; font:700 clamp(20px,5cqw,48px) Georgia,serif;
+}
+.journey-name { font-size:clamp(8px,1.65cqw,15px); font-weight:bold; letter-spacing:.03em; }
+.journey-stages {
+  --selected:#d8b57b; width:100%; flex:1; min-height:0;
+  display:none; flex-direction:column; gap:3%; padding:3%;
+  background:linear-gradient(145deg,#23445b,#101a2d);
+  border:2px solid var(--selected); border-radius:6px;
+}
+.journey-stages-header { flex:0 0 auto; display:flex; justify-content:space-between;
+  gap:5px; color:#ffe4a5; font-size:clamp(8px,1.6cqw,15px); font-weight:bold; }
+.journey-stage-grid { flex:1; min-height:0; display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr)); gap:3%; }
+.journey-stage {
+  min-width:0; padding:0; cursor:pointer; color:#fff; font-weight:bold;
+  font-size:clamp(9px,2cqw,20px); background:#17354b;
+  border:1px solid #7398b0; border-radius:4px;
+}
+.journey-stage:hover,.journey-stage:focus-visible,.journey-stage.active {
+  background:#435f4b; border-color:var(--selected);
+}
+.journey-details { flex:0 0 auto; min-height:1em; text-align:center;
+  font-size:clamp(8px,1.4cqw,13px); color:#d9e6f2; }
+.journey-actions { flex:0 0 auto; width:100%; display:flex;
+  align-items:center; justify-content:space-between; gap:5px; }
+.journey-actions button { cursor:pointer; background:#443a26; color:#ffe8bb;
+  border:1px solid #b9a173; border-radius:4px;
+  font-size:clamp(8px,1.4cqw,13px); font-weight:bold; padding:2% 3%; }
+.journey-actions button:disabled { opacity:.45; cursor:default; }
+.journey-menu [hidden] { display:none !important; }
+
 </style>
 <link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
@@ -48,6 +121,25 @@ html, body {
 <div class="container-stage">
   <img id="containerImage" class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
   <div id="containerMessage" style="display:none;width:100%;height:100%" data-header="" data-title="" data-info=""></div>
+
+  <section id="journeyMenu" class="journey-menu" aria-label="Journey Missions">
+    <h1>JOURNEY MISSIONS</h1>
+    <p class="journey-hint" id="journeyHint">Choose your VCard</p>
+    <div id="journeyOptions" class="journey-options">
+      <button type="button" class="journey-choice r" data-letter="R"><span class="journey-glyph">R</span><span class="journey-name">ROCK</span></button>
+      <button type="button" class="journey-choice p" data-letter="P"><span class="journey-glyph">P</span><span class="journey-name">PAPER</span></button>
+      <button type="button" class="journey-choice s" data-letter="S"><span class="journey-glyph">S</span><span class="journey-name">SCISSORS</span></button>
+    </div>
+    <div id="journeyStages" class="journey-stages">
+      <div class="journey-stages-header"><span id="journeyChosen">R VCARD</span><span>STAGES 1–10</span></div>
+      <div class="journey-stage-grid" id="journeyStageGrid"></div>
+      <div class="journey-details" id="journeyDetails">Select a mission stage</div>
+      <div class="journey-actions">
+        <button type="button" id="journeyBack">← BACK</button>
+        <button type="button" id="journeyStart" disabled>START JOURNEY</button>
+      </div>
+    </div>
+  </section>
 </div>
 <script src="assets/vhouse-message.js"></script>
 <script>
@@ -60,6 +152,49 @@ if (document.documentElement.classList.contains("message-mode")) {
     header: params.get("header") || "",
     title: params.get("title") || "",
     info: params.get("info") || ""
+  });
+}
+
+if (document.documentElement.classList.contains("journey-mode")) {
+  const $ = id => document.getElementById(id);
+  const options = $("journeyOptions"), stages = $("journeyStages");
+  const grid = $("journeyStageGrid"), details = $("journeyDetails");
+  const start = $("journeyStart");
+  const missions = {
+    1: "30 seconds · 3 hunts · 300 IG",
+    2: "60 seconds · 4 hunts + 2 fights · 500 IG"
+  };
+  let letter = null, stage = null;
+  grid.innerHTML = Array.from({length:10},(_,i) =>
+    '<button type="button" class="journey-stage" data-stage="'+(i+1)+'">'+(i+1)+'</button>'
+  ).join("");
+  options.addEventListener("click", event => {
+    const choice = event.target.closest("[data-letter]");
+    if (!choice) return;
+    letter = choice.dataset.letter; stage = null;
+    $("journeyChosen").textContent = letter + " VCARD";
+    stages.style.setProperty("--selected", {R:"#ffc4c8",P:"#b9e7ff",S:"#c6ffd8"}[letter]);
+    $("journeyHint").textContent = "Select a mission stage";
+    options.hidden = true; stages.style.display = "flex";
+    start.disabled = true; details.textContent = "Select a mission stage";
+    grid.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+  });
+  grid.addEventListener("click", event => {
+    const button = event.target.closest("[data-stage]");
+    if (!button) return;
+    stage = Number(button.dataset.stage);
+    grid.querySelectorAll("button").forEach(b => b.classList.toggle("active",b===button));
+    details.textContent = "Stage " + stage + " · " + (missions[stage] || "Mission details coming soon");
+    start.disabled = !missions[stage];
+  });
+  $("journeyBack").addEventListener("click", () => {
+    letter = null; stage = null; options.hidden = false;
+    stages.style.display = "none";
+    $("journeyHint").textContent = "Choose your VCard";
+  });
+  start.addEventListener("click", () => {
+    if (!missions[stage]) return;
+    details.textContent = "Stage " + stage + " selected. Mission execution is not connected yet.";
   });
 }
 </script>
