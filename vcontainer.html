@@ -42,17 +42,26 @@ html, body {
   object-fit: fill;
 }
 </style>
+<link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
 <body>
 <div class="container-stage">
   <img id="containerImage" class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
-  <script>
-  if (document.documentElement.classList.contains("message-mode")) {
-    const image = document.getElementById("containerImage");
-    image.src = "assets/Message Frame.png";
-    image.alt = "VHouse Message Frame";
-  }
-  </script>
+  <div id="containerMessage" style="display:none;width:100%;height:100%" data-header="" data-title="" data-info=""></div>
 </div>
+<script src="assets/vhouse-message.js"></script>
+<script>
+if (document.documentElement.classList.contains("message-mode")) {
+  document.getElementById("containerImage").style.display = "none";
+  const host = document.getElementById("containerMessage");
+  host.style.display = "block";
+  const params = new URLSearchParams(location.search);
+  VHouseMessage.set(host, {
+    header: params.get("header") || "",
+    title: params.get("title") || "",
+    info: params.get("info") || ""
+  });
+}
+</script>
 </body>
 </html>
