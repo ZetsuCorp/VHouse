@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse Container</title>
 <script>
-if (new URLSearchParams(location.search).get("mode") === "message") {
-  document.documentElement.classList.add("message-mode");
+const mode = new URLSearchParams(location.search).get("mode");
+if (mode === "message" || mode === "journey") {
+  document.documentElement.classList.add(mode + "-mode");
 }
 </script>
 <style>
@@ -24,17 +25,36 @@ html, body {
   align-items: center;
   justify-content: center;
 }
+/* Scale the existing artwork and Journey content together. */
+.container-art {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1672 / 941;
+  max-height: 100%;
+}
 .container-image {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 100%;
-  object-fit: contain;
+  height: 100%;
+  object-fit: fill;
   border: 3px solid white;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
   user-select: none;
   -webkit-user-drag: none;
 }
+/* Position content just inside the existing white border of Vcontainer.png. */
+.journey-content {
+  display: none;
+  position: absolute;
+  left: 13.3%;
+  top: 26%;
+  width: 73.4%;
+  height: 53.6%;
+  border: 0;
+  background: transparent;
+}
+.journey-mode .journey-content { display: block; }
+.message-mode .container-art { display: none; }
 /* RESIZE THE SAME IMAGE FOR MESSAGES */
 .message-mode .container-image {
   height: 100%;
@@ -48,13 +68,19 @@ html, body {
 </head>
 <body>
 <div class="container-stage">
-  <img id="containerImage" class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
+  <div class="container-art">
+    <img id="containerImage" class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
+    <iframe id="journeyContent" class="journey-content" title="Journey Missions"></iframe>
+  </div>
   <div id="containerMessage" style="display:none;width:100%;height:100%" data-header="" data-title="" data-info=""></div>
 
 
 </div>
 <script src="assets/vhouse-message.js"></script>
 <script>
+if (document.documentElement.classList.contains("journey-mode")) {
+  document.getElementById("journeyContent").src = "./JourneyMissions.html?embedded=1";
+}
 if (document.documentElement.classList.contains("message-mode")) {
   document.getElementById("containerImage").style.display = "none";
   const host = document.getElementById("containerMessage");
