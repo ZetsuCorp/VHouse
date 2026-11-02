@@ -95,6 +95,19 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .saved-card-inner { width:336px; max-width:100%; }
 .back-button { position:absolute; left:5.56%; top:50%; transform:translate(-50%,-50%); z-index:40; }
 .finish-overlay { position:absolute; inset:0; z-index:30; }
+/* This instance uses the shared info box, positioned in the empty right-hand space. */
+.creator-info-holder {
+  position:absolute;
+  left:61.5%;
+  top:23.2%;
+  width:27%;
+  height:61%;
+  z-index:3;
+  container-type:inline-size;
+}
+.creator-info-holder .vhouse-info { height:100%; }
+.creator-info-holder .vhouse-info-heading { font-size:5.3cqw; }
+.creator-info-holder .vhouse-info-content { font-size:4.2cqw; }
 
 [hidden] { display:none!important; }
 /* Live card preview */
@@ -107,6 +120,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 </style>
 <link rel="stylesheet" href="assets/vhouse-vcard.css">
 <link rel="stylesheet" href="assets/vhouse-message.css">
+<link rel="stylesheet" href="assets/vhouse-info.css">
 </head>
 <body>
 <div class="rotate-screen">
@@ -177,6 +191,9 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
         </div>
       </div>
     </div>
+    <div class="creator-info-holder">
+      <div id="creatorInfoBox" role="region" aria-label="Information"></div>
+    </div>
     <div class="finish-overlay" id="finishOverlay" hidden>
       <div id="creatorMessage" class="vhouse-message--game" role="dialog" aria-modal="true" aria-label="Card Complete" data-vhouse-message data-header="VCARD CREATED" data-title="Card Complete" data-info="Your VCard has been saved."></div>
     </div>
@@ -186,6 +203,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-vcard.js"></script>
 <script src="assets/vhouse-message.js"></script>
+<script src="assets/vhouse-info.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const defaultDescription = "A traveler beginning their journey into the unknown.";
@@ -330,6 +348,7 @@ $("finishButton").addEventListener("click",async()=>{
 });
 $("finishOverlay").addEventListener("click",e=>{ if(e.target===$("finishOverlay")) $("finishOverlay").hidden=true; });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("finishOverlay").hidden=true; });
+VHouseInfo.set("#creatorInfoBox", {heading:"INFORMATION", content:""});
 setTeam("R");
 updateArt();
 updateDescription();
