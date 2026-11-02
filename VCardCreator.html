@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VCard Creator — VHouse</title>
+<link rel="stylesheet" href="assets/vhouse-buttons.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
@@ -85,62 +86,14 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .name-input:focus,.description-input:focus { border-color:var(--cyan); box-shadow:0 0 0 2px #00eaff18; }
 .description-input { height:54px; min-height:54px; resize:none; line-height:1.4; }
 .team-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
-.team-button {
-  appearance:none;
-  border:2px solid #345163;
-  background:linear-gradient(#1a2a39,#111a25);
-  color:#b9ced7;
-  border-radius:9px;
-  height:52px;
-  cursor:pointer;
-  transition:background .15s,border-color .15s;
-}
-.team-button .symbol { display:block; font-size:21px; margin-bottom:2px; }
-.team-button .team-name { display:block; font-size:10px; letter-spacing:1px; font-weight:900; }
-.team-button:hover { border-color:#a1e6eb; }
-.team-button.active { background:linear-gradient(#123c48,#11232f); color:#fff; border-color:var(--cyan); box-shadow:inset 0 0 14px #00eaff20,0 0 12px #00eaff29; }
 .gallery { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
-.gallery-tile { appearance:none; text-align:center; background:#080f17; border:2px solid #293f50; padding:3px 3px 4px; border-radius:8px; color:#a9bbc9; cursor:pointer; overflow:hidden; }
-.gallery-tile img { width:100%; height:48px; object-fit:cover; border-radius:4px; display:block; margin-bottom:4px; background:#172633; }
-.gallery-tile span { font-size:9px; font-weight:bold; }
-.gallery-tile.selected { border-color:var(--cyan); box-shadow:0 0 13px #00eaff28; color:#fff; }
-.gallery-tile:hover { border-color:#7acbd8; }
-.upload { margin-top:7px; height:25px; border:2px dashed #4b6977; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#b1ccd7; font-size:10px; cursor:pointer; }
-.upload:hover,.upload.selected { background:#102531; border-color:var(--cyan); }
-.upload input { display:none; }
 .mode-row { display:flex; gap:8px; margin-bottom:8px; }
-.mode-button { flex:1; height:26px; border:2px solid #355266; border-radius:6px; background:#0b141e; color:#9fb4c3; font-size:10px; font-weight:800; cursor:pointer; }
-.mode-button.active { border-color:var(--cyan); background:#11303c; color:#fff; }
 .default-preview { padding:9px; border-left:2px solid var(--cyan); background:#0b141e; color:#a8c0c9; font-size:11px; line-height:1.4; }
 .finish-action { padding:10px 16px; }
-.finish-button { width:100%; height:38px; border:2px solid #00eaff; border-radius:7px; background:linear-gradient(100deg,#164b55,#0e263b); color:#fff; font-size:13px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 12px #00eaff33; }
-.finish-button:hover,.finish-button:focus-visible { background:linear-gradient(100deg,#197687,#13445e); outline:none; box-shadow:0 0 16px #00eaff66; }
-.finish-button:active { transform:translateY(1px); }
 /* Finished VCard takes the creation controls' place. */
 .saved-card-display { width:438px; height:530px; display:flex; align-items:center; justify-content:center; }
 .saved-card-inner { width:336px; max-width:100%; }
-.back-button {
-  position:absolute;
-  left:5.56%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  z-index:40;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-width:8%;
-  padding:.7cqw 1cqw;
-  border:2px solid #ffb62d;
-  border-radius:.6cqw;
-  background:#160d27;
-  color:#fff;
-  box-shadow:0 0 1cqw #ff9d2966;
-  text-decoration:none;
-  font-size:1.25cqw;
-  font-weight:900;
-  letter-spacing:.07em;
-}
-.back-button:hover,.back-button:focus-visible { background:#36204e; box-shadow:0 0 1.5cqw #ffb62d99; }
+.back-button { position:absolute; left:5.56%; top:50%; transform:translate(-50%,-50%); z-index:40; }
 .finish-overlay { position:absolute; inset:0; z-index:30; }
 
 [hidden] { display:none!important; }
@@ -191,9 +144,9 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
             <div class="group">
               <div class="group-label"><b>01</b><span>CHOOSE YOUR TEAM</span></div>
               <div class="team-grid">
-                <button class="team-button active" data-team="R" type="button"><span class="symbol">🪨</span><span class="team-name">STONE</span></button>
-                <button class="team-button" data-team="P" type="button"><span class="symbol">🌬️</span><span class="team-name">WIND</span></button>
-                <button class="team-button" data-team="S" type="button"><span class="symbol">🗡️</span><span class="team-name">BLADE</span></button>
+                <button class="vhouse-btn team-button active" data-team="R" type="button"><span class="symbol">🪨</span><span class="team-name">STONE</span></button>
+                <button class="vhouse-btn team-button" data-team="P" type="button"><span class="symbol">🌬️</span><span class="team-name">WIND</span></button>
+                <button class="vhouse-btn team-button" data-team="S" type="button"><span class="symbol">🗡️</span><span class="team-name">BLADE</span></button>
               </div>
             </div>
             <div class="group">
@@ -203,11 +156,11 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
             <div class="group">
               <div class="group-label"><b>03</b><span>CHOOSE YOUR IMAGE</span></div>
               <div class="gallery">
-                <button class="gallery-tile selected" data-art="0" type="button"><img id="thumb0" alt="Traveler demo art"><span>TRAVELER</span></button>
-                <button class="gallery-tile" data-art="1" type="button"><img id="thumb1" alt="Guardian demo art"><span>GUARDIAN</span></button>
-                <button class="gallery-tile" data-art="2" type="button"><img id="thumb2" alt="Rebel demo art"><span>REBEL</span></button>
+                <button class="vhouse-btn gallery-tile selected" data-art="0" type="button"><img id="thumb0" alt="Traveler demo art"><span>TRAVELER</span></button>
+                <button class="vhouse-btn gallery-tile" data-art="1" type="button"><img id="thumb1" alt="Guardian demo art"><span>GUARDIAN</span></button>
+                <button class="vhouse-btn gallery-tile" data-art="2" type="button"><img id="thumb2" alt="Rebel demo art"><span>REBEL</span></button>
               </div>
-              <label class="upload" id="uploadLabel">
+              <label class="vhouse-btn upload" id="uploadLabel">
                 <span id="uploadText">＋ &nbsp; CHOOSE IMAGE FROM PC</span>
                 <input type="file" id="fileInput" accept="image/*">
               </label>
@@ -215,14 +168,14 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
             <div class="group">
               <div class="group-label"><b>04</b><span>CHARACTER DESCRIPTION</span></div>
               <div class="mode-row">
-                <button class="mode-button active" data-mode="default" type="button">DEFAULT</button>
-                <button class="mode-button" data-mode="custom" type="button">WRITE MY OWN</button>
+                <button class="vhouse-btn mode-button active" data-mode="default" type="button">DEFAULT</button>
+                <button class="vhouse-btn mode-button" data-mode="custom" type="button">WRITE MY OWN</button>
               </div>
               <div class="default-preview" id="defaultText">A traveler beginning their journey into the unknown.</div>
               <textarea class="description-input" id="descriptionInput" maxlength="100" placeholder="Write your character's description..." hidden></textarea>
             </div>
             <div class="finish-action">
-              <button type="button" class="finish-button" id="finishButton">FINISH</button>
+              <button type="button" class="vhouse-btn finish-button" id="finishButton">FINISH</button>
             </div>
           </section>
           <div class="saved-card-display" id="savedCardDisplay" hidden>
@@ -258,7 +211,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
     <div class="finish-overlay" id="finishOverlay" hidden>
       <div id="creatorMessage" class="vhouse-message--game" role="dialog" aria-modal="true" aria-label="Card Complete" data-vhouse-message data-header="VCARD CREATED" data-title="Card Complete" data-info="Your VCard has been saved."></div>
     </div>
-    <a class="back-button" id="backButton" href="./Vhouse.html" hidden>← BACK</a>
+    <a class="vhouse-btn back-button" id="backButton" href="./Vhouse.html" hidden>← BACK</a>
   </div>
 </main>
 <script src="assets/vhouse-message.js"></script>
