@@ -81,16 +81,7 @@ html.embedded { width: 100%; height: 100%; }
 html.embedded body { width: 100%; height: 100%; min-height: 0; }
 html.embedded .game-container { width: 100%; height: 100%; }
 html.embedded .map-container { width: 100%; height: 100%; aspect-ratio: auto; border: 0; }
-/* Enlarge only the embedded Journey Missions interface, not the outer artwork. */
-html.embedded .header,
-html.embedded .card-selection,
-html.embedded .mission-card,
-html.embedded .mission-detail {
-  transform: scale(1.1);
-  transform-origin: center center;
-}
-html.embedded .back-button { font-size: 1.32cqw; }
-html.embedded .status { font-size: 1.21cqw; }
+
 
 /* R P S CARD SELECTION */
 
@@ -303,6 +294,68 @@ html.embedded .status { font-size: 1.21cqw; }
 .start-button:hover {
   background: #796638;
 }
+/* Embedded layout: enlarge mission elements without moving or scaling their regions into each other. */
+html.embedded .header {
+  top: 6%;
+}
+html.embedded .header small {
+  font-size: 1.21cqw;
+  line-height: 1.2;
+}
+html.embedded .header h1 {
+  font-size: 3.74cqw;
+  line-height: 1.1;
+}
+html.embedded .subtitle {
+  font-size: 1.32cqw;
+  line-height: 1.2;
+  margin-top: .7cqw;
+}
+
+/* Keep the selection below the heading and above the footer. */
+html.embedded .card-selection {
+  top: 30.5%;
+  left: 9.3%;
+  width: 81.4%;
+  height: 53.5%;
+  gap: 3.2%;
+}
+html.embedded .emblem {
+  width: 8.8cqw;
+  height: 8.8cqw;
+  font-size: 6.05cqw;
+}
+html.embedded .card-name { font-size: 1.65cqw; }
+html.embedded .card-label { font-size: 1.1cqw; }
+
+/* The stage selector fits the same content area. */
+html.embedded .mission-card {
+  top: 30.5%;
+  left: 9.3%;
+  width: 81.4%;
+  height: 53.5%;
+  padding: 1cqw 1.4cqw;
+  gap: .8cqw;
+}
+html.embedded .mission-title { font-size: 2.2cqw; }
+html.embedded .stage { font-size: 1.1cqw; }
+html.embedded .stage strong { font-size: 2.53cqw; }
+
+/* When stage details appear, reserve a separate row instead of covering the stage buttons. */
+html.embedded .map-container:has(.mission-detail[style*="block"]) .mission-card {
+  height: 34%;
+}
+html.embedded .mission-detail {
+  bottom: 13%;
+  left: 12%;
+  width: 76%;
+  padding: .85cqw 1cqw;
+}
+html.embedded .detail-title { font-size: 1.87cqw; }
+html.embedded .detail-copy { font-size: 1.21cqw; margin: .5cqw 0; }
+html.embedded .start-button { font-size: 1.32cqw; padding: .5cqw 1.5cqw; }
+html.embedded .back-button { font-size: 1.32cqw; }
+html.embedded .status { font-size: 1.21cqw; }
 </style>
 </head>
 
