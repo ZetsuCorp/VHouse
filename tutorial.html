@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to VHouse — Tutorial</title>
+<link rel="stylesheet" href="assets/vhouse-buttons.css">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
@@ -142,26 +143,6 @@ h1 {
   font-size: clamp(11px, 1.1cqw, 16px);
   line-height: 1.25;
 }
-.button {
-  display: inline-block;
-  flex-shrink: 0;
-  text-decoration: none;
-  color: #241129;
-  font-weight: 900;
-  font-size: clamp(12px, 1.2cqw, 18px);
-  letter-spacing: .08em;
-  padding: .85cqw 2.3cqw;
-  border-radius: .7cqw;
-  border: 2px solid #fff0c1;
-  background: linear-gradient(180deg, #ffe9b2, #c99f4a);
-  box-shadow: 0 0 1.5cqw rgba(245, 208, 119, .48);
-  transition: transform .12s ease, box-shadow .12s ease;
-}
-.button:hover, .button:focus-visible {
-  transform: translateY(-.16cqw);
-  box-shadow: 0 0 2cqw rgba(255, 232, 159, .9);
-}
-.button:active { transform: translateY(.08cqw); }
 @media (orientation: portrait) {
   .rotate-screen { display: flex; }
   .game-container { display: none !important; }
@@ -197,7 +178,7 @@ h1 {
       </div>
       <p class="goal">Your ultimate goal is to Level up and Go on Journey Missions to collect 5 Totem Pages and assemble a Z Book, The Legendary NFT binder.</p>
       <p class="ready">Look around town, then head to VHouse to begin!</p>
-      <a class="button" id="enterTown" href="./index.html?entered=1">ENTER THE TOWN</a>
+      <a class="vhouse-btn button" id="enterTown" href="./index.html?entered=1">ENTER THE TOWN</a>
     </section>
   </div>
 </main>
