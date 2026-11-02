@@ -161,8 +161,8 @@ html, body {
   height: 32.69%;
 }
 
-/* PLAYER ICON - UPPER LEFT OF JOURNEY OVERLAY */
-.player-icon { top:0.2%;left:0.4%; }
+/* Page placement; the icon and info box are a persistent UI object. */
+.town-player-hud { top: 1%; left: 1%; }
 /* Journey overlay, aligned to the second marked rectangle. */
 .journey-overlay {
   position: absolute;
@@ -170,8 +170,7 @@ html, body {
   z-index: 20;
 }
 .journey-overlay[hidden] { display: none; }
-.journey-window,
-.message-window {
+.journey-window {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -188,15 +187,10 @@ html, body {
   border: none;
   background: transparent;
 }
-.message-window {
-  top: 74.72%;
-  width: 55.99%;
-  height: 22.81%;
-}
 
 </style>
 <link rel="stylesheet" href="assets/vhouse-player.css">
-<link rel="stylesheet" href="assets/vhouse-message.css">
+<link rel="stylesheet" href="assets/vhouse-info.css">
 </head>
 
 <body>
@@ -248,20 +242,23 @@ html, body {
       aria-label="Shop">
     </button>
 
-    <!-- JOURNEY OVERLAY -->
+    <!-- Persistent player icon and reusable information box -->
+    <aside class="vhouse-player-hud town-player-hud" aria-label="Player information">
+      <div data-vhouse-player role="img" aria-label="Active VCard"></div>
+      <div data-vhouse-info aria-live="polite"></div>
+    </aside>
+
+    <!-- Journey displays only the menu -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
-      <div class="player-icon" data-vhouse-player role="img" aria-label="Player VCard placeholder"></div>
       <div class="journey-window">
         <iframe src="vcontainer.html" title="Journey Menu"></iframe>
       </div>
-      <div class="message-window" data-vhouse-message data-header="JOURNEY" data-title="Journey" data-info="Select an option to begin."></div>
     </div>
 
   </div>
 
 </main>
 
-<script src="assets/vhouse-message.js"></script>
 <script>
 // Generate the white sparkles once; CSS handles all movement and resets.
 const sparkleLayer = document.querySelector(".map-mist");
@@ -288,15 +285,13 @@ sparkleLayer.appendChild(sparkleFragment);
 const journeyButton = document.getElementById("journeyButton");
 const journeyOverlay = document.getElementById("journeyOverlay");
 const journeyWindow = journeyOverlay.querySelector(".journey-window");
-const messageWindow = journeyOverlay.querySelector(".message-window");
 
 journeyButton.addEventListener("click", () => {
   journeyOverlay.hidden = false;
 });
 
 journeyOverlay.addEventListener("click", (event) => {
-  if (!journeyWindow.contains(event.target) &&
-      !messageWindow.contains(event.target)) {
+  if (!journeyWindow.contains(event.target)) {
     journeyOverlay.hidden = true;
   }
 });
@@ -309,5 +304,6 @@ document.addEventListener("keydown", (event) => {
 </script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-player.js"></script>
+<script src="assets/vhouse-info.js"></script>
 </body>
 </html>

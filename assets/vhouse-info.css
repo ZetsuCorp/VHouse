@@ -1,0 +1,40 @@
+/* Shared VHouse information box. Position is controlled by its parent HUD.
+   Content is supplied externally and never has a predefined number of rows. */
+.vhouse-info {
+  width: 100%;
+  height: 84cqw;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #ffb62d;
+  border-radius: .65cqw;
+  background: rgba(22,13,39,.9);
+  box-shadow: 0 0 1.5cqw #ff9d2966;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  pointer-events: auto;
+}
+.vhouse-info-heading {
+  flex: none;
+  padding: 6% 5% 5%;
+  border-bottom: 2px solid #ffb62d;
+  background: rgba(58,33,85,.95);
+  color: #ffe4a1;
+  text-align: center;
+  font-size: 8.5cqw;
+  line-height: 1.2;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.vhouse-info-content {
+  flex: 1;
+  min-height: 0;
+  padding: 7%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  font-size: 7.5cqw;
+  line-height: 1.35;
+  scrollbar-width: thin;
+}
