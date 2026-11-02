@@ -180,13 +180,170 @@ html, body {
   width: 50.90%;
   height: 63.55%;
 }
-.journey-window iframe {
+/* Journey content sits in the existing Vcontainer artwork, aligned with
+   the same white panel used by VCardCreator.html. Do not resize the window. */
+.journey-window {
+  container-type: inline-size;
+  overflow: hidden;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+.journey-art {
   display: block;
   width: 100%;
   height: 100%;
-  border: none;
-  background: transparent;
+  object-fit: fill;
+  border: 3px solid white;
+  box-shadow: 0 0 10px rgba(255,255,255,.85);
+  pointer-events: none;
+  user-select: none;
 }
+.journey-panel {
+  position: absolute;
+  left: 16.7111%;
+  top: 19.85%;
+  width: 42.9333%;
+  height: 63%;
+  padding: .5% 1%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.journey-panel h2 {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #ffe4a5;
+  text-align: center;
+  font: bold clamp(11px,2.7cqw,25px) Georgia,serif;
+  line-height: 1.08;
+  white-space: nowrap;
+  text-shadow: 0 2px 6px #000;
+}
+.journey-hint {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #d9e6f2;
+  text-align: center;
+  font-size: clamp(9px,1.7cqw,16px);
+  line-height: 1.1;
+}
+.journey-options {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  gap: 2.5%;
+}
+.journey-choice {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 2px solid var(--edge);
+  border-radius: 6px;
+  background: linear-gradient(155deg,var(--light),var(--dark));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5%;
+  box-shadow: inset 0 0 0 2px #ffffff16;
+  cursor: pointer;
+}
+.journey-choice:hover,.journey-choice:focus-visible {
+  filter: brightness(1.2);
+}
+.journey-choice.r { --light:#e94d59; --dark:#711321; --edge:#ffc4c8; }
+.journey-choice.p { --light:#318fff; --dark:#102c85; --edge:#b9e7ff; }
+.journey-choice.s { --light:#39c872; --dark:#0e6136; --edge:#c6ffd8; }
+.journey-glyph {
+  width: min(7cqw,52px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--edge);
+  border-radius: 50%;
+  background: #0004;
+  font: bold clamp(20px,4.7cqw,46px) Georgia,serif;
+}
+.journey-name {
+  font-size: clamp(8px,1.6cqw,16px);
+  font-weight: bold;
+  letter-spacing: .03em;
+}
+.journey-stages {
+  --selected: #d8b57b;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 2.5%;
+  border: 2px solid var(--selected);
+  border-radius: 6px;
+  background: linear-gradient(145deg,#23445b,#101a2d);
+  display: flex;
+  flex-direction: column;
+  gap: 3%;
+}
+.journey-stages-header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  color: #ffe4a5;
+  font-size: clamp(8px,1.5cqw,15px);
+  font-weight: bold;
+}
+.journey-stage-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  grid-template-rows: repeat(2,minmax(0,1fr));
+  gap: 2.5%;
+}
+.journey-stage {
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #7398b0;
+  border-radius: 4px;
+  background: #17354b;
+  color: #fff;
+  font-size: clamp(9px,1.8cqw,18px);
+  font-weight: bold;
+  cursor: pointer;
+}
+.journey-stage:hover,.journey-stage:focus-visible,.journey-stage.active {
+  background: #435f4b;
+  border-color: var(--selected);
+}
+.journey-details {
+  flex: 0 0 auto;
+  min-height: 1em;
+  text-align: center;
+  color: #d9e6f2;
+  font-size: clamp(7px,1.3cqw,13px);
+}
+.journey-actions {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+.journey-actions button {
+  padding: 2% 3%;
+  border: 1px solid #b9a173;
+  border-radius: 4px;
+  background: #443a26;
+  color: #ffe8bb;
+  font-size: clamp(8px,1.2cqw,13px);
+  font-weight: bold;
+  cursor: pointer;
+}
+.journey-actions button:disabled { opacity:.45; cursor:default; }
+.journey-panel [hidden] { display: none !important; }
 
 </style>
 <link rel="stylesheet" href="assets/vhouse-player.css">
@@ -251,7 +408,25 @@ html, body {
     <!-- Journey displays only the menu -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
       <div class="journey-window">
-        <iframe src="./vcontainer.html?mode=journey" title="Journey Missions"></iframe>
+        <img class="journey-art" src="assets/Vcontainer.png" alt="" draggable="false">
+        <section class="journey-panel" role="dialog" aria-modal="true" aria-labelledby="journeyTitle">
+          <h2 id="journeyTitle">JOURNEY MISSIONS</h2>
+          <p class="journey-hint" id="journeyHint">Choose your VCard</p>
+          <div class="journey-options" id="journeyOptions">
+            <button type="button" class="journey-choice r" data-letter="R"><span class="journey-glyph">R</span><span class="journey-name">ROCK</span></button>
+            <button type="button" class="journey-choice p" data-letter="P"><span class="journey-glyph">P</span><span class="journey-name">PAPER</span></button>
+            <button type="button" class="journey-choice s" data-letter="S"><span class="journey-glyph">S</span><span class="journey-name">SCISSORS</span></button>
+          </div>
+          <div class="journey-stages" id="journeyStages" hidden>
+            <div class="journey-stages-header"><span id="journeyChosen">R VCARD</span><span>STAGES 1–10</span></div>
+            <div class="journey-stage-grid" id="journeyStageGrid"></div>
+            <div class="journey-details" id="journeyDetails">Select a mission stage</div>
+            <div class="journey-actions">
+              <button type="button" id="journeyBack">← BACK</button>
+              <button type="button" id="journeyStart" disabled>START JOURNEY</button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -286,8 +461,73 @@ const journeyButton = document.getElementById("journeyButton");
 const journeyOverlay = document.getElementById("journeyOverlay");
 const journeyWindow = journeyOverlay.querySelector(".journey-window");
 
+const journeyOptions = document.getElementById("journeyOptions");
+const journeyStages = document.getElementById("journeyStages");
+const journeyStageGrid = document.getElementById("journeyStageGrid");
+const journeyDetails = document.getElementById("journeyDetails");
+const journeyStart = document.getElementById("journeyStart");
+const journeyHint = document.getElementById("journeyHint");
+const missionInfo = {
+  1: "30 seconds · 3 hunts · 300 IG",
+  2: "60 seconds · 4 hunts + 2 fights · 500 IG"
+};
+let journeyLetter = null;
+let journeyStage = null;
+
+journeyStageGrid.innerHTML = Array.from({length:10}, (_,i) =>
+  '<button type="button" class="journey-stage" data-stage="' + (i+1) + '" aria-label="Stage ' + (i+1) + '">' + (i+1) + '</button>'
+).join("");
+
+function resetJourney() {
+  journeyLetter = null;
+  journeyStage = null;
+  journeyOptions.hidden = false;
+  journeyStages.hidden = true;
+  journeyHint.textContent = "Choose your VCard";
+  journeyDetails.textContent = "Select a mission stage";
+  journeyStart.disabled = true;
+  journeyStageGrid.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+}
+
 journeyButton.addEventListener("click", () => {
+  resetJourney();
   journeyOverlay.hidden = false;
+});
+
+journeyOptions.addEventListener("click", event => {
+  const card = event.target.closest("[data-letter]");
+  if (!card) return;
+  journeyLetter = card.dataset.letter;
+  journeyStage = null;
+  document.getElementById("journeyChosen").textContent = journeyLetter + " VCARD";
+  journeyStages.style.setProperty("--selected", {
+    R: "#ffc4c8", P: "#b9e7ff", S: "#c6ffd8"
+  }[journeyLetter]);
+  journeyOptions.hidden = true;
+  journeyStages.hidden = false;
+  journeyHint.textContent = "Select a mission stage";
+  journeyDetails.textContent = "Select a mission stage";
+  journeyStart.disabled = true;
+  journeyStageGrid.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+});
+
+journeyStageGrid.addEventListener("click", event => {
+  const button = event.target.closest("[data-stage]");
+  if (!button) return;
+  journeyStage = Number(button.dataset.stage);
+  journeyStageGrid.querySelectorAll("button").forEach(b =>
+    b.classList.toggle("active", b === button)
+  );
+  journeyDetails.textContent = "Stage " + journeyStage + " · " +
+    (missionInfo[journeyStage] || "Mission details coming soon");
+  journeyStart.disabled = !missionInfo[journeyStage];
+});
+
+document.getElementById("journeyBack").addEventListener("click", resetJourney);
+journeyStart.addEventListener("click", () => {
+  if (!missionInfo[journeyStage]) return;
+  journeyDetails.textContent = "Stage " + journeyStage +
+    " selected. Mission execution is not connected yet.";
 });
 
 journeyOverlay.addEventListener("click", (event) => {
