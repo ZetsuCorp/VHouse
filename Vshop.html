@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse Shop</title>
+<link rel="stylesheet" href="assets/vhouse-buttons.css">
+<link rel="stylesheet" href="assets/vhouse-player.css">
+<link rel="stylesheet" href="assets/vhouse-info.css">
+<link rel="stylesheet" href="assets/vhouse-message.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: Arial, sans-serif;
+}
+.rotate-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  padding: 24px;
+}
+.rotate-icon { font-size: 64px; }
+.rotate-screen h2 { font-size: 24px; }
+.rotate-screen p { font-size: 16px; color: #bbb; }
+@media (orientation: portrait) {
+  .rotate-screen { display: flex; }
+  .game-container { display: none !important; }
+}
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.map-container {
+  position: relative;
+  width: min(100vw, 200dvh);
+  aspect-ratio: 2 / 1;
+  flex-shrink: 0;
+  container-type: inline-size;
+}
+.game-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+/* Page-specific placement only; UI designs come from the shared components. */
+.shop-player-hud { top: 1%; left: 1%; }
+.shop-back-button {
+  position: absolute;
+  left: 16.6667%; /* actual left edge of the contained 4:3 shop artwork */
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+}
+.shop-message { z-index: 35; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="rotate-screen">
+  <div class="rotate-icon" aria-hidden="true">↻</div>
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+<main class="game-container">
+  <div class="map-container">
+    <img class="game-map" src="assets/V%20Shop.png" alt="VHouse Shop interior" draggable="false">
+
+    <aside class="vhouse-player-hud shop-player-hud" aria-label="Player information">
+      <div data-vhouse-player role="img" aria-label="Active VCard"></div>
+      <div data-vhouse-info aria-live="polite"></div>
+    </aside>
+
+    <!-- Available for future shop information; hidden until the game supplies a message. -->
+    <div id="shopMessage" class="vhouse-message--game shop-message"
+      data-vhouse-message aria-live="polite" hidden></div>
+
+    <a class="vhouse-btn back-button shop-back-button" href="./index.html">← BACK</a>
+  </div>
+</main>
+<script src="assets/vhouse-cards.js"></script>
+<script src="assets/vhouse-player.js"></script>
+<script src="assets/vhouse-info.js"></script>
+<script src="assets/vhouse-message.js"></script>
+</body>
+</html>
