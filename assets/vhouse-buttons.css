@@ -1,0 +1,267 @@
+/* Zetsu VHouse button system. One shared source for all interactive controls.
+   Page-local CSS owns only each control's layout/coordinates. */
+:where(.vhouse-btn) { --vhouse-btn-outline: 2px; }
+
+/* Back button */
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8%;
+  padding: .7cqw 1cqw;
+  border: var(--vhouse-btn-outline, 2px) solid #ffb62d;
+  border-radius: .6cqw;
+  background: #160d27;
+  color: #fff;
+  box-shadow: 0 0 1cqw #ff9d2966;
+  text-decoration: none;
+  font-size: 1.25cqw;
+  font-weight: 900;
+  letter-spacing: .07em;
+}
+.back-button:hover,
+.back-button:focus-visible {
+  background: #36204e;
+  box-shadow: 0 0 1.5cqw #ffb62d99;
+}
+
+/* Closet carousel card controls */
+.closet-slot {
+  appearance: none;
+  position: relative;
+  flex: 0 0 24%;
+  aspect-ratio: 415 / 601;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: scale(.94);
+  opacity: .86;
+  transition: transform .2s ease, opacity .2s ease, filter .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.closet-slot.is-center {
+  transform: scale(1.04);
+  opacity: 1;
+  filter: drop-shadow(0 0 .7cqw #a442ff75);
+}
+.closet-slot:hover,
+.closet-slot:focus-visible {
+  opacity: 1;
+  filter: drop-shadow(0 0 .8cqw #c888ff88);
+}
+.closet-slot:focus-visible { outline: 2px solid #ffb62d; outline-offset: 2px; }
+.closet-slot .card-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Closet carousel arrow controls */
+.carousel-arrow {
+  position: absolute;
+  top: 37%;
+  z-index: 5;
+  width: 3.5cqw;
+  height: 3.5cqw;
+  border: var(--vhouse-btn-outline, 2px) solid #ffb62d;
+  border-radius: .6cqw;
+  background: #160d27de;
+  color: #fff;
+  font: 900 2cqw Arial, sans-serif;
+  box-shadow: 0 0 1cqw #ff9d2955;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carousel-arrow:hover,
+.carousel-arrow:focus-visible { background: #36204e; }
+
+/* Closet reduced motion rules */
+@media (prefers-reduced-motion: reduce) {
+  .closet-slot { transition: none; }
+}
+
+/* VCard team selection controls */
+.team-button {
+  appearance:none;
+  border: var(--vhouse-btn-outline, 2px) solid #345163;
+  background:linear-gradient(#1a2a39,#111a25);
+  color:#b9ced7;
+  border-radius:9px;
+  height:52px;
+  cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.team-button .symbol { display:block; font-size:21px; margin-bottom:2px; }
+.team-button .team-name { display:block; font-size:10px; letter-spacing:1px; font-weight:900; }
+.team-button:hover { border-color:#a1e6eb; }
+.team-button.active { background:linear-gradient(#123c48,#11232f); color:#fff; border-color:var(--cyan); box-shadow:inset 0 0 14px #00eaff20,0 0 12px #00eaff29; }
+
+/* VCard gallery and upload controls */
+.gallery-tile { appearance:none; text-align:center; background:#080f17; border: var(--vhouse-btn-outline, 2px) solid #293f50; padding:3px 3px 4px; border-radius:8px; color:#a9bbc9; cursor:pointer; overflow:hidden; }
+.gallery-tile img { width:100%; height:48px; object-fit:cover; border-radius:4px; display:block; margin-bottom:4px; background:#172633; }
+.gallery-tile span { font-size:9px; font-weight:bold; }
+.gallery-tile.selected { border-color:var(--cyan); box-shadow:0 0 13px #00eaff28; color:#fff; }
+.gallery-tile:hover { border-color:#7acbd8; }
+.upload { margin-top:7px; height:25px; border: var(--vhouse-btn-outline, 2px) dashed #4b6977; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#b1ccd7; font-size:10px; cursor:pointer; }
+.upload:hover,.upload.selected { background:#102531; border-color:var(--cyan); }
+.upload input { display:none; }
+
+/* VCard writing mode controls */
+.mode-button { flex:1; height:26px; border: var(--vhouse-btn-outline, 2px) solid #355266; border-radius:6px; background:#0b141e; color:#9fb4c3; font-size:10px; font-weight:800; cursor:pointer; }
+.mode-button.active { border-color:var(--cyan); background:#11303c; color:#fff; }
+
+/* VCard finish action */
+.finish-button { width:100%; height:38px; border: var(--vhouse-btn-outline, 2px) solid #00eaff; border-radius:7px; background:linear-gradient(100deg,#164b55,#0e263b); color:#fff; font-size:13px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 12px #00eaff33; }
+.finish-button:hover,.finish-button:focus-visible { background:linear-gradient(100deg,#197687,#13445e); outline:none; box-shadow:0 0 16px #00eaff66; }
+.finish-button:active { transform:translateY(1px); }
+
+/* VHouse interactive hotspot labels */
+.house-hotspot {
+  position: absolute;
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.house-hotspot::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: min(27vw, 320px);
+  padding: 9px 15px;
+  background: rgba(0,0,0,.88);
+  color: #fff;
+  border: var(--vhouse-btn-outline, 2px) solid #ffd54a;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(255, 204, 0, .4);
+  text-shadow: 0 0 8px #ffcc00;
+  font-size: clamp(11px, 1.3vw, 19px);
+  font-weight: bold;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: center;
+  opacity: .52;
+  visibility: visible;
+  pointer-events: auto;
+  animation: house-button-float 3.4s ease-in-out infinite;
+  transition: opacity .15s ease, background .15s ease;
+}
+@keyframes house-button-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -.25cqw; }
+}
+.house-hotspot:hover::after,
+.house-hotspot:focus-visible::after {
+  animation: none;
+  translate: 0 0;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .house-hotspot::after { animation: none; }
+}
+.house-hotspot:focus-visible { outline: 2px solid #ffd54a; }
+
+/* VHouse login option actions */
+.login-options button {
+  display: block;
+  width: 82%;
+  min-width: 0;
+  max-width: 30cqw;
+  padding: .7cqw .8cqw;
+  border: var(--vhouse-btn-outline, 2px) solid #ffd77b;
+  border-radius: .5cqw;
+  background: rgba(22, 8, 49, .92);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 1.16cqw;
+  font-weight: bold;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 0 .5cqw rgba(255, 235, 150, .38);
+  box-shadow: 0 0 .8cqw rgba(255, 194, 87, .3);
+  cursor: pointer;
+}
+.login-options button:hover,
+.login-options button:focus-visible {
+  background: rgba(79, 39, 126, .95);
+  box-shadow: 0 0 15px rgba(255, 216, 132, .6);
+}
+
+/* Town map hotspot controls */
+/* CLICKABLE MAP AREAS */
+.map-hotspot {
+  position: absolute;
+  display: block;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* HOVER LABEL */
+.map-hotspot::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.85);
+  border: var(--vhouse-btn-outline, 2px) solid #ffd54a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: clamp(12px, 1.5vw, 20px);
+  font-weight: bold;
+  white-space: nowrap;
+  text-shadow: 0 0 8px #ffcc00;
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+/* SHOW LABEL ON HOVER OR TAP */
+.map-hotspot:hover::after,
+.map-hotspot:focus::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Tutorial primary action */
+.button {
+  display: inline-block;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: #241129;
+  font-weight: 900;
+  font-size: clamp(12px, 1.2cqw, 18px);
+  letter-spacing: .08em;
+  padding: .85cqw 2.3cqw;
+  border-radius: .7cqw;
+  border: var(--vhouse-btn-outline, 2px) solid #fff0c1;
+  background: linear-gradient(180deg, #ffe9b2, #c99f4a);
+  box-shadow: 0 0 1.5cqw rgba(245, 208, 119, .48);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.button:hover, .button:focus-visible {
+  transform: translateY(-.16cqw);
+  box-shadow: 0 0 2cqw rgba(255, 232, 159, .9);
+}
+.button:active { transform: translateY(.08cqw); }
+
