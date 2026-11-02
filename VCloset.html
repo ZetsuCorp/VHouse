@@ -132,7 +132,7 @@ html, body {
   let items = [];
   function refreshItems() {
     const cards = store.getCards();
-    items = cards.length ? cards : [null];
+    items = cards.length ? cards.concat(Array(Math.max(0, 3 - cards.length)).fill(null)) : [null, null, null];
   }
   refreshItems();
   const slots = [...document.querySelectorAll(".closet-slot")];
