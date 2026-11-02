@@ -252,28 +252,14 @@ html, body {
   border: none;
   background: transparent;
 }
-/* MESSAGE FRAME: directly placed image, 10% larger */
 .message-window {
   top: 74.72%;
   width: 55.99%;
   height: 22.81%;
 }
-/* Soft white backlight follows the image's actual transparent outline. */
-.message-window img {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  border: none;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, .42))
-          drop-shadow(0 0 11px rgba(255, 255, 255, .22));
-  user-select: none;
-  -webkit-user-drag: none;
-}
 
 </style>
+<link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
 
 <body>
@@ -333,15 +319,14 @@ html, body {
       <div class="journey-window">
         <iframe src="vcontainer.html" title="Journey Menu"></iframe>
       </div>
-      <div class="message-window">
-        <img src="assets/Message Frame.png" alt="Journey Messages" draggable="false">
-      </div>
+      <div class="message-window" data-vhouse-message data-header="JOURNEY" data-title="Journey" data-info="Select an option to begin."></div>
     </div>
 
   </div>
 
 </main>
 
+<script src="assets/vhouse-message.js"></script>
 <script>
 // Generate the white sparkles once; CSS handles all movement and resets.
 const sparkleLayer = document.querySelector(".map-mist");
