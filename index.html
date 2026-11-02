@@ -162,30 +162,7 @@ html, body {
 }
 
 /* PLAYER ICON - UPPER LEFT OF JOURNEY OVERLAY */
-.player-icon {
-  position: absolute;
-  top: 0.2%;
-  left: 0.4%;
-  width: 11%;
-  aspect-ratio: 1 / 1;
-  pointer-events: none;
-}
-.player-icon img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.player-icon::after {
-  content: "";
-  position: absolute;
-  inset: 5%;
-  border: 3px solid white;
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
-  pointer-events: none;
-}
-
+.player-icon { top:0.2%;left:0.4%; }
 /* Journey overlay, aligned to the second marked rectangle. */
 .journey-overlay {
   position: absolute;
@@ -218,6 +195,7 @@ html, body {
 }
 
 </style>
+<link rel="stylesheet" href="assets/vhouse-player.css">
 <link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
 
@@ -272,9 +250,7 @@ html, body {
 
     <!-- JOURNEY OVERLAY -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
-      <div class="player-icon">
-        <img src="assets/PlayerHolder-removebg-preview.png" alt="Player Icon" draggable="false">
-      </div>
+      <div class="player-icon" data-vhouse-player role="img" aria-label="Player VCard placeholder"></div>
       <div class="journey-window">
         <iframe src="vcontainer.html" title="Journey Menu"></iframe>
       </div>
@@ -331,5 +307,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 </script>
+<script src="assets/vhouse-cards.js"></script>
+<script src="assets/vhouse-player.js"></script>
 </body>
 </html>
