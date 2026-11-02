@@ -1,0 +1,38 @@
+/* Shared player portrait UI. Page CSS controls only position. */
+.vhouse-player {
+  position: absolute;
+  width: 11%;
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  isolation: isolate;
+}
+.vhouse-player-holder {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 0;
+}
+.vhouse-player-portrait {
+  position: absolute;
+  inset: 21%;
+  width: 58%;
+  height: 58%;
+  object-fit: cover;
+  border-radius: 50%;
+  z-index: 1;
+  display: none;
+}
+.vhouse-player.has-vcard .vhouse-player-portrait { display: block; }
+.vhouse-player::after {
+  content: "";
+  position: absolute;
+  inset: 5%;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255,255,255,.85);
+  pointer-events: none;
+  z-index: 2;
+}
