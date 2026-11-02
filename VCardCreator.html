@@ -358,7 +358,7 @@ $("finishButton").addEventListener("click",async()=>{
 });
 $("finishOverlay").addEventListener("click",e=>{ if(e.target===$("finishOverlay")) $("finishOverlay").hidden=true; });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("finishOverlay").hidden=true; });
-VHouseInfo.set("#creatorInfoBox", {heading:"HOW TO CREATE YOUR VCARD", content:"Choose STONE, WIND, or BLADE. Name your VCard, pick or upload an image, and add a description.\n\nPress FINISH to save it to your Closet for adventures."});
+VHouseInfo.set("#creatorInfoBox", {heading:"CREATE YOUR VCARD", content:"Choose your team: STONE, WIND, or BLADE. Give your VCard a name, select an image or upload your own, and add a character description.\n\nWhen you're happy with your creation, press FINISH to save your VCard. Your card will be stored in your Closet, where you can select it for your adventures."});
 setTeam("R");
 updateArt();
 updateDescription();
