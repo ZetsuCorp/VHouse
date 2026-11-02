@@ -36,32 +36,8 @@ html, body {
 .rotate-screen p { font-size: 16px; color: #bbb; }
 
 /* Exactly the same 2:1 screen fit and centering as index.html. */
-.game-container {
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.map-container {
-  position: relative;
-  width: min(100vw, 200dvh);
-  aspect-ratio: 2 / 1;
-  flex-shrink: 0;
-  isolation: isolate;
-  container-type: inline-size;
-}
-.game-map {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
+.map-container { isolation: isolate; }
+
 .map-container::after {
   content: "";
   position: absolute;
@@ -148,6 +124,7 @@ h1 {
   .game-container { display: none !important; }
 }
 </style>
+<link rel="stylesheet" href="assets/vhouse-screen.css">
 </head>
 <body>
 <div class="rotate-screen">
