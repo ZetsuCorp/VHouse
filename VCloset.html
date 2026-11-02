@@ -78,61 +78,19 @@ html, body {
   gap: 2.5%;
   z-index: 2;
 }
-.stored-vcard {
-  --card-accent: #2d7bdc;
-  position: absolute;
-  left: 17.5%;
-  top: 16.8%;
-  width: 65%;
-  height: 67%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 2px solid var(--card-accent);
-  border-radius: .25cqw;
-  background: #08111b;
-  box-shadow: 0 0 .65cqw #000b;
-  color: white;
-  pointer-events: none;
-}
-.stored-vcard .stored-name {
-  padding: .45cqw .15cqw;
-  text-align: center;
-  font-size: 1cqw;
-  font-weight: 900;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: #070b13;
-}
-.stored-vcard .stored-art {
-  display: block;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  object-fit: cover;
-}
-.stored-vcard .stored-level {
-  padding: .3cqw .15cqw;
-  border-top: 2px solid var(--card-accent);
-  background: #08111b;
-  font-size: .75cqw;
-  font-weight: 900;
-  text-align: center;
-}
-.stored-vcard .stored-stats {
-  display: flex;
-  justify-content: space-around;
-  padding: .35cqw .15cqw;
-  border-top: 2px solid var(--card-accent);
-  background: #03070d;
-  font-size: .75cqw;
-  font-weight: 900;
+.closet-slot .closet-card-host {
+  position:absolute;
+  left:17.5%;
+  top:16.8%;
+  width:65%;
+  max-height:67%;
+  pointer-events:none;
+  overflow:hidden;
 }
 .carousel-prev { left:12%; }
 .carousel-next { right:12%; }
 </style>
+<link rel="stylesheet" href="assets/vhouse-vcard.css">
 <link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
 <body>
@@ -164,66 +122,56 @@ html, body {
   </div>
 </main>
 
+<script src="assets/vhouse-cards.js"></script>
+<script src="assets/vhouse-vcard.js"></script>
 <script src="assets/vhouse-message.js"></script>
 <script>
 (() => {
-  // The VCard Creator currently saves one completed card under this key.
-  // Empty positions remain available for future VCards/outfits.
-  let savedCard = null;
-  try {
-    const value = JSON.parse(localStorage.getItem("vhouse-vcard") || "null");
-    if (value && typeof value === "object" && !Array.isArray(value)) savedCard = value;
-  } catch (error) {
-    console.warn("Could not read saved VCard:", error);
+  // One store drives the Closet, Creator, and Player UI.
+  const store = VHouseCardStore;
+  let items = [];
+  function refreshItems() {
+    const cards = store.getCards();
+    items = cards.length ? cards : [null];
   }
-  const items = [savedCard, null, null];
+  refreshItems();
   const slots = [...document.querySelectorAll(".closet-slot")];
   const showcase = document.getElementById("closetShowcase");
   const messageHost = document.getElementById("closetMessage");
   const colors = {R: "#2d7bdc", P: "#1abf96", S: "#b16df4"};
   let selected = 0;
 
-  function textElement(tag, className, value) {
-    const el = document.createElement(tag);
-    el.className = className;
-    el.textContent = value;
-    return el;
-  }
   function render() {
+    refreshItems();
+    const activeIndex = items.findIndex(card => card?.id === store.getActiveId());
+    if (activeIndex >= 0 && selected >= items.length) selected = activeIndex;
+    selected = ((selected % items.length) + items.length) % items.length;
     slots.forEach((slot, position) => {
       const offset = position - 1;
       const index = (selected + offset + items.length) % items.length;
       const card = items[index];
-      slot.querySelector(".stored-vcard")?.remove();
-      slot.setAttribute("aria-label", card
-        ? String(card.name || "VCard") + (offset === 0 ? ", selected" : ", select")
-        : "Empty VCard slot " + (index + 1));
-      if (!card) return;
-      const preview = document.createElement("div");
-      preview.className = "stored-vcard";
-      preview.style.setProperty("--card-accent", colors[card.team] || colors.R);
-      preview.appendChild(textElement("div", "stored-name", String(card.name || "VCARD")));
-      if (typeof card.image === "string" && card.image.length) {
-        const art = document.createElement("img");
-        art.className = "stored-art";
-        art.src = card.image;
-        art.alt = "";
-        preview.appendChild(art);
+      let host = slot.querySelector(".closet-card-host");
+      if (!host) {
+        host = document.createElement("div");
+        host.className = "closet-card-host";
+        slot.appendChild(host);
       }
-      preview.appendChild(textElement("div", "stored-level", "LEVEL " + (card.level || 1)));
-      preview.appendChild(textElement("div", "stored-stats",
-        "ATK " + (card.atk ?? 100) + "    DEF " + (card.def ?? 100)));
-      slot.appendChild(preview);
+      VHouseVCard.render(host, card);
+      slot.setAttribute("aria-label", card ? String(card.name) + (offset === 0 ? ", selected" : ", select") : "Empty VCard slot");
+      slot.classList.toggle("is-center", offset === 0);
+      slot.setAttribute("aria-current", String(offset === 0));
     });
     const current = items[selected];
     VHouseMessage.set(messageHost, {
-      header: current ? "VIEWING VCARD" : "EMPTY SLOT",
+      header: current ? (current.id === store.getActiveId() ? "ACTIVE VCARD" : "VIEWING VCARD") : "EMPTY SLOT",
       title: current ? String(current.name || "VCard") : "VCard Slot",
       info: current ? String(current.description || "No description entered.") : "Finished VCards and outfits can be viewed here."
     });
   }
   function move(direction) {
     selected = (selected + direction + items.length) % items.length;
+    const card = items[selected];
+    if (card) store.setActive(card.id);
     render();
   }
   document.querySelector(".carousel-prev").addEventListener("click", () => move(-1));
@@ -262,6 +210,13 @@ html, body {
   document.addEventListener("keydown", event => {
     if (event.key === "ArrowLeft") move(-1);
     if (event.key === "ArrowRight") move(1);
+  });
+  const initiallyActive = items.findIndex(card => card?.id === store.getActiveId());
+  selected = initiallyActive >= 0 ? initiallyActive : 0;
+  store.subscribe(() => {
+    const next = store.getCards().findIndex(card => card.id === store.getActiveId());
+    if (next >= 0) selected = next;
+    render();
   });
   render();
 })();
