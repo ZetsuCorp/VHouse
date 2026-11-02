@@ -344,7 +344,7 @@ $("finishButton").addEventListener("click",async()=>{
 });
 $("finishOverlay").addEventListener("click",e=>{ if(e.target===$("finishOverlay")) $("finishOverlay").hidden=true; });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("finishOverlay").hidden=true; });
-VHouseInfo.set("#creatorInfoBox", {heading:"INFORMATION", content:""});
+VHouseInfo.set("#creatorInfoBox", {heading:"HOW TO CREATE YOUR VCARD", content:"Choose STONE, WIND, or BLADE. Name your VCard, pick or upload an image, and add a description.\n\nPress FINISH to save it to your Closet for adventures."});
 setTeam("R");
 updateArt();
 updateDescription();
