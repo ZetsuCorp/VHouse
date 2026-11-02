@@ -152,30 +152,7 @@ html, body {
   z-index: 5;
   pointer-events: none;
 }
-.hud-player-icon {
-  position: absolute;
-  top: 0.2%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 11%;
-  aspect-ratio: 1 / 1;
-  pointer-events: none;
-}
-.hud-player-icon img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.hud-player-icon::after {
-  content: "";
-  position: absolute;
-  inset: 5%;
-  border: 3px solid white;
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
-  pointer-events: none;
-}
+.hud-player-icon { top:0.2%;left:50%;transform:translateX(-50%); }
 /* Reuse the same Vcontainer frame as the Journey menu. */
 .login-overlay {
   position: absolute;
@@ -220,6 +197,7 @@ html, body {
   letter-spacing: .06em;
 }
 </style>
+<link rel="stylesheet" href="assets/vhouse-player.css">
 </head>
 <body>
 <div class="rotate-screen">
@@ -239,9 +217,7 @@ html, body {
       <button type="button" class="vhouse-btn house-hotspot hotspot-login" data-label="Log In" aria-label="Log In"></button>
     </div>
     <div class="hud-layer">
-      <div class="hud-player-icon">
-        <img src="assets/PlayerHolder-removebg-preview.png" alt="Player Placeholder" draggable="false">
-      </div>
+      <div class="hud-player-icon" data-vhouse-player role="img" aria-label="Player VCard placeholder"></div>
     </div>
     <div id="loginOverlay" class="login-overlay" hidden>
       <div class="login-window" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
@@ -274,5 +250,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") loginOverlay.hidden = true;
 });
 </script>
+<script src="assets/vhouse-cards.js"></script>
+<script src="assets/vhouse-player.js"></script>
 </body>
 </html>
