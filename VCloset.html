@@ -208,65 +208,12 @@ html, body {
 .carousel-arrow:focus-visible { background: #36204e; }
 .carousel-prev { left: 12%; }
 .carousel-next { right: 12%; }
-.closet-message {
-  position: absolute;
-  left: 50%;
-  top: 73%;
-  transform: translateX(-50%);
-  width: 55.99%;
-  height: 22.81%;
-  z-index: 3;
-  pointer-events: none;
-}
-.closet-message img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  filter: drop-shadow(0 0 5px #ffffff55);
-}
-.closet-message-content {
-  position: absolute;
-  inset: 38% 14% 12%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: .12cqw;
-  color: #fff;
-  text-align: center;
-  text-shadow: 0 2px 7px #000;
-  overflow: hidden;
-}
-.closet-message-header {
-  font-size: .72cqw;
-  line-height: 1.1;
-  letter-spacing: .12em;
-  color: #ffe5a0;
-  font-weight: 900;
-}
-.closet-message-title {
-  font-size: 1.2cqw;
-  line-height: 1.1;
-  font-weight: 900;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.closet-message-info {
-  font-size: .88cqw;
-  line-height: 1.2;
-  max-width: 100%;
-  max-height: 2.4em;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-}
 @media (prefers-reduced-motion: reduce) {
   .closet-slot { transition: none; }
 }
 
 </style>
+<link rel="stylesheet" href="assets/vhouse-message.css">
 </head>
 <body>
 <div class="rotate-screen">
@@ -291,18 +238,13 @@ html, body {
     </div>
     <button class="carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
     <button class="carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
-    <div class="closet-message" aria-live="polite">
-      <img src="assets/Message Frame.png" alt="" draggable="false">
-      <div class="closet-message-content">
-        <div class="closet-message-header" id="closetMessageReason">VCARD CLOSET</div>
-        <strong class="closet-message-title" id="closetItemName">VCard Closet</strong>
-        <p class="closet-message-info" id="closetItemDescription">Finished VCards and outfits are displayed here.</p>
-      </div>
-    </div>
+    <div id="closetMessage" class="vhouse-message--game" aria-live="polite" data-vhouse-message
+      data-header="VCARD CLOSET" data-title="VCard Closet" data-info="Finished VCards and outfits are displayed here."></div>
     <a class="back-button" href="./Vhouse.html">← BACK</a>
   </div>
 </main>
 
+<script src="assets/vhouse-message.js"></script>
 <script>
 (() => {
   // The VCard Creator currently saves one completed card under this key.
@@ -317,9 +259,7 @@ html, body {
   const items = [savedCard, null, null];
   const slots = [...document.querySelectorAll(".closet-slot")];
   const showcase = document.getElementById("closetShowcase");
-  const reasonLabel = document.getElementById("closetMessageReason");
-  const nameLabel = document.getElementById("closetItemName");
-  const descriptionLabel = document.getElementById("closetItemDescription");
+  const messageHost = document.getElementById("closetMessage");
   const colors = {R: "#2d7bdc", P: "#1abf96", S: "#b16df4"};
   let selected = 0;
 
@@ -356,11 +296,11 @@ html, body {
       slot.appendChild(preview);
     });
     const current = items[selected];
-    reasonLabel.textContent = current ? "VIEWING VCARD" : "EMPTY SLOT";
-    nameLabel.textContent = current ? String(current.name || "VCard") : "VCard Slot";
-    descriptionLabel.textContent = current
-      ? String(current.description || "No description entered.")
-      : "Finished VCards and outfits can be viewed here.";
+    VHouseMessage.set(messageHost, {
+      header: current ? "VIEWING VCARD" : "EMPTY SLOT",
+      title: current ? String(current.name || "VCard") : "VCard Slot",
+      info: current ? String(current.description || "No description entered.") : "Finished VCards and outfits can be viewed here."
+    });
   }
   function move(direction) {
     selected = (selected + direction + items.length) % items.length;
