@@ -36,3 +36,63 @@
   pointer-events: none;
   z-index: 2;
 }
+
+/* Persistent player HUD, shared with any future screen that uses a stats panel. */
+.vhouse-player-hud {
+  position: absolute;
+  z-index: 25;
+  width: 15%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  pointer-events: none;
+  container-type: inline-size;
+}
+.vhouse-player-hud .vhouse-player {
+  position: relative;
+  inset: auto;
+  width: 72%;
+  height: auto;
+  flex: 0 0 auto;
+  transform: none;
+}
+.vhouse-player-info {
+  width: 100%;
+  margin-top: 3%;
+  border: 2px solid #ffb62d;
+  border-radius: 6px;
+  background: rgba(22, 13, 39, .89);
+  box-shadow: 0 0 1.5cqw #ff9d2966;
+  color: white;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+.vhouse-player-info-title {
+  padding: 5% 5% 4%;
+  background: rgba(58, 33, 85, .95);
+  border-bottom: 2px solid #ffb62d;
+  color: #ffe4a1;
+  font-size: 8cqw;
+  line-height: 1.15;
+  text-align: center;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vhouse-player-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4%;
+  padding: 4% 8%;
+  font-size: 7.2cqw;
+  line-height: 1.1;
+  font-weight: 700;
+}
+.vhouse-player-info-row + .vhouse-player-info-row {
+  border-top: 1px solid rgba(255, 182, 45, .36);
+}
+.vhouse-player-info-label { color: #ddc8ec; }
+.vhouse-player-info-value { color: white; font-weight: 900; font-variant-numeric: tabular-nums; }
