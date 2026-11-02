@@ -63,12 +63,13 @@ html, body {
   -webkit-user-drag: none;
   pointer-events: none;
 }
-/* Page-specific placement only; UI designs come from the shared components. */
-.shop-player-hud { top: 1%; left: 1%; }
+/* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
+.shop-player-hud { top: 2%; left: 7%; }
+/* Clear the HUD and align with the visible image edge like other VHouse pages. */
 .shop-back-button {
   position: absolute;
-  left: 16.6667%; /* actual left edge of the contained 4:3 shop artwork */
-  top: 50%;
+  left: 5.56%;
+  top: 70%;
   transform: translate(-50%, -50%);
   z-index: 30;
 }
@@ -84,7 +85,7 @@ html, body {
 </div>
 <main class="game-container">
   <div class="map-container">
-    <img class="game-map" src="assets/V%20Shop.png" alt="VHouse Shop interior" draggable="false">
+    <img class="game-map" src="assets/V%20Shop.png?v=20261102" alt="VHouse Shop interior" draggable="false">
 
     <aside class="vhouse-player-hud shop-player-hud" aria-label="Player information">
       <div data-vhouse-player role="img" aria-label="Active VCard"></div>
