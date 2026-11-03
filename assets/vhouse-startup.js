@@ -10,6 +10,9 @@
   let config = null, configError = null, imageErrors = [];
   let authAdapter = null, authMode = null;
   let legalRequired = false;
+  let policyScrollReached = false;
+  let legalConfigValid = false;
+  let policyScrollCleanup = null;
   const root = $("startupRoot");
   if (!root) return;
 
@@ -128,8 +131,43 @@
       $("authStatus").textContent = "Sign-in failed. Try again or continue as guest.";
     }
   }
+  function updateLegalContinue() {
+    $("legalContinue").disabled = !policyScrollReached || !legalConfigValid ||
+      (legalRequired && !$("legalConsent").checked);
+  }
+  function bindPolicyScroll() {
+    if (policyScrollCleanup) {
+      policyScrollCleanup();
+      policyScrollCleanup = null;
+    }
+    policyScrollReached = false;
+    updateLegalContinue();
+    const frame = $("policyFrame");
+    if (root.dataset.stage !== "legal" || frame.hidden) return;
+    try {
+      const doc = frame.contentDocument;
+      const scrolling = doc?.scrollingElement || doc?.documentElement;
+      if (!doc || !scrolling || doc.readyState === "loading") return;
+      const checkBottom = () => {
+        if (root.dataset.stage !== "legal") return;
+        const scrollDistance = scrolling.scrollHeight - scrolling.clientHeight;
+        if (scrollDistance > 8 && scrolling.scrollTop >= scrollDistance - 8) {
+          policyScrollReached = true;
+          $("legalStatus").textContent = "End of policy reached. You can continue.";
+          updateLegalContinue();
+        }
+      };
+      doc.addEventListener("scroll", checkBottom, {passive: true, capture: true});
+      policyScrollCleanup = () => doc.removeEventListener("scroll", checkBottom, true);
+      checkBottom();
+    } catch (error) {
+      $("legalStatus").textContent = "The embedded policy cannot be checked. Continue remains locked.";
+      console.warn("VHouse policy scroll check unavailable:", error);
+    }
+  }
   function showLegal() {
     setStage("legal");
+    policyScrollReached = false;
     const legal = config?.legal || {};
     const status = $("legalStatus");
     const terms = $("startupTerms"), privacy = $("startupPrivacy"), row = $("consentRow");
@@ -138,30 +176,30 @@
     const hasTerms = validLink(legal.termsUrl), hasPrivacy = validLink(legal.privacyUrl);
     terms.hidden = !hasTerms; privacy.hidden = !hasPrivacy;
     if (hasTerms) terms.href = legal.termsUrl;
+    legalRequired = legal.required === true;
+    legalConfigValid = hasPrivacy && (!legalRequired || hasTerms);
+    row.hidden = !legalRequired;
+    $("legalConsent").checked = false;
+    updateLegalContinue();
     if (hasPrivacy) {
       privacy.href = legal.privacyUrl;
       frame.hidden = false;
+      const nextUrl = new URL(legal.privacyUrl, document.baseURI);
+      if (nextUrl.origin !== location.origin) {
+        status.textContent = "A scroll-verified privacy page must be hosted on this site's origin.";
+        frame.hidden = true;
+        return;
+      }
+      status.textContent = "Scroll to the bottom of the VHouse privacy page to unlock CONTINUE. Official policy text is still being prepared.";
       if (frame.getAttribute("src") !== legal.privacyUrl) frame.src = legal.privacyUrl;
+      else bindPolicyScroll();
     } else {
       frame.hidden = true;
       frame.removeAttribute("src");
+      status.textContent = "The game privacy policy is not configured yet.";
     }
-    legalRequired = legal.required === true;
-    row.hidden = !legalRequired;
-    $("legalConsent").checked = false;
-    if (legalRequired) {
-      if (!hasTerms || !hasPrivacy) {
-        status.textContent = "Required legal documents are not configured. Entry is blocked until they are published.";
-        $("legalContinue").disabled = true;
-      } else {
-        status.textContent = "Review the linked policies, then confirm to continue.";
-        $("legalContinue").disabled = true;
-      }
-    } else {
-      status.textContent = hasPrivacy
-        ? "VHouse privacy page preview. The official game privacy policy is not published yet."
-        : "The game privacy policy is not configured yet.";
-      $("legalContinue").disabled = false;
+    if (legalRequired && !hasTerms) {
+      status.textContent = "Required Terms are not configured. Entry remains blocked.";
     }
   }
   function showTitle() { setStage("title"); }
@@ -177,10 +215,10 @@
   $("emailLogin").addEventListener("click", () => signIn("email"));
   $("guestLogin").addEventListener("click", () => { authMode = "guest-preview"; showLegal(); });
   $("sessionContinue").addEventListener("click", showLegal);
-  $("legalConsent").addEventListener("change", () => {
-    $("legalContinue").disabled = legalRequired && !$("legalConsent").checked;
-  });
+  $("policyFrame").addEventListener("load", bindPolicyScroll);
+  $("legalConsent").addEventListener("change", updateLegalContinue);
   $("legalContinue").addEventListener("click", () => {
+    if (!policyScrollReached || !legalConfigValid) return;
     if (legalRequired && !$("legalConsent").checked) return;
     if (!authMode) return;
     showTitle();
