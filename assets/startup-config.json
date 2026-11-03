@@ -14,7 +14,7 @@
     "assets/Vcontainer.png"
   ],
   "auth": {
-    "enabled": false,
+    "enabled": true,
     "providers": [
       "discord",
       "email"
