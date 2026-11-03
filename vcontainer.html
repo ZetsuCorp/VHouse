@@ -65,21 +65,23 @@ html, body {
 
 </style>
 <link rel="stylesheet" href="assets/vhouse-message.css">
+<link rel="stylesheet" href="assets/vhouse-journey.css">
 </head>
 <body>
 <div class="container-stage">
   <div class="container-art">
     <img id="containerImage" class="container-image" src="assets/Vcontainer.png" alt="VHouse Container" draggable="false">
-    <iframe id="journeyContent" class="journey-content" title="Journey Missions"></iframe>
+    <div id="journeyContent" class="journey-content"></div>
   </div>
   <div id="containerMessage" style="display:none;width:100%;height:100%" data-header="" data-title="" data-info=""></div>
 
 
 </div>
 <script src="assets/vhouse-message.js"></script>
+<script src="assets/vhouse-journey.js"></script>
 <script>
 if (document.documentElement.classList.contains("journey-mode")) {
-  document.getElementById("journeyContent").src = "./JourneyMissions.html?embedded=1";
+  VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
 }
 if (document.documentElement.classList.contains("message-mode")) {
   document.getElementById("containerImage").style.display = "none";
