@@ -1,0 +1,28 @@
+{
+  "appId": "vhouse",
+  "title": "V HOUSE: A Journey of Creation",
+  "buildVersion": "0.2.0-draft2",
+  "latestVersion": "0.2.0-draft2",
+  "minimumSupportedVersion": "0.2.0-draft2",
+  "maintenance": false,
+  "preload": [
+    "assets/VStart.png",
+    "assets/VCrad Town.png",
+    "assets/Vhome1.png",
+    "assets/Vshop.png",
+    "assets/VCloset.png",
+    "assets/Vcontainer.png"
+  ],
+  "auth": {
+    "enabled": false,
+    "providers": [
+      "discord",
+      "email"
+    ]
+  },
+  "legal": {
+    "required": false,
+    "termsUrl": null,
+    "privacyUrl": null
+  }
+}
