@@ -42,6 +42,18 @@ html, body { margin:0; padding:0; }
 .startup-action:disabled { opacity:.48; cursor:not-allowed; box-shadow:none; }
 .startup-secondary { background:#1b1930; }
 .startup-footnote { margin:.1cqw 0 0; font-size:clamp(9px,1.05cqw,16px); color:#bdacc5; line-height:1.3; }
+/* Only startup's legal stage embeds a policy page. Keep the iframe inside the shared game canvas. */
+.startup-screen[data-stage="legal"] .startup-panel {
+  width:86%; height:91%; max-height:91%; padding:1cqw 1.5cqw;
+  overflow:hidden; gap:.45cqw;
+}
+.startup-screen[data-stage="legal"] .startup-panel h2 { font-size:clamp(15px,2.25cqw,32px); }
+.startup-screen[data-stage="legal"] .startup-status { margin:.2cqw 0; font-size:clamp(9px,1.05cqw,15px); }
+.startup-policy-frame {
+  display:block; width:100%; flex:1 1 auto; min-height:0;
+  border:1px solid #bc9357; border-radius:.3cqw; background:#fff;
+}
+.startup-screen[data-stage="legal"] .startup-actions { margin:0; flex:0 0 auto; }
 .startup-legal-links { display:flex; justify-content:center; gap:2cqw; font-size:clamp(10px,1.3cqw,17px); }
 .startup-legal-links a { color:#ffd48a; }
 .startup-consent { text-align:left; font-size:clamp(9px,1.2cqw,16px); line-height:1.4; }
