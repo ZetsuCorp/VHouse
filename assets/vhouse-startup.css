@@ -1,4 +1,6 @@
 /* Shared VHouse 2:1 game canvas, no iframes and no scroll. */
+/* Match the Town's zero-margin viewport; browser default body margins shift startup off center. */
+html, body { margin:0; padding:0; }
 .startup-root { overflow:hidden; background:#0b0719; color:#f7e3ba; }
 .startup-screen { position:absolute; inset:0; overflow:hidden; }
 .startup-screen[hidden], [hidden] { display:none !important; }
