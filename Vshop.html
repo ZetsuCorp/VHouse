@@ -188,6 +188,8 @@ html, body {
 .shop-message { z-index: 35; }
 [hidden] { display: none !important; }
 </style>
+<link rel="stylesheet" href="assets/vhouse-layout.css">
+<link rel="stylesheet" href="assets/vhouse-frame.css">
 </head>
 <body>
 <div class="rotate-screen">
@@ -221,8 +223,8 @@ html, body {
     <!-- One shared shop menu; content is rendered directly in the game DOM. -->
     <div id="shopMenuOverlay" class="shop-menu-overlay" hidden>
       <div class="shop-menu-window" role="dialog" aria-modal="true" aria-label="Shop menu">
-        <img class="shop-menu-frame" src="assets/Vcontainer.png" alt="" draggable="false">
-        <div id="shopMenuContent" class="shop-menu-content"></div>
+        <img class="shop-menu-frame vhouse-frame-art" src="assets/Vcontainer.png" alt="" draggable="false">
+        <div id="shopMenuContent" class="shop-menu-content vhouse-frame-content"></div>
       </div>
     </div>
 
