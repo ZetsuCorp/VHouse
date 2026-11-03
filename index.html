@@ -8,14 +8,20 @@
 
 <title>VHouse Game Map</title>
 <script>
-// Show the tutorial before the game map on a player's first visit.
+// First external entry goes through Draft 2 startup. Internal game navigation stays intact.
 try {
-  const enteredFromTutorial = new URLSearchParams(window.location.search).has("entered");
-  if (!enteredFromTutorial && localStorage.getItem("vhouse_tutorial_seen") !== "yes") {
-    window.location.replace("./tutorial.html");
+  const params = new URLSearchParams(window.location.search);
+  const returningFromTutorial = params.has("entered");
+  const comingFromTitle = params.has("started");
+  const started = sessionStorage.getItem("vhouse_startup_ready_v1") === "yes";
+  if (returningFromTutorial || comingFromTitle) {
+    sessionStorage.setItem("vhouse_startup_ready_v1", "yes");
+  } else if (!started) {
+    window.location.replace("./startup.html");
   }
 } catch (error) {
-  // If storage is blocked, keep the map accessible.
+  // If browser storage is unavailable, the existing Town remains accessible.
+  console.warn("VHouse entry check could not access session storage:", error);
 }
 </script>
 
