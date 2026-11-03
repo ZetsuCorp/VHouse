@@ -168,12 +168,13 @@ html, body {
   width: 50.90%;
   height: 63.55%;
 }
-.login-window iframe {
+.login-window .login-frame {
   display: block;
   width: 100%;
   height: 100%;
-  border: none;
-  background: transparent;
+  object-fit: fill;
+  border: 3px solid white;
+  box-shadow: 0 0 10px rgba(255,255,255,.85);
   pointer-events: none;
 }
 /* Stuff uses the same existing frame position as the house's login menu. */
@@ -250,7 +251,7 @@ html, body {
     </div>
     <div id="loginOverlay" class="login-overlay" hidden>
       <div class="login-window" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-        <iframe src="vcontainer.html" title="VHouse Login Menu" tabindex="-1" aria-hidden="true"></iframe>
+        <img class="login-frame" src="assets/Vcontainer.png" alt="" draggable="false">
         <div class="login-options">
           <h2 id="loginTitle">LOG IN</h2>
           <button type="button" class="vhouse-btn">Log In with Email</button>
