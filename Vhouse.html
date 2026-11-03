@@ -176,6 +176,35 @@ html, body {
   background: transparent;
   pointer-events: none;
 }
+/* Stuff uses the same existing frame position as the house's login menu. */
+.stuff-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+.stuff-overlay[hidden] { display: none; }
+.stuff-window {
+  position: absolute;
+  top: 9.14%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50.90%;
+  height: 63.55%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stuff-window img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1672 / 941;
+  max-height: 100%;
+  object-fit: fill;
+  border: 3px solid white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .85);
+  pointer-events: none;
+  user-select: none;
+}
 /* All login text, spacing, and buttons scale with the game container. */
 .login-options {
   position: absolute;
@@ -229,12 +258,27 @@ html, body {
         </div>
       </div>
     </div>
+    <!-- Empty Stuff menu frame; content will be added in the next step. -->
+    <div id="stuffOverlay" class="stuff-overlay" hidden>
+      <div class="stuff-window" role="dialog" aria-modal="true" aria-label="Stuff menu">
+        <img src="assets/Vcontainer.png" alt="" draggable="false">
+      </div>
+    </div>
   </div>
 </main>
 <script>
 const loginButton = document.querySelector(".hotspot-login");
 const loginOverlay = document.getElementById("loginOverlay");
 const loginWindow = loginOverlay.querySelector(".login-window");
+const stuffButton = document.querySelector(".hotspot-chest");
+const stuffOverlay = document.getElementById("stuffOverlay");
+
+stuffButton.addEventListener("click", () => {
+  stuffOverlay.hidden = false;
+});
+stuffOverlay.addEventListener("click", (event) => {
+  if (event.target === stuffOverlay) stuffOverlay.hidden = true;
+});
 
 loginButton.addEventListener("click", () => {
   loginOverlay.hidden = false;
@@ -247,7 +291,10 @@ loginOverlay.addEventListener("click", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") loginOverlay.hidden = true;
+  if (event.key === "Escape") {
+    loginOverlay.hidden = true;
+    stuffOverlay.hidden = true;
+  }
 });
 </script>
 <script src="assets/vhouse-cards.js"></script>
