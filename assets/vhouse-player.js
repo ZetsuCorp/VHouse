@@ -14,7 +14,20 @@
     art.className = "vhouse-player-portrait";
     art.alt = "";
     art.draggable = false;
-    host.replaceChildren(holder, art);
+    const loginLabel = document.createElement("span");
+    loginLabel.className = "vhouse-player-login";
+    loginLabel.hidden = true;
+    host.replaceChildren(holder, art, loginLabel);
+    const updateLogin = () => {
+      const identity = window.VHouseAuth?.getLoginIdentity?.() || "";
+      loginLabel.textContent = identity ? 'Logged in as "' + identity + '"' : "";
+      loginLabel.hidden = !identity;
+    };
+    window.VHouseAuth?.subscribe(updateLogin);
+    window.VHouseAuth?.ready.then(updateLogin).catch(error => {
+      console.warn("VHouse login label unavailable:", error);
+    });
+    updateLogin();
     const update = () => {
       const card = window.VHouseCardStore?.getActive();
       if (card && typeof card.image === "string" &&
