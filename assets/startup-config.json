@@ -23,6 +23,6 @@
   "legal": {
     "required": false,
     "termsUrl": null,
-    "privacyUrl": "https://policies.google.com/privacy?hl=en-US"
+    "privacyUrl": "./privacy.html"
   }
 }
