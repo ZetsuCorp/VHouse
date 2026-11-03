@@ -64,10 +64,13 @@
       <div class="startup-panel">
         <p class="startup-eyebrow">BEFORE YOU PLAY</p>
         <h2>Privacy &amp; Permissions</h2>
-        <p class="startup-status" id="legalStatus">No camera, microphone, location, or wallet access is requested at startup. Terms and Privacy Policy are not published in this draft.</p>
+        <p class="startup-status" id="legalStatus">Privacy policy reference</p>
+        <iframe id="policyFrame" class="startup-policy-frame" title="Privacy policy document"
+          loading="lazy" referrerpolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
         <div class="startup-legal-links">
           <a id="startupTerms" href="#" rel="noopener noreferrer" target="_blank" hidden>Terms</a>
-          <a id="startupPrivacy" href="#" rel="noopener noreferrer" target="_blank" hidden>Privacy Policy</a>
+          <a id="startupPrivacy" href="#" rel="noopener noreferrer" target="_blank" hidden>Open privacy policy in browser</a>
         </div>
         <label class="startup-consent" id="consentRow" hidden>
           <input type="checkbox" id="legalConsent"> I agree to the linked Terms and acknowledge the Privacy Policy.
