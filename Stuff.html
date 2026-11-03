@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse — Stuff</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0d101e}
+#vhs-demo3{font-family:Arial,sans-serif;color:#f5e8d6;max-width:900px;margin:0 auto;padding:16px}
+#vhs-demo3 *{box-sizing:border-box}
+#vhs-demo3 button{font:inherit;cursor:pointer}
+#vhs-demo3 .shell{border:2px solid #c29a62;border-radius:10px;overflow:hidden;background:radial-gradient(ellipse at 40% 10%,#413149,#161525 75%)}
+#vhs-demo3 .head{display:flex;align-items:center;justify-content:space-between;background:#151321df;border-bottom:1px solid #a08055;padding:12px 14px;gap:8px}
+#vhs-demo3 .eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:#cba875}
+#vhs-demo3 h2{font:700 clamp(22px,4vw,31px) Georgia,serif;color:#ffe2ac;margin:2px 0}
+#vhs-demo3 .balances{display:flex;gap:7px}
+#vhs-demo3 .balance{border:1px solid #92734d;background:#10111f;padding:7px 10px;border-radius:6px;text-align:center;min-width:67px}
+#vhs-demo3 .balance small{display:block;color:#cbb592;font-size:10px;white-space:nowrap}
+#vhs-demo3 .balance strong{display:block;color:#ffe0a1;font-size:16px;margin-top:3px}
+#vhs-demo3 .area{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:10px;padding:12px}
+#vhs-demo3 .panel{min-width:0;border:1px solid #857052;border-radius:7px;background:linear-gradient(145deg,#2e283c,#171725);overflow:hidden}
+#vhs-demo3 .panelhead{padding:10px;background:#191728;border-bottom:1px solid #776042;font:700 clamp(13px,2.3vw,19px) Georgia,serif;color:#ffe0a6}
+#vhs-demo3 .stats{padding:11px;display:flex;flex-direction:column;gap:8px}
+#vhs-demo3 .vcard-name{border:1px solid #9b784b;border-radius:6px;padding:10px;background:#211c2f;text-align:center}
+#vhs-demo3 .vcard-name small{display:block;color:#c7bad1;font-size:10px;margin-bottom:5px}
+#vhs-demo3 .vcard-name strong{display:block;font-size:15px;color:#ffe0a6;overflow-wrap:anywhere}
+#vhs-demo3 .statrow{display:flex;justify-content:space-between;gap:8px;padding:9px 2px;border-bottom:1px solid #6c5a684f;font-size:12px}
+#vhs-demo3 .statrow span{color:#d6cad6}
+#vhs-demo3 .statrow strong{color:#ffdb9b;text-align:right}
+#vhs-demo3 .inventory{height:242px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none;touch-action:pan-y}
+#vhs-demo3 .inventory::-webkit-scrollbar{display:none;width:0;height:0}
+#vhs-demo3 .slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:9px}
+#vhs-demo3 .slot{min-width:0;min-height:101px;padding:8px 3px;border:1px solid #6b5c73;border-radius:6px;background:linear-gradient(#302839,#191a29);color:#f4e8d9;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;text-align:center}
+#vhs-demo3 .slot:hover{border-color:#f6d291}
+#vhs-demo3 .slot.selected{border:2px solid #ffdb93;background:linear-gradient(#4d394b,#242034)}
+#vhs-demo3 .slot:focus-visible{outline:2px solid #ffe0a6;outline-offset:-2px}
+#vhs-demo3 .itemicon{font-size:28px}
+#vhs-demo3 .itemname{font-size:11px;line-height:1.2;font-weight:800}
+#vhs-demo3 .qty{font-size:10px;color:#f8d49b}
+#vhs-demo3 .details{margin:0 9px 9px;background:#171523;border:1px solid #79654e;border-radius:6px;padding:10px;min-height:65px}
+#vhs-demo3 .details strong{font-size:13px;color:#ffe0a6}
+#vhs-demo3 .details p{font-size:11px;line-height:1.4;color:#d7cbd8;margin:5px 0 0}
+@media(max-width:460px){
+#vhs-demo3{padding:6px}
+#vhs-demo3 .head{padding:8px}
+#vhs-demo3 .balance{padding:5px;min-width:57px}
+#vhs-demo3 .balance strong{font-size:13px}
+#vhs-demo3 .area{padding:7px;gap:6px}
+#vhs-demo3 .panelhead{padding:8px 5px}
+#vhs-demo3 .stats{padding:6px;gap:4px}
+#vhs-demo3 .vcard-name{padding:7px 4px}
+#vhs-demo3 .vcard-name strong{font-size:12px}
+#vhs-demo3 .statrow{font-size:10px;padding:8px 0}
+#vhs-demo3 .inventory{height:213px}
+#vhs-demo3 .slots{gap:4px;padding:5px}
+#vhs-demo3 .slot{min-height:86px;padding:5px 2px;gap:3px}
+#vhs-demo3 .itemicon{font-size:22px}
+#vhs-demo3 .itemname{font-size:9px}
+#vhs-demo3 .details{margin:0 5px 5px;padding:6px}
+}
+</style>
+</head>
+<body>
+<main id="vhs-demo3">
+<div class="shell">
+<header class="head">
+<div><div class="eyebrow">VHOUSE</div><h2>STUFF</h2></div>
+<div class="balances">
+<div class="balance"><small>IG MONEY</small><strong>1,500</strong></div>
+<div class="balance"><small>SCRAPS</small><strong>12</strong></div>
+</div>
+</header>
+<div class="area">
+<section class="panel" aria-label="VCard Stats">
+<div class="panelhead">VCARD STATS</div>
+<div class="stats">
+<div class="vcard-name"><small>VCARD NAME</small><strong data-vcard-name>—</strong></div>
+<div class="statrow"><span>VCards Owned</span><strong data-cards-owned>0</strong></div>
+<div class="statrow"><span>Missions Completed</span><strong>2</strong></div>
+<div class="statrow"><span>Journey Stage</span><strong>1</strong></div>
+<div class="statrow"><span>Totem Pages</span><strong>0 / 5</strong></div>
+<div class="statrow"><span>Z Book</span><strong>Not Assembled</strong></div>
+</div>
+</section>
+<section class="panel" aria-label="Personal Inventory">
+<div class="panelhead">PERSONAL INVENTORY</div>
+<div class="inventory" tabindex="0" aria-label="Scrollable personal inventory">
+<div class="slots" data-inventory></div>
+</div>
+<div class="details" aria-live="polite">
+<strong data-name>Scrap Metal</strong>
+<p data-description>Collected material from Journey Missions.</p>
+</div>
+</section>
+</div>
+</div>
+</main>
+<script src="assets/vhouse-cards.js"></script>
+<script>
+(()=>{
+const root=document.getElementById("vhs-demo3");if(!root)return;
+function updateVCard(){
+  const store=window.VHouseCardStore;
+  const active=store?.getActive();
+  root.querySelector("[data-vcard-name]").textContent=active?.name||"—";
+  root.querySelector("[data-cards-owned]").textContent=String(store?.getCards().length||0);
+}
+window.VHouseCardStore?.subscribe(updateVCard);
+updateVCard();
+// First-draft inventory sample; live player inventory will replace this data source.
+const items=[
+["Scrap Metal","⚙️",12,"Collected material from Journey Missions."],
+["Copper Parts","🔩",5,"Components stored in your inventory."],
+["Old Relic","🏺",2,"An old relic recovered during a Journey."],
+["Lucky Charm","🍀",1,"A boost item for Journey encounters."],
+["Swift Boots","🥾",1,"A Journey speed boost item."],
+["Hunt Lantern","🏮",1,"A boost item for hunting encounters."],
+["Crystal","💎",3,"A crystal recovered during a Journey."],
+["Journey Token","🪙",2,"A token stored in your inventory."],
+["Repair Kit","🧰",1,"Equipment for your Journey."],
+["Travel Pack","🎒",1,"Supplies for travel."],
+["Ancient Coin","🪙",4,"An old collectible coin."],
+["Totem Scrap","📜",2,"A fragment of a Totem Page."]
+];
+const host=root.querySelector("[data-inventory]");
+items.forEach((item,i)=>{
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="slot"+(i===0?" selected":"");
+  button.setAttribute("aria-pressed",String(i===0));
+  for(const [cls,value] of [["itemicon",item[1]],["itemname",item[0]],["qty","× "+item[2]]]){
+    const el=document.createElement("span");
+    el.className=cls;
+    el.textContent=value;
+    button.appendChild(el);
+  }
+  button.addEventListener("click",()=>{
+    host.querySelectorAll(".slot").forEach((slot,j)=>{
+      slot.classList.toggle("selected",j===i);
+      slot.setAttribute("aria-pressed",String(j===i));
+    });
+    root.querySelector("[data-name]").textContent=item[0];
+    root.querySelector("[data-description]").textContent=item[3];
+  });
+  host.appendChild(button);
+});
+})();
+</script>
+</body>
+</html>
