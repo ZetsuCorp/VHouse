@@ -1,7 +1,7 @@
 /* VHouse accounts: shared Supabase session for Discord and email. */
 (() => {
   "use strict";
-  const URL = "https://jqvnrdjrkdjgjbmqmbbl.supabase.co";
+  const SUPABASE_URL = "https://jqvnrdjrkdjgjbmqmbbl.supabase.co";
   const KEY = window.VHOUSE_PUBLISHABLE_KEY || "";
   const REDIRECT = new URL("./startup.html?auth_return=1",location.href).href;
   const listeners=new Set();
@@ -51,7 +51,7 @@
   const ready=(async()=>{
     if(!KEY)throw Error("Supabase publishable key is not configured");
     await loadSdk();
-    client=window.supabase.createClient(URL,KEY,{auth:{
+    client=window.supabase.createClient(SUPABASE_URL,KEY,{auth:{
       persistSession:true,autoRefreshToken:true,detectSessionInUrl:true
     }});
     client.auth.onAuthStateChange((event,session)=>{
