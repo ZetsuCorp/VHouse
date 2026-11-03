@@ -134,7 +134,7 @@
     const status = $("legalStatus");
     const terms = $("startupTerms"), privacy = $("startupPrivacy"), row = $("consentRow");
     const frame = $("policyFrame");
-    const validLink = url => typeof url === "string" && /^https:\/\//i.test(url);
+    const validLink = url => typeof url === "string" && (/^https:\/\//i.test(url) || /^\.\/[a-z0-9_./-]+\.html$/i.test(url));
     const hasTerms = validLink(legal.termsUrl), hasPrivacy = validLink(legal.privacyUrl);
     terms.hidden = !hasTerms; privacy.hidden = !hasPrivacy;
     if (hasTerms) terms.href = legal.termsUrl;
@@ -159,7 +159,7 @@
       }
     } else {
       status.textContent = hasPrivacy
-        ? "Temporary reference: Google's Privacy Policy, NOT VHouse's. If embedding is blocked, use the link below."
+        ? "VHouse privacy page preview. The official game privacy policy is not published yet."
         : "The game privacy policy is not configured yet.";
       $("legalContinue").disabled = false;
     }
