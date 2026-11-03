@@ -1,6 +1,7 @@
 /* One Journey Missions design for the standalone page and every in-game menu. */
 .vhouse-journey {
   position: relative; width:100%; height:100%; overflow:hidden;
+  box-sizing:border-box; border:1px solid #bc9357; border-radius:.65cqw;
   container-type:inline-size;
   background:radial-gradient(ellipse at center,#263c51,#0d1a2a 60%,#050a13);
   color:white; font-family:Arial,sans-serif;
