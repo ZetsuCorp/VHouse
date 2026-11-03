@@ -95,6 +95,7 @@
     const status = $("authStatus");
     $("sessionContinue").hidden = true;
     $("guestLogin").hidden = false;
+    $("startupEmailForm").hidden = true;
     for (const [provider,id] of [["discord","discordLogin"],["email","emailLogin"]]) {
       const button = $(id);
       button.disabled = !authAdapter?.signIn;
@@ -106,29 +107,35 @@
         const session = await authAdapter.restoreSession();
         if (session?.authenticated === true) {
           authMode = "authenticated";
-          status.textContent = "A verified session was restored.";
+          status.textContent = "Signed in. You can link Discord or a verified email to this VHouse account.";
+          const linked = session.user?.identities?.some(i => i.provider === "discord");
+          $("discordLogin").textContent = linked ? "DISCORD CONNECTED" : "LINK DISCORD";
+          $("emailLogin").textContent = session.user?.email ? "EMAIL CONNECTED / UPDATE" : "LINK EMAIL";
           $("guestLogin").hidden = true;
           $("sessionContinue").hidden = false;
           return;
         }
       } catch (error) { console.warn("VHouse session restoration failed:",error); }
     }
-    status.textContent = "Login providers are not connected in this draft. Guest preview uses browser-local VCards and does not verify ownership.";
+    status.textContent = "Sign in with Discord or Email, or continue with the browser-local guest preview.";
   }
-  async function signIn(provider) {
+  async function signIn(provider, options={}) {
     if (!authAdapter?.signIn) return;
-    $("authStatus").textContent = "Opening " + provider + " sign-in…";
+    $("authStatus").textContent = "Connecting " + provider + "…";
     try {
-      const session = await authAdapter.signIn(provider);
+      const session = await authAdapter.signIn(provider, options);
       if (session?.authenticated === true) {
         authMode = "authenticated";
         showLegal();
+      } else if (session?.pending) {
+        $("authStatus").textContent = session.message ||
+          "Complete the authentication step to return to VHouse.";
       } else {
-        $("authStatus").textContent = "Sign-in was not completed. Try again or continue as guest.";
+        $("authStatus").textContent = "Sign-in was not completed. You can retry.";
       }
     } catch (error) {
       console.error("VHouse sign-in failed:",error);
-      $("authStatus").textContent = "Sign-in failed. Try again or continue as guest.";
+      $("authStatus").textContent = error.message || "Sign-in failed. You can retry.";
     }
   }
   function updateLegalContinue() {
@@ -212,7 +219,14 @@
 
   $("versionRetry").addEventListener("click", () => window.location.reload());
   $("discordLogin").addEventListener("click", () => signIn("discord"));
-  $("emailLogin").addEventListener("click", () => signIn("email"));
+  $("emailLogin").addEventListener("click", () => {
+    $("startupEmailForm").hidden = !$("startupEmailForm").hidden;
+    if (!$("startupEmailForm").hidden) $("startupEmail").focus();
+  });
+  $("startupEmailForm").addEventListener("submit", event => {
+    event.preventDefault();
+    void signIn("email", {email:$("startupEmail").value});
+  });
   $("guestLogin").addEventListener("click", () => { authMode = "guest-preview"; showLegal(); });
   $("sessionContinue").addEventListener("click", showLegal);
   $("policyFrame").addEventListener("load", bindPolicyScroll);
@@ -236,6 +250,7 @@
     },
     buildVersion: BUILD_VERSION
   };
+  if (window.VHouseAuth) window.VHouseStartup.registerAuthAdapter(window.VHouseAuth);
   setStage("splash");
   sleep(900).then(beginLoading).catch(error => {
     console.error("VHouse startup failed:",error);
