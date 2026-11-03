@@ -186,30 +186,59 @@ const shopMenuWindow = shopMenuOverlay.querySelector(".shop-menu-window");
 const shopMenuContent = document.getElementById("shopMenuContent");
 const shopInterface = document.getElementById("shopInterface");
 const shopPages = {
-  "Mission Boosts": "./MissionBoosts.html",
-  "Journey Service": "./JourneyService.html",
-  "Trade Scraps": "./TradeScraps.html"
+  "Mission Boosts": "./MissionBoosts.html?v=legible-20261103",
+  "Journey Service": "./JourneyService.html?v=legible-20261103",
+  "Trade Scraps": "./TradeScraps.html?v=legible-20261103"
 };
 
-/* Fit each complete shop UI into the existing artwork's inner rectangle. */
+/* Display the shops at their actual text sizes instead of shrinking a 900px page. */
 function fitShopInterface() {
   if (shopMenuOverlay.hidden || !shopInterface.contentDocument) return;
-  const page = shopInterface.contentDocument.querySelector("main");
-  if (!page) return;
-  const baseWidth = 900;
-  shopInterface.style.width = baseWidth + "px";
-  shopInterface.style.height = "600px";
-  const baseHeight = Math.ceil(page.getBoundingClientRect().height) + 2;
-  if (!baseHeight || !shopMenuContent.clientWidth || !shopMenuContent.clientHeight) return;
-  const scale = 1.10 * Math.min(
-    (shopMenuContent.clientWidth - 8) / baseWidth,
-    (shopMenuContent.clientHeight - 8) / baseHeight,
-    1
-  );
-  shopInterface.style.height = baseHeight + "px";
-  shopInterface.style.left = (shopMenuContent.clientWidth - baseWidth * scale) / 2 + "px";
-  shopInterface.style.top = (shopMenuContent.clientHeight - baseHeight * scale) / 2 + "px";
-  shopInterface.style.transform = "scale(" + scale + ")";
+  const doc = shopInterface.contentDocument;
+  if (!doc.querySelector("main")) return;
+
+  shopInterface.style.width = "100%";
+  shopInterface.style.height = "100%";
+  shopInterface.style.left = "0";
+  shopInterface.style.top = "0";
+  shopInterface.style.transform = "none";
+
+  // Apply compact sizing only in the embedded view; standalone shop pages are unchanged.
+  if (doc.getElementById("vhouse-embedded-shop-style")) return;
+  const style = doc.createElement("style");
+  style.id = "vhouse-embedded-shop-style";
+  style.textContent = `
+    html,body{width:100%;height:100%;overflow:hidden;background:transparent!important}
+    main{height:100%;width:100%;max-width:none!important;padding:0!important;display:flex;flex-direction:column}
+    main>.shell{height:100%;width:100%;min-height:0;display:flex;flex-direction:column}
+    main .top{padding:5px 8px!important;flex-shrink:0}
+    main .eyebrow{font-size:11px!important;line-height:1.1!important}
+    main h2{font-size:22px!important;line-height:1.08!important;margin:1px 0!important}
+    main .money-box{min-width:0!important;padding:3px 6px!important}
+    main .money-box small{font-size:11px!important;line-height:1!important;margin-bottom:2px!important}
+    main .money-box strong{font-size:18px!important}
+    main .main{flex:1;min-height:0;padding:5px!important;display:flex;flex-direction:column}
+    main .body,main .sides{flex:1;min-height:0;gap:6px!important}
+    main .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+    main .panel-header{padding:5px 6px!important;min-height:27px;flex-shrink:0;flex-wrap:nowrap!important}
+    main .panel-header strong{font-size:19px!important;line-height:1!important}
+    main .panel-header small{font-size:14px!important;line-height:1!important}
+    main .items{flex:1;min-height:0!important;grid-template-rows:repeat(2,minmax(0,1fr));gap:4px!important;padding:4px!important;align-content:stretch!important}
+    main .item{min-height:0!important;gap:2px!important;padding:3px!important}
+    main .art{font-size:22px!important;line-height:1!important}
+    main .item-name,main .item-cost,main .owned,
+    main .item-count,main .value{font-family:Arial,sans-serif!important;font-size:19px!important;font-weight:700!important;line-height:1.05!important}
+    main .detail{flex:1;min-height:0!important;padding:4px!important;gap:3px!important}
+    main .detail-icon{width:34px!important;height:34px!important;font-size:23px!important;flex-shrink:0}
+    main .detail-name{font-size:19px!important;line-height:1.05!important}
+    main .detail-copy{font-size:19px!important;line-height:1.1!important;min-height:0;overflow:hidden}
+    main .detail-cost{font-size:19px!important;line-height:1.05!important}
+    main .buy{font-size:19px!important;line-height:1.05!important;padding:5px!important;flex-shrink:0}
+    main .status{font-size:15px!important;line-height:1.1!important;min-height:0!important;margin-top:3px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    main .actions{margin-top:4px!important;flex-shrink:0}
+    main .trade-btn{font-size:19px!important;line-height:1.1!important;padding:5px 15px!important}
+  `;
+  doc.head.appendChild(style);
 }
 shopInterface.addEventListener("load", fitShopInterface);
 new ResizeObserver(fitShopInterface).observe(shopMenuContent);
