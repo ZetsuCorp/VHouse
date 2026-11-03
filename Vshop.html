@@ -81,49 +81,100 @@ html, body {
 .hotspot-journey-service { left: 26.4%; top: 49%; width: 46.4%; height: 15.5%; }
 .hotspot-trade-scraps { left: 81.8%; top: 64.7%; width: 18%; height: 35%; }
 
-/* Reuse the existing VHouse menu frame; don't resize the game artwork. */
-.shop-menu-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
+/* Shared VHouse frame and placement: do not resize or reposition. */
+.shop-menu-overlay{position:absolute;inset:0;z-index:40}
+.shop-menu-window{
+  position:absolute;top:5.96%;left:50%;width:55.99%;height:69.91%;
+  transform:translateX(-50%);container-type:inline-size;
 }
-.shop-menu-window {
-  position: absolute;
-  top: 5.96%;
-  left: 50%;
-  width: 55.99%;
-  height: 69.91%;
-  transform: translateX(-50%);
-  container-type: inline-size;
+.shop-menu-frame{
+  position:absolute;inset:0;width:100%;height:100%;display:block;
+  object-fit:fill;border:3px solid white;
+  box-shadow:0 0 10px rgba(255,255,255,.85);
+  pointer-events:none;user-select:none;
 }
-.shop-menu-window iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: transparent;
-  pointer-events: none;
+/* Direct DOM content; no iframe or page scaling. */
+.shop-menu-content{
+  position:absolute;left:13.3%;top:26%;width:73.4%;height:53.6%;
+  overflow:hidden;min-width:0;min-height:0;
 }
-/* The clickable shop page sits inside the existing Vcontainer image's content area. */
-.shop-menu-content {
-  position: absolute;
-  left: 13.3%;
-  top: 26%;
-  width: 73.4%;
-  height: 53.6%;
-  overflow: hidden;
-  pointer-events: none;
+.zshop{font-family:Arial,sans-serif;color:#f7ead4;width:100%;height:100%;
+  display:flex;flex-direction:column;border:1px solid #bc9357;border-radius:.65cqw;
+  background:linear-gradient(135deg,#292135,#141423);overflow:hidden}
+.zshop *{box-sizing:border-box}
+.zshop button{font-family:Arial,sans-serif;cursor:pointer}
+.zshop button:focus-visible{outline:2px solid #ffe0a3;outline-offset:-2px}
+.zshop-head{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
+  gap:.7cqw;padding:.65cqw 1.05cqw;border-bottom:1px solid #8d6e4e;background:#191523}
+.zshop-headings{min-width:0}
+.zshop-eyebrow{color:#f5c98c;font-size:clamp(10px,1.35cqw,15px);font-weight:800;letter-spacing:.10em}
+.zshop-title{font:700 clamp(18px,2.7cqw,31px)/1.07 Georgia,serif;color:#ffe2ab;white-space:nowrap}
+.zshop-money{display:flex;gap:.6cqw;flex-shrink:0}
+.zshop-balance{min-width:6.9cqw;padding:.4cqw .75cqw;border:1px solid #8d6c4d;
+  border-radius:.45cqw;background:#12111f;text-align:center}
+.zshop-balance-label{display:block;font-size:clamp(10px,1.38cqw,15px);color:#edca91;white-space:nowrap}
+.zshop-balance-amount{display:block;font-size:clamp(13px,2cqw,22px);font-weight:900;color:#ffe2a2}
+.zshop-work{flex:1;display:grid;grid-template-columns:minmax(0,1.52fr) minmax(0,1fr);
+  min-width:0;min-height:0;gap:.8cqw;padding:.65cqw}
+.zshop-work.trade-layout{grid-template-columns:repeat(2,minmax(0,1fr));padding-bottom:.25cqw}
+.zshop-panel{display:flex;flex-direction:column;min-height:0;min-width:0;
+  border:1px solid #776149;border-radius:.55cqw;background:#1d192c;overflow:hidden}
+.zshop-panel-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  gap:.5cqw;min-height:2.8cqw;padding:.38cqw .7cqw;background:#181525;border-bottom:1px solid #645440}
+.zshop-panel-head strong{font:700 clamp(13px,1.9cqw,20px)/1 Georgia,serif;color:#ffdda5}
+.zshop-panel-head small{font:700 clamp(10px,1.3cqw,14px)/1 Arial,sans-serif;color:#e0cbbb}
+.zshop-grid{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));min-height:0;min-width:0;
+  gap:.45cqw;padding:.55cqw;align-content:stretch}
+.zshop-item{min-height:0;min-width:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.22cqw;padding:.25cqw;
+  background:linear-gradient(145deg,#342d42,#191827);border:1px solid #696075;
+  border-radius:.4cqw;color:#fff2e3;text-align:center;line-height:1.05}
+.zshop-item:hover{border-color:#ffdda0}
+.zshop-item.selected{border:2px solid #f5c979;background:#3d304a}
+.zshop-item:disabled{opacity:.45;cursor:default}
+.zshop-icon{font-size:clamp(15px,2.2cqw,23px);line-height:1}
+.zshop-item-name{font-size:clamp(11px,1.7cqw,17px);font-weight:800;
+  overflow-wrap:break-word;line-height:1.05}
+.zshop-item-cost,.zshop-item-owned{font-size:clamp(11px,1.52cqw,16px);font-weight:800;
+  line-height:1.05;color:#ffe0a2}
+.zshop-item-owned{color:#d8f4e1}
+.zshop-details{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:space-around;gap:.22cqw;padding:.48cqw;
+  text-align:center}
+.zshop-detail-icon{font-size:clamp(20px,3.1cqw,34px);line-height:1}
+.zshop-detail-name{font:700 clamp(14px,2.1cqw,22px)/1.08 Georgia,serif;color:#ffe0a7}
+.zshop-detail-description{font-size:clamp(11px,1.65cqw,17px);font-weight:600;
+  color:#f2e9dd;line-height:1.12;overflow-wrap:break-word}
+.zshop-detail-price{font-size:clamp(14px,1.8cqw,20px);font-weight:900;color:#ffd794}
+.zshop-action{width:100%;min-height:3.25cqw;flex-shrink:0;
+  border:1px solid #ffe6b5;border-radius:.35cqw;
+  background:linear-gradient(#ffe9b2,#c89b5b);color:#281e28;
+  font-size:clamp(12px,1.7cqw,18px);font-weight:900;padding:.34cqw .4cqw}
+.zshop-action:disabled{opacity:.4;cursor:default}
+.zshop-trade-actions{flex:0 0 auto;display:flex;justify-content:center;
+  padding:0 .65cqw .55cqw}
+.zshop-trade-actions .zshop-action{width:auto;min-width:33%;min-height:3cqw}
+.zshop-status{flex:0 0 auto;font-size:clamp(10px,1.28cqw,14px);text-align:center;
+  padding:0 .5cqw .3cqw;color:#f5dbab;line-height:1.1}
+/* On narrow landscape screens prioritize readable labels over decorative emoji. */
+@container (max-width:650px){
+  .zshop-head{padding:.4cqw .6cqw}
+  .zshop-title{font-size:clamp(15px,2.6cqw,20px)}
+  .zshop-money{gap:.3cqw}
+  .zshop-balance{padding:.2cqw .3cqw}
+  .zshop-work{gap:.4cqw;padding:.35cqw}
+  .zshop-panel-head{padding:.2cqw .35cqw}
+  .zshop-panel-head small{display:none}
+  .zshop-grid{padding:.3cqw;gap:.3cqw}
+  .zshop-item{gap:0;padding:.12cqw}
+  .zshop-icon{font-size:14px}
+  .zshop-item-name{font-size:11px}
+  .zshop-item-cost,.zshop-item-owned{font-size:10px}
+  .zshop-detail-description{font-size:10px}
+  .zshop-detail-icon{font-size:20px}
 }
-.shop-menu-window iframe.shop-interface {
-  position: absolute;
-  display: block;
-  left: 0;
-  top: 0;
-  border: 0;
-  background: transparent;
-  pointer-events: auto;
-  transform-origin: top left;
-}
+/* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 .shop-player-hud { top: 2%; left: 7%; }
 /* Clear the HUD and align with the visible image edge like other VHouse pages. */
@@ -167,13 +218,11 @@ html, body {
     <div id="shopMessage" class="vhouse-message--game shop-message"
       data-vhouse-message aria-live="polite" hidden></div>
 
-    <!-- The existing shop menu frame contains one independently interactive shop page. -->
+    <!-- One shared shop menu; content is rendered directly in the game DOM. -->
     <div id="shopMenuOverlay" class="shop-menu-overlay" hidden>
       <div class="shop-menu-window" role="dialog" aria-modal="true" aria-label="Shop menu">
-        <iframe src="./vcontainer.html" title="VHouse Shop Menu Frame" tabindex="-1" aria-hidden="true"></iframe>
-        <div id="shopMenuContent" class="shop-menu-content">
-          <iframe id="shopInterface" class="shop-interface" title="Shop Interface"></iframe>
-        </div>
+        <img class="shop-menu-frame" src="assets/Vcontainer.png" alt="" draggable="false">
+        <div id="shopMenuContent" class="shop-menu-content"></div>
       </div>
     </div>
 
@@ -184,84 +233,159 @@ html, body {
 const shopMenuOverlay = document.getElementById("shopMenuOverlay");
 const shopMenuWindow = shopMenuOverlay.querySelector(".shop-menu-window");
 const shopMenuContent = document.getElementById("shopMenuContent");
-const shopInterface = document.getElementById("shopInterface");
-const shopPages = {
-  "Mission Boosts": "./MissionBoosts.html?v=legible-20261103",
-  "Journey Service": "./JourneyService.html?v=legible-20261103",
-  "Trade Scraps": "./TradeScraps.html?v=legible-20261103"
-};
-
-/* Display the shops at their actual text sizes instead of shrinking a 900px page. */
-function fitShopInterface() {
-  if (shopMenuOverlay.hidden || !shopInterface.contentDocument) return;
-  const doc = shopInterface.contentDocument;
-  if (!doc.querySelector("main")) return;
-
-  shopInterface.style.width = "100%";
-  shopInterface.style.height = "100%";
-  shopInterface.style.left = "0";
-  shopInterface.style.top = "0";
-  shopInterface.style.transform = "none";
-
-  // Apply compact sizing only in the embedded view; standalone shop pages are unchanged.
-  if (doc.getElementById("vhouse-embedded-shop-style")) return;
-  const style = doc.createElement("style");
-  style.id = "vhouse-embedded-shop-style";
-  style.textContent = `
-    html,body{width:100%;height:100%;overflow:hidden;background:transparent!important}
-    main{height:100%;width:100%;max-width:none!important;padding:0!important;display:flex;flex-direction:column}
-    main>.shell{height:100%;width:100%;min-height:0;display:flex;flex-direction:column}
-    main .top{padding:5px 8px!important;flex-shrink:0}
-    main .eyebrow{font-size:11px!important;line-height:1.1!important}
-    main h2{font-size:22px!important;line-height:1.08!important;margin:1px 0!important}
-    main .money-box{min-width:0!important;padding:3px 6px!important}
-    main .money-box small{font-size:11px!important;line-height:1!important;margin-bottom:2px!important}
-    main .money-box strong{font-size:18px!important}
-    main .main{flex:1;min-height:0;padding:5px!important;display:flex;flex-direction:column}
-    main .body,main .sides{flex:1;min-height:0;gap:6px!important}
-    main .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
-    main .panel-header{padding:5px 6px!important;min-height:27px;flex-shrink:0;flex-wrap:nowrap!important}
-    main .panel-header strong{font-size:19px!important;line-height:1!important}
-    main .panel-header small{font-size:14px!important;line-height:1!important}
-    main .items{flex:1;min-height:0!important;grid-template-rows:repeat(2,minmax(0,1fr));gap:4px!important;padding:4px!important;align-content:stretch!important}
-    main .item{min-height:0!important;gap:2px!important;padding:3px!important}
-    main .art{font-size:22px!important;line-height:1!important}
-    main .item-name,main .item-cost,main .owned,
-    main .item-count,main .value{font-family:Arial,sans-serif!important;font-size:19px!important;font-weight:700!important;line-height:1.05!important}
-    main .detail{flex:1;min-height:0!important;padding:4px!important;gap:3px!important}
-    main .detail-icon{width:34px!important;height:34px!important;font-size:23px!important;flex-shrink:0}
-    main .detail-name{font-size:19px!important;line-height:1.05!important}
-    main .detail-copy{font-size:19px!important;line-height:1.1!important;min-height:0;overflow:hidden}
-    main .detail-cost{font-size:19px!important;line-height:1.05!important}
-    main .buy{font-size:19px!important;line-height:1.05!important;padding:5px!important;flex-shrink:0}
-    main .status{font-size:15px!important;line-height:1.1!important;min-height:0!important;margin-top:3px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    main .actions{margin-top:4px!important;flex-shrink:0}
-    main .trade-btn{font-size:19px!important;line-height:1.1!important;padding:5px 15px!important}
-  `;
-  doc.head.appendChild(style);
-}
-shopInterface.addEventListener("load", fitShopInterface);
-new ResizeObserver(fitShopInterface).observe(shopMenuContent);
 let shopMenuTrigger = null;
-document.querySelectorAll(".shop-hotspot").forEach(button => {
-  button.addEventListener("click", () => {
-    shopMenuTrigger = button;
-    shopMenuOverlay.hidden = false;
-    shopInterface.title = button.dataset.menu;
-    shopInterface.src = shopPages[button.dataset.menu];
+let activeShop = "Mission Boosts";
+let shopStatus = "";
+
+const boosts = [
+  { name:"Lucky Charm", icon:"🍀", price:200, desc:"Grants an extra Luck retry during a Journey encounter." },
+  { name:"Swift Boots", icon:"🥾", price:350, desc:"Reduces the return time of a Journey." },
+  { name:"Hunt Lantern", icon:"🏮", price:150, desc:"Provides a hunting advantage during a Journey." },
+  { name:"Extra Chance", icon:"🎲", price:400, desc:"Grants an additional encounter attempt during a Journey." }
+];
+const services = [
+  { name:"Journey Check", icon:"🔎", price:0, desc:"Inspect the readiness of your VCard before departure." },
+  { name:"Quick Return", icon:"⏳", price:250, desc:"Sample service for reducing the time of a Journey." },
+  { name:"Mission Support", icon:"🧭", price:175, desc:"Sample assistance for an upcoming mission." },
+  { name:"Send Assistance", icon:"🆘", price:75, desc:"Send assistance to a VCard currently on a Journey." }
+];
+const tradeCatalog = {
+  scrap:{name:"Scrap Metal",icon:"⚙️",value:15},
+  copper:{name:"Copper Parts",icon:"🔩",value:30},
+  relic:{name:"Old Relic",icon:"🏺",value:60},
+  crystal:{name:"Crystal",icon:"💎",value:45},
+  repair:{name:"Repair Kit",icon:"🧰",value:90},
+  token:{name:"Journey Token",icon:"🪙",value:120}
+};
+const ownedScraps={scrap:12,copper:5,relic:2,crystal:0,repair:0,token:0};
+const shopStock={scrap:0,copper:0,relic:0,crystal:6,repair:4,token:3};
+const boostOwned=[0,0,0,0];
+let boostMoney=1500,serviceMoney=1500;
+let selectedBoost=0,selectedService=0,tradeFrom="scrap",tradeTo="crystal";
+
+function shopBalance(label,value){
+  return '<div class="zshop-balance"><span class="zshop-balance-label">'+label+
+    '</span><strong class="zshop-balance-amount">'+value+'</strong></div>';
+}
+function shopItem(item,subtitle,extra,action,index,selected,disabled=false){
+  return '<button type="button" class="zshop-item'+(selected?' selected':'')+
+    '" data-shop-action="'+action+'" data-index="'+index+'" aria-pressed="'+selected+'"'+
+    (disabled?' disabled':'')+'>'+
+    '<span class="zshop-icon">'+item.icon+'</span>'+
+    '<span class="zshop-item-name">'+item.name+'</span>'+
+    '<span class="zshop-item-cost">'+subtitle+'</span>'+
+    (extra?'<span class="zshop-item-owned">'+extra+'</span>':'')+
+    '</button>';
+}
+function shopPanel(title,subtitle,body){
+  return '<section class="zshop-panel"><div class="zshop-panel-head"><strong>'+title+
+    '</strong><small>'+subtitle+'</small></div>'+body+'</section>';
+}
+function renderShop(){
+  let balance,body,footer="",title=activeShop.toUpperCase();
+  if(activeShop==="Mission Boosts" || activeShop==="Journey Service"){
+    const isBoost=activeShop==="Mission Boosts";
+    const items=isBoost?boosts:services;
+    const selected=isBoost?selectedBoost:selectedService;
+    const money=isBoost?boostMoney:serviceMoney;
+    const item=items[selected];
+    balance=shopBalance("IG MONEY",money.toLocaleString())+
+      (isBoost?shopBalance("BOOSTS OWNED",boostOwned.reduce((a,b)=>a+b,0)):"");
+    const list=items.map((v,i)=>shopItem(v,v.price?v.price+" IG":"FREE",
+      isBoost?"OWNED: "+boostOwned[i]:"",isBoost?"select-boost":"select-service",i,selected===i)).join("");
+    const detail='<div class="zshop-details">'+
+      '<div class="zshop-detail-icon">'+item.icon+'</div>'+
+      '<strong class="zshop-detail-name">'+item.name+'</strong>'+
+      '<p class="zshop-detail-description">'+item.desc+'</p>'+
+      '<strong class="zshop-detail-price">'+(item.price?item.price+" IG":"FREE")+'</strong>'+
+      '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
+      '"'+(money<item.price?' disabled':'')+'>'+(isBoost?"BUY BOOST":"USE SERVICE")+'</button></div>';
+    body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"SERVICES","AVAILABLE",
+      '<div class="zshop-grid">'+list+'</div>')+
+      shopPanel("DETAILS","SELECTED",detail)+'</div>';
+  }else{
+    if(!ownedScraps[tradeFrom]){
+      tradeFrom=Object.keys(ownedScraps).find(key=>ownedScraps[key]>0)||"scrap";
+    }
+    balance=shopBalance("IG MONEY","500")+shopBalance("SCRAPS",ownedScraps.scrap);
+    const playerItems=Object.keys(ownedScraps).filter(key=>ownedScraps[key]>0)
+      .map(key=>shopItem(tradeCatalog[key],"Owned: "+ownedScraps[key],
+        tradeCatalog[key].value+" trade value","select-player",key,key===tradeFrom)).join("");
+    const available=["crystal","repair","token"].map(key=>shopItem(tradeCatalog[key],
+      "Stock: "+shopStock[key],tradeCatalog[key].value+" trade value",
+      "select-stock",key,key===tradeTo,!shopStock[key])).join("");
+    const cost=Math.ceil(tradeCatalog[tradeTo].value/tradeCatalog[tradeFrom].value);
+    const canTrade=ownedScraps[tradeFrom]>=cost&&shopStock[tradeTo]>0;
+    body='<div class="zshop-work trade-layout">'+shopPanel("YOUR ITEMS","INVENTORY",
+      '<div class="zshop-grid">'+playerItems+'</div>')+
+      shopPanel("SHOP ITEMS","AVAILABLE",'<div class="zshop-grid">'+available+'</div>')+'</div>'+
+      '<div class="zshop-trade-actions"><button class="zshop-action" data-shop-action="confirm-trade"'+
+      (canTrade?'':' disabled')+'>CONFIRM TRADE</button></div>';
+  }
+  if(shopStatus)footer='<div class="zshop-status" role="status">'+shopStatus+'</div>';
+  shopMenuContent.innerHTML='<div class="zshop">'+
+    '<header class="zshop-head"><div class="zshop-headings"><div class="zshop-eyebrow">ZETSU SHOP</div>'+
+    '<h2 class="zshop-title">'+title+'</h2></div>'+
+    '<div class="zshop-money">'+balance+'</div></header>'+body+footer+'</div>';
+  shopMenuWindow.setAttribute("aria-label",activeShop);
+}
+shopMenuContent.addEventListener("click",event=>{
+  const button=event.target.closest("button[data-shop-action]");
+  if(!button||button.disabled)return;
+  const action=button.dataset.shopAction;
+  const index=button.dataset.index;
+  shopStatus="";
+  if(action==="select-boost")selectedBoost=Number(index);
+  if(action==="select-service")selectedService=Number(index);
+  if(action==="select-player")tradeFrom=index;
+  if(action==="select-stock")tradeTo=index;
+  if(action==="buy-boost"){
+    const item=boosts[selectedBoost];
+    if(boostMoney>=item.price){
+      boostMoney-=item.price;
+      boostOwned[selectedBoost]++;
+      shopStatus=item.name+" purchased.";
+    }
+  }
+  if(action==="use-service"){
+    const item=services[selectedService];
+    if(serviceMoney>=item.price){
+      serviceMoney-=item.price;
+      shopStatus=item.name+" — demo service selected.";
+    }
+  }
+  if(action==="confirm-trade"){
+    const count=Math.ceil(tradeCatalog[tradeTo].value/tradeCatalog[tradeFrom].value);
+    if(ownedScraps[tradeFrom]>=count&&shopStock[tradeTo]>0){
+      ownedScraps[tradeFrom]-=count;
+      shopStock[tradeFrom]+=count;
+      shopStock[tradeTo]--;
+      ownedScraps[tradeTo]++;
+      shopStatus="Trade complete.";
+    }
+  }
+  renderShop();
+});
+document.querySelectorAll(".shop-hotspot").forEach(button=>{
+  button.addEventListener("click",()=>{
+    shopMenuTrigger=button;
+    activeShop=button.dataset.menu;
+    shopStatus="";
+    shopMenuOverlay.hidden=false;
+    renderShop();
   });
 });
-function closeShopMenu() {
-  if (shopMenuOverlay.hidden) return;
-  shopMenuOverlay.hidden = true;
-  shopInterface.removeAttribute("src");
-  if (shopMenuTrigger) shopMenuTrigger.focus();
+function closeShopMenu(){
+  if(shopMenuOverlay.hidden)return;
+  shopMenuOverlay.hidden=true;
+  shopMenuContent.replaceChildren();
+  if(shopMenuTrigger)shopMenuTrigger.focus();
 }
-shopMenuOverlay.addEventListener("click", event => {
-  if (!shopMenuWindow.contains(event.target)) closeShopMenu();
+shopMenuOverlay.addEventListener("click",event=>{
+  if(!shopMenuWindow.contains(event.target))closeShopMenu();
 });
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape") closeShopMenu();
+document.addEventListener("keydown",event=>{
+  if(event.key==="Escape")closeShopMenu();
 });
 </script>
 <script src="assets/vhouse-cards.js"></script>
