@@ -62,6 +62,66 @@ html, body {
   -webkit-user-drag: none;
   pointer-events: none;
 }
+/* The artwork is 16:9 inside the shared 2:1 game frame. */
+.shop-hotspot-layer {
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 88.888889%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.shop-hotspot {
+  pointer-events: auto;
+}
+/* The three marked areas, left to right, on the shop artwork. */
+.hotspot-mission-boosts { left: 4.4%; top: 34%; width: 20.2%; height: 28.5%; }
+.hotspot-journey-service { left: 26.4%; top: 49%; width: 46.4%; height: 15.5%; }
+.hotspot-trade-scraps { left: 81.8%; top: 64.7%; width: 18%; height: 35%; }
+
+/* Reuse the existing VHouse menu frame; don't resize the game artwork. */
+.shop-menu-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+}
+.shop-menu-window {
+  position: absolute;
+  top: 9.14%;
+  left: 50%;
+  width: 50.90%;
+  height: 63.55%;
+  transform: translateX(-50%);
+  container-type: inline-size;
+}
+.shop-menu-window iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.shop-menu-content {
+  position: absolute;
+  left: 13.3%;
+  top: 26%;
+  width: 73.4%;
+  height: 53.6%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2cqw;
+  text-align: center;
+  pointer-events: none;
+}
+.shop-menu-content h2 {
+  color: #ffe9a4;
+  font-size: 4cqw;
+  line-height: 1.15;
+  letter-spacing: .05em;
+  text-shadow: 0 0 1.4cqw rgba(255, 210, 105, .65);
+}
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 .shop-player-hud { top: 2%; left: 7%; }
 /* Clear the HUD and align with the visible image edge like other VHouse pages. */
@@ -86,6 +146,16 @@ html, body {
   <div class="map-container">
     <img class="game-map" src="assets/V%20Shop.png?v=20261102" alt="VHouse Shop interior" draggable="false">
 
+    <!-- Clickable shop displays: left, center, right. -->
+    <div class="shop-hotspot-layer">
+      <button type="button" class="vhouse-btn map-hotspot shop-hotspot hotspot-mission-boosts"
+        data-menu="Mission Boosts" data-label="Mission Boosts" aria-label="Mission Boosts"></button>
+      <button type="button" class="vhouse-btn map-hotspot shop-hotspot hotspot-journey-service"
+        data-menu="Journey Service" data-label="Journey Service" aria-label="Journey Service"></button>
+      <button type="button" class="vhouse-btn map-hotspot shop-hotspot hotspot-trade-scraps"
+        data-menu="Trade Scraps" data-label="Trade Scraps" aria-label="Trade Scraps"></button>
+    </div>
+
     <aside class="vhouse-player-hud shop-player-hud" aria-label="Player information">
       <div data-vhouse-player role="img" aria-label="Active VCard"></div>
       <div data-vhouse-info aria-live="polite"></div>
@@ -95,9 +165,43 @@ html, body {
     <div id="shopMessage" class="vhouse-message--game shop-message"
       data-vhouse-message aria-live="polite" hidden></div>
 
+    <!-- One reusable shop menu, titled by the selected hotspot. -->
+    <div id="shopMenuOverlay" class="shop-menu-overlay" hidden>
+      <div class="shop-menu-window" role="dialog" aria-modal="true" aria-labelledby="shopMenuTitle">
+        <iframe src="./vcontainer.html" title="VHouse Shop Menu" tabindex="-1" aria-hidden="true"></iframe>
+        <div class="shop-menu-content">
+          <h2 id="shopMenuTitle"></h2>
+        </div>
+      </div>
+    </div>
+
     <a class="vhouse-btn back-button shop-back-button" href="./index.html">← BACK</a>
   </div>
 </main>
+<script>
+const shopMenuOverlay = document.getElementById("shopMenuOverlay");
+const shopMenuWindow = shopMenuOverlay.querySelector(".shop-menu-window");
+const shopMenuTitle = document.getElementById("shopMenuTitle");
+let shopMenuTrigger = null;
+document.querySelectorAll(".shop-hotspot").forEach(button => {
+  button.addEventListener("click", () => {
+    shopMenuTrigger = button;
+    shopMenuTitle.textContent = button.dataset.menu;
+    shopMenuOverlay.hidden = false;
+  });
+});
+function closeShopMenu() {
+  if (shopMenuOverlay.hidden) return;
+  shopMenuOverlay.hidden = true;
+  if (shopMenuTrigger) shopMenuTrigger.focus();
+}
+shopMenuOverlay.addEventListener("click", event => {
+  if (!shopMenuWindow.contains(event.target)) closeShopMenu();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closeShopMenu();
+});
+</script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-player.js"></script>
 <script src="assets/vhouse-info.js"></script>
