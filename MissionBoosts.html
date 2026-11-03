@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse — Mission Boosts</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0d101e}
+#vh-mb1{font:13px Arial,sans-serif;color:#f7ead4;max-width:1100px;margin:0 auto;padding:16px}
+#vh-mb1 *{box-sizing:border-box}
+#vh-mb1 button{font:inherit;cursor:pointer}
+#vh-mb1 button:focus-visible{outline:2px solid #ffe0a3;outline-offset:2px}
+#vh-mb1 .shell{border:2px solid #a7834e;border-radius:11px;overflow:hidden;background:radial-gradient(ellipse at 45% 0%,#43314b,#1e1b30 52%,#0d111e)}
+#vh-mb1 .top{background:#181320c9;border-bottom:1px solid #aa8655;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#vh-mb1 .eyebrow{font-size:10px;color:#c7a478;letter-spacing:2px;font-weight:800}
+#vh-mb1 h2{font:700 clamp(20px,3.8vw,32px) Georgia,serif;color:#ffe1a7;margin:3px 0}
+#vh-mb1 .money{display:flex;gap:7px}
+#vh-mb1 .money-box{background:#100f1d;border:1px solid #85684d;border-radius:6px;padding:8px 11px;text-align:center;min-width:70px}
+#vh-mb1 .money-box small{display:block;font-size:9px;color:#bda37e;margin-bottom:4px}
+#vh-mb1 .money-box strong{font-size:15px;color:#ffdda0}
+#vh-mb1 .main{padding:14px}
+#vh-mb1 .body{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px}
+#vh-mb1 .panel{min-width:0;border:1px solid #80694f;background:linear-gradient(145deg,#30283c,#151625);border-radius:8px;overflow:hidden}
+#vh-mb1 .panel-header{display:flex;align-items:center;justify-content:space-between;gap:5px;border-bottom:1px solid #756044;background:#1a1729;padding:11px}
+#vh-mb1 .panel-header strong{font:700 clamp(13px,2.4vw,19px) Georgia,serif;color:#ffdc98}
+#vh-mb1 .panel-header small{font-size:9px;color:#bdb0c1;white-space:nowrap}
+#vh-mb1 .items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px;align-content:start}
+#vh-mb1 .item{border:1px solid #6c6071;border-radius:6px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;min-height:114px;padding:10px 5px;min-width:0;background:linear-gradient(145deg,#30293a,#17192a);color:#efe5d9;text-align:center;position:relative}
+#vh-mb1 .item:hover{border-color:#f4cf87}
+#vh-mb1 .item.active{border:2px solid #f0c977;background:linear-gradient(145deg,#4d3a49,#242039);box-shadow:0 0 12px #e3ad5c33}
+#vh-mb1 .art{font-size:33px;line-height:1.2}
+#vh-mb1 .item-name{font-size:11px;font-weight:800}
+#vh-mb1 .item-cost{font-size:10px;color:#f6ce88}
+#vh-mb1 .owned{font-size:9px;color:#a9e1cb}
+#vh-mb1 .detail{display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;padding:13px;min-height:264px}
+#vh-mb1 .detail-icon{width:76px;height:76px;display:grid;place-items:center;font-size:42px;background:radial-gradient(circle,#69516e,#241f35);border:1px solid #a4875b;border-radius:12px}
+#vh-mb1 .detail-name{font:700 clamp(15px,2.5vw,20px) Georgia,serif;color:#ffe0a2}
+#vh-mb1 .detail-copy{font-size:12px;line-height:1.4;color:#cbbfce;flex:1}
+#vh-mb1 .detail-cost{font-size:18px;font-weight:800;color:#f7ce88}
+#vh-mb1 .buy{width:100%;border:1px solid #ffe0a3;border-radius:6px;background:linear-gradient(#ffe6aa,#b98e4d);color:#2d1e24;font-weight:900;padding:12px}
+#vh-mb1 .buy:disabled{opacity:.45;cursor:not-allowed}
+#vh-mb1 .status{min-height:17px;margin-top:11px;text-align:center;color:#ccbba8;font-size:11px}
+@media(max-width:480px){
+#vh-mb1{padding:6px}
+#vh-mb1 .top{padding:10px;gap:4px}
+#vh-mb1 .money-box{min-width:58px;padding:6px}
+#vh-mb1 .money-box strong{font-size:12px}
+#vh-mb1 .main{padding:8px}
+#vh-mb1 .body{gap:6px;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+#vh-mb1 .items{gap:5px;padding:6px}
+#vh-mb1 .item{min-height:101px;padding:6px 3px}
+#vh-mb1 .art{font-size:27px}
+#vh-mb1 .item-name{font-size:10px}
+#vh-mb1 .detail{padding:8px;min-height:245px}
+#vh-mb1 .detail-icon{width:57px;height:57px;font-size:30px}
+#vh-mb1 .detail-copy{font-size:10px}
+#vh-mb1 .buy{font-size:11px;padding:10px 4px}
+#vh-mb1 .panel-header{padding:9px 6px;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<main id="vh-mb1">
+<div class="shell">
+<header class="top">
+<div><div class="eyebrow">ZETSU SHOP</div><h2>MISSION BOOSTS</h2></div>
+<div class="money">
+<div class="money-box"><small>IG MONEY</small><strong data-ig>1,500</strong></div>
+<div class="money-box"><small>BOOSTS OWNED</small><strong data-owned-total>0</strong></div>
+</div>
+</header>
+<div class="main">
+<div class="body">
+<section class="panel">
+<div class="panel-header"><strong>BOOST ITEMS</strong><small>AVAILABLE</small></div>
+<div class="items" data-items></div>
+</section>
+<section class="panel">
+<div class="panel-header"><strong>DETAILS</strong><small>SELECTED</small></div>
+<div class="detail">
+<div class="detail-icon" data-icon></div>
+<div class="detail-name" data-name></div>
+<div class="detail-copy" data-desc></div>
+<div class="detail-cost" data-cost></div>
+<button class="buy" data-buy>BUY BOOST</button>
+</div>
+</section>
+</div>
+<div class="status" data-status role="status"></div>
+</div>
+</div>
+</main>
+<script>
+(()=>{
+const root=document.getElementById("vh-mb1");if(!root||root.dataset.init)return;root.dataset.init="1";
+const boosts=[
+{name:"Lucky Charm",icon:"🍀",price:200,desc:"Grants an extra Luck retry during a Journey encounter."},
+{name:"Swift Boots",icon:"🥾",price:350,desc:"Reduces the return time of a Journey."},
+{name:"Hunt Lantern",icon:"🏮",price:150,desc:"Provides a hunting advantage during a Journey."},
+{name:"Extra Chance",icon:"🎲",price:400,desc:"Grants an additional encounter attempt during a Journey."}
+];
+let selected=0,ig=1500;const owned=boosts.map(()=>0),$=s=>root.querySelector(s);
+function render(){
+$("[data-ig]").textContent=ig.toLocaleString();
+$("[data-owned-total]").textContent=owned.reduce((a,b)=>a+b,0);
+const host=$("[data-items]");host.replaceChildren();
+boosts.forEach((item,i)=>{
+const b=document.createElement("button");b.type="button";b.className="item"+(selected===i?" active":"");b.setAttribute("aria-pressed",String(selected===i));
+const art=document.createElement("div");art.className="art";art.textContent=item.icon;
+const name=document.createElement("div");name.className="item-name";name.textContent=item.name;
+const price=document.createElement("div");price.className="item-cost";price.textContent=item.price+" IG";
+const qty=document.createElement("div");qty.className="owned";qty.textContent="OWNED: "+owned[i];
+b.append(art,name,price,qty);b.addEventListener("click",()=>{selected=i;render();$("[data-status]").textContent=""});host.appendChild(b);
+});
+const item=boosts[selected];
+$("[data-icon]").textContent=item.icon;
+$("[data-name]").textContent=item.name;
+$("[data-desc]").textContent=item.desc;
+$("[data-cost]").textContent=item.price+" IG";
+$("[data-buy]").disabled=ig<item.price;
+}
+$("[data-buy]").addEventListener("click",()=>{
+const item=boosts[selected];if(ig<item.price)return;
+ig-=item.price;owned[selected]++;render();
+$("[data-status]").textContent=item.name+" purchased. Owned: "+owned[selected]+".";
+});
+render();
+})();
+</script>
+</body>
+</html>
