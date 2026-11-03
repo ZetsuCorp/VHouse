@@ -8,6 +8,9 @@ html, body { margin:0; padding:0; }
   display:flex; justify-content:center; align-items:center;
   background:radial-gradient(ellipse at 50% 35%,#34204f 0%,#15102b 56%,#070611 100%);
 }
+/* Player login screen has a solid black background. */
+.startup-screen[data-stage="auth"],
+.startup-screen[data-stage="auth"] .startup-panel { background:#000; }
 .startup-center { width:86%; text-align:center; }
 .startup-eyebrow { margin:0 0 .7cqw; font-size:clamp(9px,1.15cqw,18px); font-weight:800; letter-spacing:.25em; color:#e5b95b; }
 .startup-publisher { font-family:Georgia,serif; font-size:clamp(20px,4cqw,58px); color:#ffdfa0; letter-spacing:.08em; text-shadow:0 0 2cqw #dfa33f8a; margin:0; }
