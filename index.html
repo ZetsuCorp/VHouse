@@ -180,13 +180,7 @@ html, body {
   width: 67.75%;
   height: 84.59%;
 }
-.journey-window iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: transparent;
-}
+.journey-window .vhouse-frame-art { width:100%; height:100%; }
 
 </style>
 <link rel="stylesheet" href="assets/vhouse-player.css">
@@ -251,7 +245,8 @@ html, body {
     <!-- Journey displays only the menu -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
       <div class="journey-window">
-        <iframe src="./vcontainer.html?mode=journey" title="Journey Menu"></iframe>
+        <img class="vhouse-frame-art" src="assets/Vcontainer.png" alt="" draggable="false">
+        <div class="vhouse-frame-content" id="journeyContent"></div>
       </div>
     </div>
 
@@ -288,6 +283,9 @@ const journeyWindow = journeyOverlay.querySelector(".journey-window");
 
 journeyButton.addEventListener("click", () => {
   journeyOverlay.hidden = false;
+  if (!document.querySelector("#journeyContent [data-vhouse-journey-root]")) {
+    VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
+  }
 });
 
 journeyOverlay.addEventListener("click", (event) => {
@@ -302,6 +300,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 </script>
+<script src="assets/vhouse-journey.js"></script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-player.js"></script>
 <script src="assets/vhouse-info.js"></script>
