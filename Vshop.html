@@ -104,21 +104,25 @@ html, body {
   background: transparent;
   pointer-events: none;
 }
+/* The clickable shop page sits inside the existing Vcontainer image's content area. */
 .shop-menu-content {
   position: absolute;
   left: 13.3%;
   top: 26%;
   width: 73.4%;
   height: 53.6%;
-  --vhm-scale: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: .8cqw;
-  padding: 2cqw;
-  text-align: center;
+  overflow: hidden;
   pointer-events: none;
+}
+.shop-menu-window iframe.shop-interface {
+  position: absolute;
+  display: block;
+  left: 0;
+  top: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  transform-origin: top left;
 }
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 .shop-player-hud { top: 2%; left: 7%; }
@@ -163,14 +167,12 @@ html, body {
     <div id="shopMessage" class="vhouse-message--game shop-message"
       data-vhouse-message aria-live="polite" hidden></div>
 
-    <!-- One reusable shop menu, titled by the selected hotspot. -->
+    <!-- The existing shop menu frame contains one independently interactive shop page. -->
     <div id="shopMenuOverlay" class="shop-menu-overlay" hidden>
-      <div class="shop-menu-window" role="dialog" aria-modal="true" aria-labelledby="shopMenuTitle">
-        <iframe src="./vcontainer.html" title="VHouse Shop Menu" tabindex="-1" aria-hidden="true"></iframe>
-        <div class="shop-menu-content" aria-live="polite">
-          <div id="shopMenuHeader" class="vhouse-message-header"></div>
-          <strong id="shopMenuTitle" class="vhouse-message-title"></strong>
-          <p id="shopMenuInfo" class="vhouse-message-info"></p>
+      <div class="shop-menu-window" role="dialog" aria-modal="true" aria-label="Shop menu">
+        <iframe src="./vcontainer.html" title="VHouse Shop Menu Frame" tabindex="-1" aria-hidden="true"></iframe>
+        <div id="shopMenuContent" class="shop-menu-content">
+          <iframe id="shopInterface" class="shop-interface" title="Shop Interface"></iframe>
         </div>
       </div>
     </div>
@@ -181,27 +183,49 @@ html, body {
 <script>
 const shopMenuOverlay = document.getElementById("shopMenuOverlay");
 const shopMenuWindow = shopMenuOverlay.querySelector(".shop-menu-window");
-const shopMenuHeader = document.getElementById("shopMenuHeader");
-const shopMenuTitle = document.getElementById("shopMenuTitle");
-const shopMenuInfo = document.getElementById("shopMenuInfo");
-const shopMenuMessages = {
-  "Mission Boosts": "Boosts for your Journey Missions.",
-  "Journey Service": "Services for your Journey.",
-  "Trade Scraps": "Trade your collected scraps."
+const shopMenuContent = document.getElementById("shopMenuContent");
+const shopInterface = document.getElementById("shopInterface");
+const shopPages = {
+  "Mission Boosts": "./MissionBoosts.html",
+  "Journey Service": "./JourneyService.html",
+  "Trade Scraps": "./TradeScraps.html"
 };
+
+/* Fit each complete shop UI into the existing artwork's inner rectangle. */
+function fitShopInterface() {
+  if (shopMenuOverlay.hidden || !shopInterface.contentDocument) return;
+  const page = shopInterface.contentDocument.querySelector("main");
+  if (!page) return;
+  const baseWidth = 900;
+  shopInterface.style.width = baseWidth + "px";
+  shopInterface.style.height = "600px";
+  const baseHeight = Math.ceil(page.getBoundingClientRect().height) + 2;
+  if (!baseHeight || !shopMenuContent.clientWidth || !shopMenuContent.clientHeight) return;
+  const scale = Math.min(
+    (shopMenuContent.clientWidth - 8) / baseWidth,
+    (shopMenuContent.clientHeight - 8) / baseHeight,
+    1
+  );
+  shopInterface.style.height = baseHeight + "px";
+  shopInterface.style.left = (shopMenuContent.clientWidth - baseWidth * scale) / 2 + "px";
+  shopInterface.style.top = (shopMenuContent.clientHeight - baseHeight * scale) / 2 + "px";
+  shopInterface.style.transform = "scale(" + scale + ")";
+}
+shopInterface.addEventListener("load", fitShopInterface);
+new ResizeObserver(fitShopInterface).observe(shopMenuContent);
 let shopMenuTrigger = null;
 document.querySelectorAll(".shop-hotspot").forEach(button => {
   button.addEventListener("click", () => {
     shopMenuTrigger = button;
-    shopMenuHeader.textContent = "ZETSU SHOP";
-    shopMenuTitle.textContent = button.dataset.menu;
-    shopMenuInfo.textContent = shopMenuMessages[button.dataset.menu] || "";
     shopMenuOverlay.hidden = false;
+    shopInterface.title = button.dataset.menu;
+    shopInterface.src = shopPages[button.dataset.menu];
   });
 });
 function closeShopMenu() {
   if (shopMenuOverlay.hidden) return;
   shopMenuOverlay.hidden = true;
+  shopInterface.removeAttribute("src");
   if (shopMenuTrigger) shopMenuTrigger.focus();
 }
 shopMenuOverlay.addEventListener("click", event => {
