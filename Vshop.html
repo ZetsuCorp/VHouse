@@ -201,7 +201,7 @@ function fitShopInterface() {
   shopInterface.style.height = "600px";
   const baseHeight = Math.ceil(page.getBoundingClientRect().height) + 2;
   if (!baseHeight || !shopMenuContent.clientWidth || !shopMenuContent.clientHeight) return;
-  const scale = Math.min(
+  const scale = 1.10 * Math.min(
     (shopMenuContent.clientWidth - 8) / baseWidth,
     (shopMenuContent.clientHeight - 8) / baseHeight,
     1
