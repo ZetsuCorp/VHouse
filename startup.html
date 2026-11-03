@@ -58,7 +58,9 @@
       <div class="startup-panel">
         <p class="startup-eyebrow">PLAYER ACCESS</p>
         <h2>Welcome to VHouse</h2>
+        <img id="discordAvatar" class="startup-discord-avatar" alt="Discord profile avatar" hidden>
         <p class="startup-status" id="authStatus" role="status">Restoring your session…</p>
+        <p class="startup-connected" id="authConnected" hidden></p>
         <div class="startup-actions">
           <button type="button" class="startup-action" id="discordLogin" disabled>DISCORD LOGIN — NOT CONNECTED</button>
           <button type="button" class="startup-action" id="emailLogin" disabled>EMAIL LOGIN — NOT CONNECTED</button>
@@ -67,10 +69,8 @@
             <input id="startupEmail" type="email" placeholder="Email address" autocomplete="email" required>
             <button type="submit" class="startup-action">SEND EMAIL LINK</button>
           </form>
-          <button type="button" class="startup-action startup-secondary" id="guestLogin">CONTINUE AS GUEST (PREVIEW)</button>
           <button type="button" class="startup-action" id="sessionContinue" hidden>CONTINUE</button>
         </div>
-        <p class="startup-footnote">Guest VCards remain browser-local. Guest mode does not verify accounts or NFTs.</p>
       </div>
     </section>
 
