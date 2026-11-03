@@ -90,11 +90,45 @@
     await sleep(350);
     if (root.dataset.stage === "version") await showAuth();
   }
+  function discordAvatarUrl(user) {
+    const identity = user?.identities?.find(item => item.provider === "discord");
+    if (!identity) return null;
+    const details = identity.identity_data || {};
+    const direct = details.avatar_url || details.picture ||
+      (user.app_metadata?.provider === "discord" ? user.user_metadata?.avatar_url : null);
+    if (typeof direct === "string" && /^https:\/\//i.test(direct)) return direct;
+    const discordId = details.provider_id || details.sub;
+    const avatarHash = details.avatar;
+    if (discordId && avatarHash && /^[a-zA-Z0-9_]+$/.test(String(avatarHash))) {
+      return "https://cdn.discordapp.com/avatars/" +
+        encodeURIComponent(discordId) + "/" + encodeURIComponent(avatarHash) + ".png?size=128";
+    }
+    return null;
+  }
+  function renderAccount(user) {
+    const avatar = $("discordAvatar");
+    const avatarUrl = discordAvatarUrl(user);
+    avatar.hidden = !avatarUrl;
+    if (avatarUrl) avatar.src = avatarUrl;
+    else avatar.removeAttribute("src");
+    const discordLinked = user?.identities?.some(item => item.provider === "discord");
+    const emailLinked = Boolean(user?.email);
+    $("authConnected").hidden = false;
+    $("authConnected").textContent = [discordLinked ? "Discord connected" : "",
+      emailLinked ? "Email connected" : ""].filter(Boolean).join(" • ") || "Account connected";
+    $("discordLogin").hidden = Boolean(discordLinked);
+    $("emailLogin").hidden = Boolean(emailLinked);
+    if (!discordLinked) $("discordLogin").textContent = "LINK DISCORD";
+    if (!emailLinked) $("emailLogin").textContent = "LINK EMAIL";
+  }
   async function showAuth() {
     setStage("auth");
     const status = $("authStatus");
     $("sessionContinue").hidden = true;
-    $("guestLogin").hidden = false;
+    $("discordAvatar").hidden = true;
+    $("authConnected").hidden = true;
+    $("discordLogin").hidden = false;
+    $("emailLogin").hidden = false;
     $("startupEmailForm").hidden = true;
     for (const [provider,id] of [["discord","discordLogin"],["email","emailLogin"]]) {
       const button = $(id);
@@ -107,17 +141,14 @@
         const session = await authAdapter.restoreSession();
         if (session?.authenticated === true) {
           authMode = "authenticated";
-          status.textContent = "Signed in. You can link Discord or a verified email to this VHouse account.";
-          const linked = session.user?.identities?.some(i => i.provider === "discord");
-          $("discordLogin").textContent = linked ? "DISCORD CONNECTED" : "LINK DISCORD";
-          $("emailLogin").textContent = session.user?.email ? "EMAIL CONNECTED / UPDATE" : "LINK EMAIL";
-          $("guestLogin").hidden = true;
+          status.textContent = "Signed in.";
+          renderAccount(session.user);
           $("sessionContinue").hidden = false;
           return;
         }
       } catch (error) { console.warn("VHouse session restoration failed:",error); }
     }
-    status.textContent = "Sign in with Discord or Email, or continue with the browser-local guest preview.";
+    status.textContent = "Sign in with Discord or Email to continue.";
   }
   async function signIn(provider, options={}) {
     if (!authAdapter?.signIn) return;
@@ -227,7 +258,6 @@
     event.preventDefault();
     void signIn("email", {email:$("startupEmail").value});
   });
-  $("guestLogin").addEventListener("click", () => { authMode = "guest-preview"; showLegal(); });
   $("sessionContinue").addEventListener("click", showLegal);
   $("policyFrame").addEventListener("load", bindPolicyScroll);
   $("legalConsent").addEventListener("change", updateLegalContinue);
