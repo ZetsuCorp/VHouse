@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V HOUSE: A Journey of Creation</title>
+<link rel="stylesheet" href="assets/vhouse-layout.css">
+<link rel="stylesheet" href="assets/vhouse-startup.css">
+<script src="assets/vhouse-startup.js" defer></script>
+</head>
+<body>
+<div class="rotate-screen">
+  <div class="rotate-icon">↻</div>
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+<main class="game-container">
+  <div class="map-container startup-root" id="startupRoot">
+    <section class="startup-screen startup-splash" data-stage="splash" aria-label="Publisher introduction">
+      <div class="startup-center">
+        <p class="startup-eyebrow">PRESENTED BY</p>
+        <h1 class="startup-publisher">THE ZETSUMETSU CORPORATION</h1>
+        <p class="startup-subtle">A Zetsu Reality</p>
+        <div class="startup-spinner" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="startup-screen startup-plain" data-stage="loading" aria-label="Loading game" hidden>
+      <div class="startup-panel">
+        <p class="startup-eyebrow">V HOUSE</p>
+        <h2>Preparing your Reality</h2>
+        <progress id="assetProgress" max="1" value="0" aria-label="Game asset loading progress"></progress>
+        <p class="startup-status" id="assetStatus" role="status">Checking game resources…</p>
+      </div>
+    </section>
+
+    <section class="startup-screen startup-plain" data-stage="version" aria-label="Version verification" hidden>
+      <div class="startup-panel">
+        <p class="startup-eyebrow">GAME CHECK</p>
+        <h2>Version Check</h2>
+        <p class="startup-status" id="versionStatus" role="status">Checking published configuration…</p>
+        <div class="startup-actions">
+          <button type="button" class="startup-action" id="versionNext" hidden>CONTINUE</button>
+          <button type="button" class="startup-action startup-secondary" id="versionRetry" hidden>RETRY / RELOAD</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="startup-screen startup-plain" data-stage="auth" aria-label="Player authentication" hidden>
+      <div class="startup-panel">
+        <p class="startup-eyebrow">PLAYER ACCESS</p>
+        <h2>Welcome to VHouse</h2>
+        <p class="startup-status" id="authStatus" role="status">Restoring your session…</p>
+        <div class="startup-actions">
+          <button type="button" class="startup-action" id="discordLogin" disabled>DISCORD LOGIN — NOT CONNECTED</button>
+          <button type="button" class="startup-action" id="emailLogin" disabled>EMAIL LOGIN — NOT CONNECTED</button>
+          <button type="button" class="startup-action startup-secondary" id="guestLogin">CONTINUE AS GUEST (PREVIEW)</button>
+          <button type="button" class="startup-action" id="sessionContinue" hidden>CONTINUE</button>
+        </div>
+        <p class="startup-footnote">Guest VCards remain browser-local. Guest mode does not verify accounts or NFTs.</p>
+      </div>
+    </section>
+
+    <section class="startup-screen startup-plain" data-stage="legal" aria-label="Notices and permissions" hidden>
+      <div class="startup-panel">
+        <p class="startup-eyebrow">BEFORE YOU PLAY</p>
+        <h2>Privacy &amp; Permissions</h2>
+        <p class="startup-status" id="legalStatus">No camera, microphone, location, or wallet access is requested at startup. Terms and Privacy Policy are not published in this draft.</p>
+        <div class="startup-legal-links">
+          <a id="startupTerms" href="#" rel="noopener noreferrer" target="_blank" hidden>Terms</a>
+          <a id="startupPrivacy" href="#" rel="noopener noreferrer" target="_blank" hidden>Privacy Policy</a>
+        </div>
+        <label class="startup-consent" id="consentRow" hidden>
+          <input type="checkbox" id="legalConsent"> I agree to the linked Terms and acknowledge the Privacy Policy.
+        </label>
+        <div class="startup-actions">
+          <button type="button" class="startup-action" id="legalContinue">CONTINUE</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="startup-screen startup-title" data-stage="title" aria-label="V HOUSE title screen" hidden>
+      <img class="game-map startup-cover" src="assets/VStart.png" alt="V HOUSE: A Journey of Creation — A Zetsu Reality — From The Zetsumetsu Corporation" draggable="false">
+      <button type="button" class="startup-play" id="playButton">PLAY</button>
+    </section>
+    <p class="startup-announcer" id="startupAnnouncer" aria-live="polite" aria-atomic="true"></p>
+  </div>
+</main>
+</body>
+</html>
