@@ -6,6 +6,8 @@
 <title>V HOUSE: A Journey of Creation</title>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-startup.css">
+<script src="assets/vhouse-public-config.js" defer></script>
+<script src="assets/vhouse-auth.js" defer></script>
 <script src="assets/vhouse-startup.js" defer></script>
 </head>
 <body>
@@ -60,6 +62,11 @@
         <div class="startup-actions">
           <button type="button" class="startup-action" id="discordLogin" disabled>DISCORD LOGIN — NOT CONNECTED</button>
           <button type="button" class="startup-action" id="emailLogin" disabled>EMAIL LOGIN — NOT CONNECTED</button>
+          <form id="startupEmailForm" class="startup-email-form" hidden>
+            <label for="startupEmail">Email address</label>
+            <input id="startupEmail" type="email" placeholder="Email address" autocomplete="email" required>
+            <button type="submit" class="startup-action">SEND EMAIL LINK</button>
+          </form>
           <button type="button" class="startup-action startup-secondary" id="guestLogin">CONTINUE AS GUEST (PREVIEW)</button>
           <button type="button" class="startup-action" id="sessionContinue" hidden>CONTINUE</button>
         </div>
