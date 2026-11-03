@@ -56,37 +56,36 @@
     }));
     showVersion();
   }
-  function showVersion() {
+  async function showVersion() {
     setStage("version");
-    const next = $("versionNext"), retry = $("versionRetry"), status = $("versionStatus");
-    next.hidden = true;
-    retry.hidden = false;
-    retry.textContent = "RETRY / RELOAD";
+    const retry = $("versionRetry"), status = $("versionStatus");
+    retry.hidden = true;
     if (imageErrors.length) {
       status.textContent = imageErrors.length + " game image(s) failed to load. Retry when your connection is ready.";
+      retry.hidden = false;
       return;
     }
     if (configError) {
-      status.textContent = "Published version could not be verified. Guest preview only: " + configError.message;
-      next.textContent = "CONTINUE UNVERIFIED PREVIEW";
-      next.hidden = false;
+      status.textContent = "Published version could not be verified. Reload to retry.";
+      retry.hidden = false;
       return;
     }
     if (config.maintenance) {
       status.textContent = "VHouse is marked as unavailable for maintenance in the published configuration.";
+      retry.hidden = false;
       return;
     }
     if (compareVersions(BUILD_VERSION, config.minimumSupportedVersion) < 0) {
       status.textContent = "This build is below the published minimum version. Reload to update.";
+      retry.hidden = false;
       return;
     }
-    if (compareVersions(BUILD_VERSION, config.latestVersion) < 0) {
-      status.textContent = "A newer build is published. Reload to update, or continue with this compatible draft.";
-    } else {
-      status.textContent = "Build " + BUILD_VERSION + " matches the published startup configuration.";
-    }
-    next.textContent = "CONTINUE";
-    next.hidden = false;
+    status.textContent = compareVersions(BUILD_VERSION, config.latestVersion) < 0
+      ? "A newer compatible build is published."
+      : "Build " + BUILD_VERSION + " matches the published startup configuration.";
+    // Version verification is automatic; players do not need to approve a successful check.
+    await sleep(350);
+    if (root.dataset.stage === "version") await showAuth();
   }
   async function showAuth() {
     setStage("auth");
@@ -163,7 +162,6 @@
     window.location.assign(seen ? "./index.html?started=1" : "./tutorial.html");
   }
 
-  $("versionNext").addEventListener("click", showAuth);
   $("versionRetry").addEventListener("click", () => window.location.reload());
   $("discordLogin").addEventListener("click", () => signIn("discord"));
   $("emailLogin").addEventListener("click", () => signIn("email"));
@@ -196,6 +194,5 @@
     setStage("version");
     $("versionStatus").textContent = "Startup failed. Reload to retry.";
     $("versionRetry").hidden = false;
-    $("versionNext").hidden = true;
   });
 })();
