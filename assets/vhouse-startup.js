@@ -237,7 +237,7 @@
     buildVersion: BUILD_VERSION
   };
   setStage("splash");
-  sleep(900).then(beginLoading).catch(error => {
+  sleep(3000).then(beginLoading).catch(error => {
     console.error("VHouse startup failed:",error);
     setStage("version");
     $("versionStatus").textContent = "Startup failed. Reload to retry.";
