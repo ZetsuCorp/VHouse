@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse</title>
 <link rel="stylesheet" href="assets/vhouse-buttons.css">
+<script src="assets/vhouse-public-config.js" defer></script>
+<script src="assets/vhouse-auth.js" defer></script>
 <style>
 * {
   margin: 0;
@@ -230,6 +232,11 @@ html, body {
   text-shadow: 0 0 .8cqw rgba(255, 210, 105, .65);
   letter-spacing: .06em;
 }
+.house-email-form{display:flex;gap:.3cqw;align-items:center;justify-content:center;width:100%}
+.house-email-form[hidden]{display:none}
+.house-email-form input{width:57%;min-width:0;background:#181226;color:white;border:1px solid #cfad6a;padding:.4cqw;font-size:1cqw}
+.house-auth-status{font-size:1cqw;color:#f2e3c7;text-align:center;max-width:100%;overflow-wrap:anywhere}
+.login-options [hidden]{display:none!important}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
@@ -260,8 +267,14 @@ html, body {
         <img class="login-frame" src="assets/Vcontainer.png" alt="" draggable="false">
         <div class="login-options">
           <h2 id="loginTitle">LOG IN</h2>
-          <button type="button" class="vhouse-btn">Log In with Email</button>
-          <button type="button" class="vhouse-btn">Log In with Discord</button>
+          <button type="button" id="houseEmailLogin" class="vhouse-btn">Log In with Email</button>
+          <button type="button" id="houseDiscordLogin" class="vhouse-btn">Log In with Discord</button>
+          <form id="houseEmailForm" class="house-email-form" hidden>
+            <input id="houseEmailAddress" type="email" placeholder="Email address" autocomplete="email" required>
+            <button type="submit" class="vhouse-btn">Send Email Link</button>
+          </form>
+          <p id="houseAuthStatus" class="house-auth-status" role="status">Checking account…</p>
+          <button type="button" id="houseSignOut" class="vhouse-btn" hidden>Sign Out</button>
         </div>
       </div>
     </div>
@@ -323,6 +336,54 @@ stuffOverlay.addEventListener("click", (event) => {
 
 loginButton.addEventListener("click", () => {
   loginOverlay.hidden = false;
+  updateHouseAccount();
+});
+function updateHouseAccount(){
+  const auth=window.VHouseAuth;
+  const user=auth?.getUser();
+  document.getElementById("houseSignOut").hidden=!user;
+  document.getElementById("houseDiscordLogin").textContent=user
+    ? (user.identities?.some(i=>i.provider==="discord")?"Discord Connected":"Link Discord")
+    : "Log In with Discord";
+  document.getElementById("houseEmailLogin").textContent=user
+    ? (user.email?"Email Connected / Update":"Link Email")
+    : "Log In with Email";
+  document.getElementById("houseAuthStatus").textContent=user
+    ? "Signed in: "+(user.email||"Discord account")
+    : "Sign in with Discord or Email.";
+}
+async function houseAuthAction(provider,options={}){
+  const status=document.getElementById("houseAuthStatus");
+  status.textContent="Connecting "+provider+"…";
+  try{
+    if(!window.VHouseAuth)throw Error("Authentication is not ready");
+    await window.VHouseAuth.ready;
+    const result=await window.VHouseAuth.signIn(provider,options);
+    if(result?.authenticated)status.textContent="Account connected.";
+    else status.textContent=result?.message||"Complete authentication to continue.";
+    if(result?.authenticated)updateHouseAccount();
+  }catch(error){status.textContent=error.message||"Authentication failed.";}
+}
+document.getElementById("houseDiscordLogin").addEventListener("click",()=>houseAuthAction("discord"));
+document.getElementById("houseEmailLogin").addEventListener("click",()=>{
+  const form=document.getElementById("houseEmailForm");
+  form.hidden=!form.hidden;
+  if(!form.hidden)document.getElementById("houseEmailAddress").focus();
+});
+document.getElementById("houseEmailForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  void houseAuthAction("email",{email:document.getElementById("houseEmailAddress").value});
+});
+document.getElementById("houseSignOut").addEventListener("click",async()=>{
+  try{
+    await window.VHouseAuth.signOut();
+    updateHouseAccount();
+  }catch(error){document.getElementById("houseAuthStatus").textContent=error.message;}
+});
+window.addEventListener("load",()=>{
+  window.VHouseAuth?.ready.then(updateHouseAccount).catch(error=>{
+    document.getElementById("houseAuthStatus").textContent=error.message;
+  });
 });
 
 loginOverlay.addEventListener("click", (event) => {
