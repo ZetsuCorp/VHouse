@@ -59,6 +59,39 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 #vhs-demo3 .itemname{font-size:9px}
 #vhs-demo3 .details{margin:0 5px 5px;padding:6px}
 }
+
+/* Fit the same Stuff interface into the existing VHouse menu's content area. */
+#vhs-demo3.embedded {
+  width:100%; height:100%; max-width:none; padding:0; margin:0;
+  overflow:hidden; container-type:inline-size;
+}
+#vhs-demo3.embedded .shell {
+  width:100%; height:100%; display:flex; flex-direction:column;
+  border:1px solid #bc9357; border-radius:.65cqw;
+}
+#vhs-demo3.embedded .head { flex:0 0 auto; padding:.45cqw .7cqw; }
+#vhs-demo3.embedded .eyebrow { font-size:clamp(8px,1.15cqw,12px); letter-spacing:.14em; }
+#vhs-demo3.embedded h2 { font-size:clamp(16px,2.7cqw,23px); margin:0; }
+#vhs-demo3.embedded .balance { min-width:0; padding:.3cqw .6cqw; }
+#vhs-demo3.embedded .balance small { font-size:clamp(8px,1.15cqw,11px); }
+#vhs-demo3.embedded .balance strong { font-size:clamp(11px,1.7cqw,17px); margin-top:.15cqw; }
+#vhs-demo3.embedded .area { flex:1; min-height:0; padding:.55cqw; gap:.55cqw; }
+#vhs-demo3.embedded .panel { min-height:0; height:100%; display:flex; flex-direction:column; }
+#vhs-demo3.embedded .panelhead { flex:0 0 auto; padding:.55cqw; font-size:clamp(10px,1.5cqw,15px); }
+#vhs-demo3.embedded .stats { min-height:0; padding:.5cqw; gap:.3cqw; }
+#vhs-demo3.embedded .vcard-name { padding:.45cqw; }
+#vhs-demo3.embedded .vcard-name small { font-size:clamp(8px,1cqw,10px); margin-bottom:2px; }
+#vhs-demo3.embedded .vcard-name strong { font-size:clamp(10px,1.5cqw,15px); }
+#vhs-demo3.embedded .statrow { font-size:clamp(9px,1.2cqw,12px); padding:.3cqw 1px; }
+#vhs-demo3.embedded .inventory { flex:1; min-height:0; height:auto; overflow-y:auto; }
+#vhs-demo3.embedded .slots { gap:.45cqw; padding:.5cqw; }
+#vhs-demo3.embedded .slot { min-height:clamp(50px,7.3cqw,75px); padding:.4cqw .2cqw; gap:.25cqw; }
+#vhs-demo3.embedded .itemicon { font-size:clamp(16px,2.7cqw,25px); }
+#vhs-demo3.embedded .itemname { font-size:clamp(9px,1.2cqw,12px); }
+#vhs-demo3.embedded .qty { font-size:clamp(8px,1.1cqw,11px); }
+#vhs-demo3.embedded .details { flex:0 0 auto; min-height:0; margin:0 .5cqw .5cqw; padding:.5cqw; }
+#vhs-demo3.embedded .details strong { font-size:clamp(10px,1.3cqw,13px); }
+#vhs-demo3.embedded .details p { font-size:clamp(9px,1.1cqw,11px); margin-top:.3cqw; line-height:1.2; }
 </style>
 </head>
 <body>
@@ -97,55 +130,7 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 </div>
 </main>
 <script src="assets/vhouse-cards.js"></script>
-<script>
-(()=>{
-const root=document.getElementById("vhs-demo3");if(!root)return;
-function updateVCard(){
-  const store=window.VHouseCardStore;
-  const active=store?.getActive();
-  root.querySelector("[data-vcard-name]").textContent=active?.name||"—";
-  root.querySelector("[data-cards-owned]").textContent=String(store?.getCards().length||0);
-}
-window.VHouseCardStore?.subscribe(updateVCard);
-updateVCard();
-// First-draft inventory sample; live player inventory will replace this data source.
-const items=[
-["Scrap Metal","⚙️",12,"Collected material from Journey Missions."],
-["Copper Parts","🔩",5,"Components stored in your inventory."],
-["Old Relic","🏺",2,"An old relic recovered during a Journey."],
-["Lucky Charm","🍀",1,"A boost item for Journey encounters."],
-["Swift Boots","🥾",1,"A Journey speed boost item."],
-["Hunt Lantern","🏮",1,"A boost item for hunting encounters."],
-["Crystal","💎",3,"A crystal recovered during a Journey."],
-["Journey Token","🪙",2,"A token stored in your inventory."],
-["Repair Kit","🧰",1,"Equipment for your Journey."],
-["Travel Pack","🎒",1,"Supplies for travel."],
-["Ancient Coin","🪙",4,"An old collectible coin."],
-["Totem Scrap","📜",2,"A fragment of a Totem Page."]
-];
-const host=root.querySelector("[data-inventory]");
-items.forEach((item,i)=>{
-  const button=document.createElement("button");
-  button.type="button";
-  button.className="slot"+(i===0?" selected":"");
-  button.setAttribute("aria-pressed",String(i===0));
-  for(const [cls,value] of [["itemicon",item[1]],["itemname",item[0]],["qty","× "+item[2]]]){
-    const el=document.createElement("span");
-    el.className=cls;
-    el.textContent=value;
-    button.appendChild(el);
-  }
-  button.addEventListener("click",()=>{
-    host.querySelectorAll(".slot").forEach((slot,j)=>{
-      slot.classList.toggle("selected",j===i);
-      slot.setAttribute("aria-pressed",String(j===i));
-    });
-    root.querySelector("[data-name]").textContent=item[0];
-    root.querySelector("[data-description]").textContent=item[3];
-  });
-  host.appendChild(button);
-});
-})();
-</script>
+<script src="assets/vhouse-stuff.js"></script>
+<script>VHouseStuff.init(document.getElementById("vhs-demo3"));</script>
 </body>
 </html>
