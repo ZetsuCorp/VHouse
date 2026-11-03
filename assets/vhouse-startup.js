@@ -20,7 +20,7 @@
   }
   function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
   function compareVersions(a, b) {
-    const split = value => String(value || "").match(/^\\d+(?:\\.\\d+){0,2}/)?.[0].split(".").map(Number) || [];
+    const split = value => String(value || "").match(/^\d+(?:\.\d+){0,2}/)?.[0].split(".").map(Number) || [];
     const av = split(a), bv = split(b);
     for (let i = 0; i < 3; i++) { if ((av[i] || 0) !== (bv[i] || 0)) return (av[i] || 0) > (bv[i] || 0) ? 1 : -1; }
     return 0;
