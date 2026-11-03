@@ -110,19 +110,15 @@ html, body {
   top: 26%;
   width: 73.4%;
   height: 53.6%;
+  --vhm-scale: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: .8cqw;
   padding: 2cqw;
   text-align: center;
   pointer-events: none;
-}
-.shop-menu-content h2 {
-  color: #ffe9a4;
-  font-size: 4cqw;
-  line-height: 1.15;
-  letter-spacing: .05em;
-  text-shadow: 0 0 1.4cqw rgba(255, 210, 105, .65);
 }
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 .shop-player-hud { top: 2%; left: 7%; }
@@ -171,8 +167,10 @@ html, body {
     <div id="shopMenuOverlay" class="shop-menu-overlay" hidden>
       <div class="shop-menu-window" role="dialog" aria-modal="true" aria-labelledby="shopMenuTitle">
         <iframe src="./vcontainer.html" title="VHouse Shop Menu" tabindex="-1" aria-hidden="true"></iframe>
-        <div class="shop-menu-content">
-          <h2 id="shopMenuTitle"></h2>
+        <div class="shop-menu-content" aria-live="polite">
+          <div id="shopMenuHeader" class="vhouse-message-header"></div>
+          <strong id="shopMenuTitle" class="vhouse-message-title"></strong>
+          <p id="shopMenuInfo" class="vhouse-message-info"></p>
         </div>
       </div>
     </div>
@@ -183,12 +181,21 @@ html, body {
 <script>
 const shopMenuOverlay = document.getElementById("shopMenuOverlay");
 const shopMenuWindow = shopMenuOverlay.querySelector(".shop-menu-window");
+const shopMenuHeader = document.getElementById("shopMenuHeader");
 const shopMenuTitle = document.getElementById("shopMenuTitle");
+const shopMenuInfo = document.getElementById("shopMenuInfo");
+const shopMenuMessages = {
+  "Mission Boosts": "Boosts for your Journey Missions.",
+  "Journey Service": "Services for your Journey.",
+  "Trade Scraps": "Trade your collected scraps."
+};
 let shopMenuTrigger = null;
 document.querySelectorAll(".shop-hotspot").forEach(button => {
   button.addEventListener("click", () => {
     shopMenuTrigger = button;
+    shopMenuHeader.textContent = "ZETSU SHOP";
     shopMenuTitle.textContent = button.dataset.menu;
+    shopMenuInfo.textContent = shopMenuMessages[button.dataset.menu] || "";
     shopMenuOverlay.hidden = false;
   });
 });
