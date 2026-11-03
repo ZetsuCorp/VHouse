@@ -65,6 +65,26 @@ html, body { margin:0; padding:0; }
 .startup-action:disabled { opacity:.48; cursor:not-allowed; box-shadow:none; }
 .startup-secondary { background:#1b1930; }
 .startup-footnote { margin:.1cqw 0 0; font-size:clamp(9px,1.05cqw,16px); color:#bdacc5; line-height:1.3; }
+.startup-discord-avatar {
+  width:clamp(38px,6.4cqw,90px);
+  height:clamp(38px,6.4cqw,90px);
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid #efc26d;
+  box-shadow:0 0 1.2cqw #e8ac5070;
+  margin:.15cqw auto 0;
+}
+.startup-connected {
+  font-size:clamp(10px,1.1cqw,16px);
+  color:#f2cc83;
+  margin:0;
+}
+.startup-screen[data-stage="auth"] .startup-actions {
+  align-items:center;
+}
+.startup-screen[data-stage="auth"] #sessionContinue:not([hidden]) {
+  min-width:36%;
+}
 .startup-email-form { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.45cqw; width:100%; }
 .startup-email-form[hidden]{display:none}
 .startup-email-form label{font-size:clamp(10px,1.1cqw,15px)}
