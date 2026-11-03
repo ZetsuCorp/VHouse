@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse — Trade Scraps</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#0d101e}
+#vh-trade4{font:13px Arial,sans-serif;color:#f7ead4;max-width:1100px;margin:0 auto;padding:16px}
+#vh-trade4 *{box-sizing:border-box}
+#vh-trade4 button{font:inherit;cursor:pointer}
+#vh-trade4 button:focus-visible{outline:2px solid #ffe2a1;outline-offset:2px}
+#vh-trade4 .shell{border:2px solid #a7834e;border-radius:11px;overflow:hidden;background:radial-gradient(ellipse at 45% 0%,#43314b,#1e1b30 52%,#0d111e)}
+#vh-trade4 .top{background:#181320c9;border-bottom:1px solid #aa8655;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#vh-trade4 .eyebrow{font-size:10px;color:#c7a478;letter-spacing:2px;font-weight:bold}
+#vh-trade4 h2{font:700 clamp(21px,3.8vw,33px) Georgia,serif;color:#ffe1a7;margin:3px 0}
+#vh-trade4 .money{display:flex;gap:7px}
+#vh-trade4 .money-box{background:#100f1d;border:1px solid #85684d;border-radius:6px;padding:8px 11px;text-align:center;min-width:74px}
+#vh-trade4 .money-box small{display:block;font-size:9px;color:#bda37e;margin-bottom:4px}
+#vh-trade4 .money-box strong{font-size:15px;color:#ffdda0}
+#vh-trade4 .main{padding:14px}
+#vh-trade4 .sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#vh-trade4 .panel{min-width:0;border:1px solid #80694f;background:linear-gradient(145deg,#30283c,#151625);border-radius:8px;overflow:hidden}
+#vh-trade4 .panel-header{display:flex;align-items:center;justify-content:space-between;gap:4px;border-bottom:1px solid #756044;background:#1a1729;padding:11px}
+#vh-trade4 .panel-header strong{font:700 clamp(13px,2.4vw,19px) Georgia,serif;color:#ffdc98}
+#vh-trade4 .panel-header small{font-size:9px;color:#bdb0c1}
+#vh-trade4 .items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px;min-height:232px;align-content:start}
+#vh-trade4 .item{border:1px solid #6c6071;border-radius:6px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:10px 5px;min-width:0;min-height:104px;background:linear-gradient(145deg,#30293a,#17192a);color:#efe5d9}
+#vh-trade4 .item:hover{border-color:#f4cf87}
+#vh-trade4 .item.active{border:2px solid #f0c977;background:linear-gradient(145deg,#4d3a49,#242039);box-shadow:0 0 12px #e3ad5c33}
+#vh-trade4 .item:disabled{opacity:.45;cursor:not-allowed}
+#vh-trade4 .art{font-size:29px;line-height:1.2}
+#vh-trade4 .item-name{font-size:11px;font-weight:800;text-align:center}
+#vh-trade4 .item-count{font-size:10px;color:#f6ce88}
+#vh-trade4 .value{font-size:9px;color:#aeabb9}
+#vh-trade4 .actions{display:flex;justify-content:center;margin-top:13px}
+#vh-trade4 .trade-btn{border:1px solid #ffe0a3;border-radius:6px;background:linear-gradient(#ffe6aa,#b98e4d);color:#2d1e24;font-size:13px;font-weight:900;padding:13px 42px}
+#vh-trade4 .trade-btn:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:460px){
+#vh-trade4{padding:6px}
+#vh-trade4 .top{padding:10px;gap:4px}
+#vh-trade4 .money-box{min-width:57px;padding:6px}
+#vh-trade4 .money-box strong{font-size:12px}
+#vh-trade4 .main{padding:8px}
+#vh-trade4 .sides{gap:6px}
+#vh-trade4 .items{gap:5px;padding:6px;min-height:210px}
+#vh-trade4 .item{min-height:88px;padding:6px 3px}
+#vh-trade4 .art{font-size:25px}
+#vh-trade4 .item-name{font-size:10px}
+#vh-trade4 .panel-header{padding:8px 6px;flex-wrap:wrap}
+#vh-trade4 .panel-header small{font-size:8px}
+}
+</style>
+</head>
+<body>
+<main id="vh-trade4">
+<div class="shell">
+<header class="top">
+<div><div class="eyebrow">ZETSU SHOP</div><h2>TRADE SCRAPS</h2></div>
+<div class="money">
+<div class="money-box"><small>IG MONEY</small><strong data-ig>500</strong></div>
+<div class="money-box"><small>SCRAPS</small><strong data-scraps>12</strong></div>
+</div>
+</header>
+<div class="main">
+<div class="sides">
+<section class="panel" aria-label="Your items">
+<div class="panel-header"><strong>YOUR ITEMS</strong><small>INVENTORY</small></div>
+<div class="items" data-player></div>
+</section>
+<section class="panel" aria-label="Shop items">
+<div class="panel-header"><strong>SHOP ITEMS</strong><small>AVAILABLE</small></div>
+<div class="items" data-shop></div>
+</section>
+</div>
+<div class="actions"><button class="trade-btn" data-trade>CONFIRM TRADE</button></div>
+</div>
+</div>
+</main>
+<script>
+(()=>{
+const root=document.getElementById('vh-trade4');if(!root||root.dataset.init)return;root.dataset.init='1';
+const catalog={scrap:{name:'Scrap Metal',icon:'⚙️',value:15},copper:{name:'Copper Parts',icon:'🔩',value:30},relic:{name:'Old Relic',icon:'🏺',value:60},crystal:{name:'Crystal',icon:'💎',value:45},repair:{name:'Repair Kit',icon:'🧰',value:90},token:{name:'Journey Token',icon:'🪙',value:120}};
+const owned={scrap:12,copper:5,relic:2,crystal:0,repair:0,token:0};
+const stock={scrap:0,copper:0,relic:0,crystal:6,repair:4,token:3};
+let from='scrap',to='crystal';const $=s=>root.querySelector(s);
+function tile(key,side){
+const item=catalog[key],count=side==='player'?owned[key]:stock[key],b=document.createElement('button');
+b.className='item'+((side==='player'?from:to)===key?' active':'');b.type='button';b.disabled=!count;
+b.setAttribute('aria-pressed',String((side==='player'?from:to)===key));
+for(const [cls,value] of [['art',item.icon],['item-name',item.name],['item-count',(side==='player'?'Owned: ':'Stock: ')+count],['value',item.value+' trade value']]){
+const s=document.createElement('span');s.className=cls;s.textContent=value;b.appendChild(s);
+}
+b.addEventListener('click',()=>{if(side==='player')from=key;else to=key;render()});
+return b;
+}
+function render(){
+if(!owned[from])from=Object.keys(owned).find(k=>owned[k]>0)||'scrap';
+const left=$('[data-player]');left.replaceChildren();
+Object.keys(owned).filter(k=>owned[k]>0).forEach(k=>left.appendChild(tile(k,'player')));
+const right=$('[data-shop]');right.replaceChildren();
+['crystal','repair','token'].forEach(k=>right.appendChild(tile(k,'shop')));
+$('[data-scraps]').textContent=owned.scrap;
+$('[data-ig]').textContent='500';
+$('[data-trade]').disabled=!owned[from]||owned[from]<Math.ceil(catalog[to].value/catalog[from].value)||!stock[to];
+}
+$('[data-trade]').addEventListener('click',()=>{
+const cost=Math.ceil(catalog[to].value/catalog[from].value);
+if(owned[from]<cost||stock[to]<1)return;
+owned[from]-=cost;stock[from]+=cost;stock[to]--;owned[to]++;render();
+});
+render();
+})();
+</script>
+</body>
+</html>
