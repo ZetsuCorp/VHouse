@@ -4,37 +4,37 @@
     if (!root || root.dataset.journeyReady === "yes") return root;
     root.dataset.journeyReady = "yes";
     const cardSelection =
-      root.querySelector("cardSelection");
+      root.querySelector("#cardSelection");
     
     const missionCard =
-      root.querySelector("missionCard");
+      root.querySelector("#missionCard");
     
     const missionTitle =
-      root.querySelector("missionTitle");
+      root.querySelector("#missionTitle");
     
     const stageGrid =
-      root.querySelector("stageGrid");
+      root.querySelector("#stageGrid");
     
     const missionDetail =
-      root.querySelector("missionDetail");
+      root.querySelector("#missionDetail");
     
     const detailTitle =
-      root.querySelector("detailTitle");
+      root.querySelector("#detailTitle");
     
     const detailCopy =
-      root.querySelector("detailCopy");
+      root.querySelector("#detailCopy");
     
     const startButton =
-      root.querySelector("startButton");
+      root.querySelector("#startButton");
     
     const backButton =
-      root.querySelector("backButton");
+      root.querySelector("#backButton");
     
     const status =
-      root.querySelector("status");
+      root.querySelector("#status");
     
     const subtitle =
-      root.querySelector("subtitle");
+      root.querySelector("#subtitle");
     
     let selectedLetter = null;
     let selectedStage = null;
