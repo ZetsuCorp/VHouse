@@ -382,7 +382,8 @@ function closeShopMenu(){
   if(shopMenuTrigger)shopMenuTrigger.focus();
 }
 shopMenuOverlay.addEventListener("click",event=>{
-  if(!shopMenuWindow.contains(event.target))closeShopMenu();
+  // Only the actual backdrop closes the menu; clicking rebuilt shop buttons does not.
+  if(event.target===shopMenuOverlay)closeShopMenu();
 });
 document.addEventListener("keydown",event=>{
   if(event.key==="Escape")closeShopMenu();
