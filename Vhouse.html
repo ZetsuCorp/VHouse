@@ -206,6 +206,10 @@ html, body {
   pointer-events: none;
   user-select: none;
 }
+/* Align loaded Stuff content to the artwork, keeping the same menu position/size. */
+.stuff-art { position:relative; width:100%; aspect-ratio:1672 / 941; max-height:100%; }
+.stuff-art > img { height:100%; aspect-ratio:auto; max-height:none; }
+
 /* All login text, spacing, and buttons scale with the game container. */
 .login-options {
   position: absolute;
@@ -261,10 +265,12 @@ html, body {
         </div>
       </div>
     </div>
-    <!-- Empty Stuff menu frame; content will be added in the next step. -->
     <div id="stuffOverlay" class="stuff-overlay" hidden>
       <div class="stuff-window" role="dialog" aria-modal="true" aria-label="Stuff menu">
-        <img src="assets/Vcontainer.png" alt="" draggable="false">
+        <div class="stuff-art">
+          <img src="assets/Vcontainer.png" alt="" draggable="false">
+          <div id="stuffMenuContent" class="vhouse-frame-content"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -276,8 +282,40 @@ const loginWindow = loginOverlay.querySelector(".login-window");
 const stuffButton = document.querySelector(".hotspot-chest");
 const stuffOverlay = document.getElementById("stuffOverlay");
 
+const stuffMenuContent = document.getElementById("stuffMenuContent");
+let stuffLoading = false;
+async function loadStuff() {
+  if (stuffLoading || stuffMenuContent.querySelector("#vhs-demo3")) return;
+  stuffLoading = true;
+  try {
+    const response = await fetch("./Stuff.html", { cache: "no-store" });
+    if (!response.ok) throw new Error("Stuff.html returned " + response.status);
+    const source = new DOMParser().parseFromString(await response.text(), "text/html");
+    const content = source.querySelector("#vhs-demo3");
+    const css = source.querySelector("style")?.textContent || "";
+    const scopedStart = css.indexOf("#vhs-demo3{");
+    if (!content || scopedStart < 0) throw new Error("Stuff interface source is missing");
+    let sheet = document.getElementById("stuffInterfaceStyles");
+    if (!sheet) {
+      sheet = document.createElement("style");
+      sheet.id = "stuffInterfaceStyles";
+      document.head.appendChild(sheet);
+    }
+    sheet.textContent = css.slice(scopedStart);
+    const interfaceRoot = document.importNode(content, true);
+    interfaceRoot.classList.add("embedded");
+    stuffMenuContent.replaceChildren(interfaceRoot);
+    VHouseStuff.init(interfaceRoot);
+  } catch (error) {
+    stuffMenuContent.textContent = "Unable to load Stuff.";
+    console.error("VHouse Stuff:", error);
+  } finally {
+    stuffLoading = false;
+  }
+}
 stuffButton.addEventListener("click", () => {
   stuffOverlay.hidden = false;
+  loadStuff();
 });
 stuffOverlay.addEventListener("click", (event) => {
   if (event.target === stuffOverlay) stuffOverlay.hidden = true;
@@ -301,6 +339,7 @@ document.addEventListener("keydown", (event) => {
 });
 </script>
 <script src="assets/vhouse-cards.js"></script>
+<script src="assets/vhouse-stuff.js"></script>
 <script src="assets/vhouse-player.js"></script>
 </body>
 </html>
