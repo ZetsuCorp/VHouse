@@ -133,11 +133,19 @@
     const legal = config?.legal || {};
     const status = $("legalStatus");
     const terms = $("startupTerms"), privacy = $("startupPrivacy"), row = $("consentRow");
+    const frame = $("policyFrame");
     const validLink = url => typeof url === "string" && /^https:\/\//i.test(url);
     const hasTerms = validLink(legal.termsUrl), hasPrivacy = validLink(legal.privacyUrl);
     terms.hidden = !hasTerms; privacy.hidden = !hasPrivacy;
     if (hasTerms) terms.href = legal.termsUrl;
-    if (hasPrivacy) privacy.href = legal.privacyUrl;
+    if (hasPrivacy) {
+      privacy.href = legal.privacyUrl;
+      frame.hidden = false;
+      if (frame.getAttribute("src") !== legal.privacyUrl) frame.src = legal.privacyUrl;
+    } else {
+      frame.hidden = true;
+      frame.removeAttribute("src");
+    }
     legalRequired = legal.required === true;
     row.hidden = !legalRequired;
     $("legalConsent").checked = false;
@@ -146,11 +154,13 @@
         status.textContent = "Required legal documents are not configured. Entry is blocked until they are published.";
         $("legalContinue").disabled = true;
       } else {
-        status.textContent = "Review the Terms and Privacy Policy, then confirm to continue.";
+        status.textContent = "Review the linked policies, then confirm to continue.";
         $("legalContinue").disabled = true;
       }
     } else {
-      status.textContent = "No camera, microphone, location, or wallet permissions are requested. Legal agreements are not enabled in this draft.";
+      status.textContent = hasPrivacy
+        ? "Temporary reference: Google's Privacy Policy, NOT VHouse's. If embedding is blocked, use the link below."
+        : "The game privacy policy is not configured yet.";
       $("legalContinue").disabled = false;
     }
   }
