@@ -36,7 +36,7 @@ html, body {
 .rotate-screen p { font-size: 16px; color: #bbb; }
 @media (orientation: portrait) {
   .rotate-screen { display: flex; }
-  .game-container { display: none !important; }
+
 }
 .game-container {
   width: 100vw;
@@ -47,21 +47,7 @@ html, body {
   justify-content: center;
   overflow: hidden;
 }
-.map-container {
-  position: relative;
-  width: min(100vw, 200dvh);
-  aspect-ratio: 2 / 1;
-  flex-shrink: 0;
-}
-.game-map {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
+
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 .shop-player-hud { top: 2%; left: 7%; }
 /* Clear the HUD and align with the visible image edge like other VHouse pages. */
@@ -75,6 +61,7 @@ html, body {
 .shop-message { z-index: 35; }
 [hidden] { display: none !important; }
 </style>
+<link rel="stylesheet" href="assets/vhouse-screen.css">
 </head>
 <body>
 <div class="rotate-screen">
