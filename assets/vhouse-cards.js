@@ -66,8 +66,24 @@
       subscribers.add(callback);
       return ()=>subscribers.delete(callback);
     },
-    async saveCard(){
-      throw Error("VCard creation is not connected to Supabase saving yet.");
+    async saveCard(card){
+      const auth=window.VHouseAuth;
+      if(!auth)throw Error("Sign in before creating a VCard.");
+      await auth.ready;
+      const playerId=currentUserId();
+      if(!playerId)throw Error("Sign in before creating a VCard.");
+      const {data,error}=await auth.getClient().rpc("vhouse_create_vcard",{
+        p_name:card.name,p_image:card.image,
+        p_description:card.description,p_designation:card.team
+      });
+      if(error)throw error;
+      if(!data?.card_id)throw Error("Supabase did not return a VCard.");
+      if(currentUserId()!==playerId)throw Error("Account changed during creation.");
+      await refresh();
+      return {id:data.card_id,name:data.name,image:data.image,
+        description:data.description,team:data.designation,
+        level:data.level,atk:data.atk,def:data.def,
+        luck:data.luck,speed:data.speed,mint_address:data.mint_address};
     },
     async setActive(){
       throw Error("Active VCard saving is not connected to Supabase yet.");
