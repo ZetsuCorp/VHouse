@@ -79,9 +79,14 @@
     let previousUserId=null;
     auth.subscribe(user=>{
       const nextId=user?.id||null;
+      if(!nextId){
+        previousUserId=null;
+        ++request;
+        clear();
+        return;
+      }
       if(nextId===previousUserId)return;
       previousUserId=nextId;
-      if(!nextId){++request;clear();return;}
       void refresh();
     });
     void auth.ready.then(()=>{
