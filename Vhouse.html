@@ -147,8 +147,9 @@ html, body {
   transform: translate(-50%, -50%);
   white-space: nowrap;
 }
-/* House placement for the same player HUD used by Town and Shop. */
-.house-player-hud { top:0.2%;left:50%;transform:translateX(-50%); }
+/* House player badge keeps its original placement and shared portrait renderer. */
+.hud-layer { position:absolute; inset:0; z-index:5; pointer-events:none; }
+.hud-player-icon { top:0.2%; left:50%; transform:translateX(-50%); }
 /* Reuse the same Vcontainer frame as the Journey menu. */
 .login-overlay {
   position: absolute;
@@ -235,7 +236,6 @@ html, body {
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
 <link rel="stylesheet" href="assets/vhouse-player.css">
-<link rel="stylesheet" href="assets/vhouse-info.css">
 </head>
 <body>
 <div class="rotate-screen">
@@ -254,10 +254,9 @@ html, body {
       <button type="button" class="vhouse-btn house-hotspot hotspot-chest" data-label="Stuff" aria-label="Stuff"></button>
       <button type="button" class="vhouse-btn house-hotspot hotspot-login" data-label="Log In" aria-label="Log In"></button>
     </div>
-    <aside class="vhouse-player-hud house-player-hud" aria-label="Player information">
-      <div data-vhouse-player role="img" aria-label="Active VCard"></div>
-      <div data-vhouse-info aria-live="polite"></div>
-    </aside>
+    <div class="hud-layer">
+      <div class="hud-player-icon" data-vhouse-player role="img" aria-label="Active VCard"></div>
+    </div>
     <div id="loginOverlay" class="login-overlay" hidden>
       <div class="login-window" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
         <img class="login-frame" src="assets/Vcontainer.png" alt="" draggable="false">
@@ -398,6 +397,5 @@ document.addEventListener("keydown", (event) => {
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-stuff.js"></script>
 <script src="assets/vhouse-player.js"></script>
-<script src="assets/vhouse-info.js"></script>
 </body>
 </html>
