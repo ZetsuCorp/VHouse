@@ -153,6 +153,29 @@
     }
     throw Error("Unsupported login provider");
   }
+  // Load account-specific game data only after Supabase has restored the login session.
+  // This is read-only: item grants, card creation and verification are separate operations.
+  async function loadPlayerData(){
+    await ready;
+    const user=currentUser;
+    if(!user) return null;
+    const playerId=user.id;
+    const [accountResult,inventoryResult]=await Promise.all([
+      client.from("vhouse_accounts")
+        .select("id,active_vcard_id").eq("id",playerId).maybeSingle(),
+      client.from("vhouse_player_inventory")
+        .select("thing,type,quantity,state,updated_at").eq("player_id",playerId)
+    ]);
+    if(accountResult.error)throw accountResult.error;
+    if(inventoryResult.error)throw inventoryResult.error;
+    // A sign-out or account change during the request must never expose the prior player.
+    if(currentUser?.id!==playerId)return null;
+    return {
+      playerId,
+      account:accountResult.data||null,
+      inventory:inventoryResult.data||[]
+    };
+  }
   async function syncActiveVCard(card){
     await ready;
     if(!currentUser)return;
@@ -169,7 +192,8 @@
   }
   window.VHouseAuth={
     ready,restoreSession,signIn,signOut,syncActiveVCard,
-    getUser:()=>currentUser,getLoginIdentity,
+    getUser:()=>currentUser,getLoginIdentity,loadPlayerData,
+    getClient:()=>client,
     subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn)}
   };
 })();
