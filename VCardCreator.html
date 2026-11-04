@@ -319,7 +319,7 @@ document.querySelectorAll(".mode-button").forEach(button=>button.addEventListene
   updateDescription();
 }));
 $("descriptionInput").addEventListener("input",updateDescription);
-// Save the actual selections first; only close the creation unit after local storage succeeds.
+// Save the completed non-minted VCard through the authenticated Supabase connection.
 async function saveCardAndFinish() {
   const imageElement=$("vcardHost").querySelector(".card-art img");
   let savedImage=imageElement.src;
@@ -359,8 +359,8 @@ $("finishButton").addEventListener("click",async()=>{
   try {
     await saveCardAndFinish();
   } catch(error) {
-    console.error("Could not save VCard locally:",error);
-    alert("Card could not be saved locally.");
+    console.error("Could not save VCard:",error);
+    alert("Card could not be saved: " + (error.message || "Unknown error"));
   }
 });
 $("finishOverlay").addEventListener("click",e=>{ if(e.target===$("finishOverlay")) $("finishOverlay").hidden=true; });
