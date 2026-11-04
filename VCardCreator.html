@@ -186,6 +186,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
               <textarea class="description-input" id="descriptionInput" maxlength="100" placeholder="Write your character's description..." hidden></textarea>
             </div>
             <div class="finish-action">
+              <button type="button" class="vhouse-btn" id="mintButton" title="Minting will be available later">MINT</button>
               <button type="button" class="vhouse-btn finish-button" id="finishButton">FINISH</button>
             </div>
           </section>
@@ -221,6 +222,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 <script src="assets/vhouse-info.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+$("mintButton").addEventListener("click",()=>alert("Minting is not connected yet. You can finish creating your VCard without minting."));
 const defaultDescription = "A traveler beginning their journey into the unknown.";
 const teamColors = { R:"#2d7bdc", P:"#1abf96", S:"#b16df4" };
 let descriptionMode="default", artIndex=0, uploadedImage=null, uploadedUrl=null;
