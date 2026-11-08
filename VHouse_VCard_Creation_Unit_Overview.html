@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Feature overview of the VHouse VCard Creation Unit, including NFT minting, loading, updating, customization, and character-linked value.">
+  <title>VHouse — VCard Creation Unit | Feature Overview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#080d14; --panel:#101b29; --panel-2:#142331;
+      --border:#344a58; --gold:#dfbd83; --cyan:#73e9ed;
+      --white:#eef4f6; --muted:#a9bcc8;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(ellipse at 85% 0%,#192b3d 0%,var(--bg) 48%);color:var(--white);font:15px/1.66 system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+    .page{width:min(1100px,calc(100% - 36px));margin:0 auto;padding:44px 0 68px}
+    .eyebrow{color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+    header{border-bottom:1px solid #455060;padding-bottom:32px;margin-bottom:34px}
+    h1,h2,h3,p{margin-top:0}
+    h1{font-size:clamp(2.15rem,5.5vw,4.2rem);line-height:1.09;letter-spacing:-.055em;margin:13px 0 18px;font-weight:850}
+    h1 span{color:var(--gold)}
+    h2{font-size:1.4rem;line-height:1.25;letter-spacing:-.025em;color:var(--gold);margin-bottom:16px}
+    h3{font-size:1.03rem;line-height:1.4;margin:0 0 8px;color:#fff}
+    p{color:var(--muted);margin-bottom:12px}
+    .lede{font-size:1.11rem;line-height:1.75;max-width:810px;color:#e1ebf1;margin:0}
+    .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:25px}
+    .tag{padding:6px 11px;border:1px solid #445b68;border-radius:50px;color:#d5e7ed;background:#14212c;font-size:11px;font-weight:700;letter-spacing:.025em}
+    section{margin-top:36px}
+    .section-head{display:flex;align-items:center;gap:15px;margin-bottom:14px}
+    .section-head h2{margin:0;white-space:nowrap}
+    .section-head:after{content:"";height:1px;background:linear-gradient(90deg,#4c6170,transparent);flex:1}
+    .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+    .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+    .panel{background:linear-gradient(155deg,var(--panel),#0c151f);border:1px solid var(--border);border-radius:15px;padding:23px;min-width:0}
+    .panel p:last-child{margin-bottom:0}
+    .panel .panel-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+    .bubble{display:grid;place-items:center;width:49px;height:49px;border-radius:50%;background:#1a3742;border:1px solid #428b9d;color:var(--cyan);font-size:22px}
+    .chip{font-size:10px;font-weight:800;letter-spacing:.1em;color:#91c6ce;text-transform:uppercase}
+    .nested{margin-top:15px;padding-top:14px;border-top:1px solid #2d4150}
+    .nested h3{font-size:.96rem;color:var(--cyan)}
+    .feature{padding:18px 20px}
+    .feature .number{color:var(--cyan);font-weight:800;font-size:11px;letter-spacing:.16em;margin-bottom:8px}
+    .feature h3{margin-bottom:8px}
+    .feature p{font-size:13px;line-height:1.65}
+    .feature p:last-child{margin-bottom:0}
+    .rule{border-left:3px solid var(--gold);background:#121f2b;padding:17px 20px;border-radius:0 12px 12px 0;color:#e5ecf0}
+    .rule strong{color:var(--gold)}
+    .info{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .info .panel{min-height:100%}
+    .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .pills span{border:1px solid #37606e;background:#102936;border-radius:8px;padding:5px 10px;color:#bcecf1;font-size:12px;font-weight:700}
+    .price-table{width:100%;border-collapse:collapse;font-size:14px}
+    .price-table th{text-align:left;color:var(--gold);font-size:11px;letter-spacing:.09em;text-transform:uppercase}
+    .price-table th,.price-table td{padding:13px 12px;border-bottom:1px solid #2e4250}
+    .price-table th:first-child,.price-table td:first-child{padding-left:0}
+    .price-table th:last-child,.price-table td:last-child{padding-right:0}
+    .price-table tr:last-child td{border-bottom:0}
+    .price-table .primary{color:#fff;font-weight:700}
+    .price-note{color:#9fb6c3;font-size:12px;margin:11px 0 0}
+    .receipt{display:grid;gap:12px;background:#0b141d;border:1px solid #a1804f;border-radius:14px;padding:21px;max-width:415px}
+    .receipt-title{text-align:center;letter-spacing:.12em;font-size:14px;font-weight:900;color:var(--gold);padding-bottom:13px;border-bottom:1px solid #776142}
+    .receipt-line{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #253f4d;padding-bottom:9px;font-size:12px}
+    .receipt-line span{color:#d3e1e6;font-weight:800}
+    .receipt-line em{color:var(--cyan);font-style:normal;font-size:11px}
+    .receipt-caption{font-size:11px;color:#91aebc;text-align:center}
+    footer{border-top:1px solid #324757;margin-top:44px;padding-top:20px;color:#97aebc;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;font-size:11px}
+    @media(max-width:750px){.page{width:min(100% - 28px,650px);padding-top:25px}.cols,.three,.info{grid-template-columns:1fr}.section-head h2{white-space:normal}.panel{padding:19px}.price-table{font-size:12px}.price-table th,.price-table td{padding:11px 8px}}
+    @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:#080d14}.page{width:100%;padding:10px 16px}.panel,.receipt{break-inside:avoid}section{break-inside:auto}h2{break-after:avoid}}
+  </style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <div class="eyebrow">VHouse · A Journey of Creation</div>
+    <h1>VCARD <span>CREATION UNIT</span></h1>
+    <p class="lede">The VCard Creation Unit is VHouse's character-NFT creation and development system. It brings card design, blockchain ownership, editable character metadata, visual customization, and character-linked SOL value into one game interface.</p>
+    <div class="meta">
+      <span class="tag">Character NFT engine</span>
+      <span class="tag">Solana</span>
+      <span class="tag">Token-2022</span>
+      <span class="tag">IPFS-backed artwork &amp; metadata</span>
+      <span class="tag">No collection required</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="access-title">
+    <div class="section-head"><h2 id="access-title">The Two Main Units</h2></div>
+    <div class="cols">
+      <article class="panel">
+        <div class="panel-top"><div class="bubble" aria-hidden="true">✦</div><span class="chip">New character</span></div>
+        <h3>MINT VCARD</h3>
+        <p>The creation side of VHouse. A new character card combines its team, identity, image, description, level, and combat stats into one complete VCard artwork.</p>
+        <p>The completed card becomes the NFT artwork. Its JSON metadata is stored through IPFS and linked to a newly minted Solana Token-2022 NFT.</p>
+      </article>
+      <article class="panel">
+        <div class="panel-top"><div class="bubble" aria-hidden="true">◇</div><span class="chip">Existing character</span></div>
+        <h3>LOAD NFT</h3>
+        <p>The existing-NFT side of VHouse. It identifies supported NFT standards, reads available artwork and metadata, and checks on-chain ownership against the connected Phantom wallet.</p>
+        <div class="nested">
+          <h3>UPDATE VCARD</h3>
+          <p>Changes character information and artwork on the existing NFT.</p>
+        </div>
+        <div class="nested">
+          <h3>CUSTOMIZE VCARD</h3>
+          <p>Applies visual effects and evolves the character's presentation without replacing its identity.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="editor-title">
+    <div class="section-head"><h2 id="editor-title">Card Design &amp; Editing</h2></div>
+    <div class="three">
+      <article class="panel feature">
+        <div class="number">01 / IDENTITY</div>
+        <h3>Teams &amp; Character Data</h3>
+        <p>STONE, WIND, and BLADE teams; character name and description; Level 1 foundation with ATK 100 and DEF 100.</p>
+      </article>
+      <article class="panel feature">
+        <div class="number">02 / ARTWORK</div>
+        <h3>Image Positioning &amp; Crop</h3>
+        <p>Preset artwork or uploaded images, with mouse/touch dragging, zoom, and a confirmed crop that fills the character-art frame.</p>
+      </article>
+      <article class="panel feature">
+        <div class="number">03 / EFFECTS</div>
+        <h3>Visual Customization</h3>
+        <p>Card treatments include NONE, GLOW, HOLO, and EMBER. Updated full-card artwork reflects the chosen effect.</p>
+      </article>
+    </div>
+    <div class="pills" aria-label="Card design features">
+      <span>Live VCard preview</span><span>Full-card PNG export</span><span>Mouse and touch support</span><span>Front / receipt flip</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="chain-title">
+    <div class="section-head"><h2 id="chain-title">NFT Identity &amp; Metadata</h2></div>
+    <div class="info">
+      <article class="panel">
+        <h3>On-Chain Identity</h3>
+        <p>New VCards are Token-2022 NFTs designed with a single-token supply, non-transferable character ownership, a metadata pointer, and MintCloseAuthority for the mint account.</p>
+        <p>The character retains its original mint address across supported UPDATE and CUSTOMIZE operations.</p>
+        <p>Existing NFTs can be recognized as Token-2022 or Metaplex Core when loading. Editing depends on the NFT program and its update authority; Core-specific editing is separate from the Token-2022 update mechanism.</p>
+      </article>
+      <article class="panel">
+        <h3>Artwork &amp; Attribute Records</h3>
+        <p>The full rendered VCard PNG and its metadata JSON are stored on IPFS through Pinata. The NFT metadata URI provides access to the JSON through an HTTPS gateway.</p>
+        <p>The standard JSON <code>attributes</code> array stores character values such as Team, Level, ATK, DEF, and any applied Effect using <code>trait_type</code> and <code>value</code>.</p>
+        <p>The artwork displays the player's character name; NFT metadata adds the backend prefix <strong>“Vcard ”</strong> without altering the printed card.</p>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="value-title">
+    <div class="section-head"><h2 id="value-title">Character Value &amp; Service Fees</h2></div>
+    <div class="panel">
+      <p>Every supported paid UPDATE or CUSTOMIZE adds a small amount of SOL directly to the character NFT's mint account. The player supplies both portions in the transaction: VHouse receives its service share, and the NFT receives its character-value share. Accumulated SOL is not an in-game spending balance.</p>
+      <table class="price-table">
+        <thead><tr><th>VCard operation</th><th>Service price</th><th>VHouse share</th><th>NFT share</th></tr></thead>
+        <tbody>
+          <tr><td class="primary">CREATE · current test</td><td>0.001 SOL</td><td>0.001 SOL</td><td>—</td></tr>
+          <tr><td class="primary">UPDATE · current</td><td>$0.75</td><td>$0.50</td><td>$0.25</td></tr>
+          <tr><td class="primary">CUSTOMIZE · current</td><td>$0.75</td><td>$0.50</td><td>$0.25</td></tr>
+          <tr><td class="primary">UPDATE / CUSTOMIZE · future</td><td>$1.00</td><td>$0.75</td><td>$0.25</td></tr>
+          <tr><td class="primary">CREATE · planned full game</td><td>$5.00</td><td>To be defined</td><td>To be defined</td></tr>
+        </tbody>
+      </table>
+      <p class="price-note">USD-denominated edit prices are converted to SOL at transaction time. Solana network costs and any required account rent are additional. No collection system or in-game burn/redeem feature is part of this unit.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="receipt-title">
+    <div class="section-head"><h2 id="receipt-title">The VCard Receipt</h2></div>
+    <div class="cols">
+      <div>
+        <p>Each card has two faces: the character art on the front and its NFT information receipt on the back. The receipt keeps technical links outside the main game display.</p>
+        <p>The unit provides mint-status feedback and a success presentation, with the completed VCard downloadable as a PNG. Updated artwork and metadata produce fresh IPFS records while preserving the existing compatible NFT's mint address.</p>
+      </div>
+      <div class="receipt" aria-label="Illustrative receipt layout">
+        <div class="receipt-title">VCARD RECEIPT</div>
+        <div class="receipt-line"><span>MINT LINK</span><em>Solana NFT record</em></div>
+        <div class="receipt-line"><span>FULL VCARD PNG</span><em>IPFS artwork</em></div>
+        <div class="receipt-line"><span>NFT JSON</span><em>IPFS attributes</em></div>
+        <div class="receipt-caption">The information side of the VCard</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="purpose-title">
+    <div class="section-head"><h2 id="purpose-title">The Concept</h2></div>
+    <div class="rule"><strong>A VCard is a developing game character, not just a static NFT image.</strong> Its design, metadata, and associated on-chain value can evolve over time, while VHouse provides one coherent creation and editing experience without requiring every card to belong to a collection.</div>
+  </section>
+
+  <footer><span>VHouse · A Zetsu Reality</span><span>From The Zetsumetsu Corporation · 2026</span></footer>
+</main>
+</body>
+</html>
