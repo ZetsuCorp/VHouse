@@ -17,6 +17,8 @@ html,body{margin:0;color:#eaf9ff}
 .map-container .mint-success-overlay{position:absolute}
 .game{width:min(900px,100%);padding:16px;border:2px solid #bc9357;border-radius:10px;background:linear-gradient(140deg,#142132,#080d16)}
 .workspace{display:grid;grid-template-columns:minmax(0,438fr) minmax(0,336fr);gap:16px;align-items:start}
+/* Keep the VCard's original height while widening the complete game unit. */
+#creationUnit .workspace:not(.loaded-vcard) .card-stand{max-width:375px;margin-inline:auto}
 h1{margin:0 0 16px;text-align:center;color:#e4c58f;font-size:17px;letter-spacing:2px}
 
 .editor{background:#101b29;border:1px solid #355066;border-radius:10px;overflow:hidden}
