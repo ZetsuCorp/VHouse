@@ -100,10 +100,20 @@ button:disabled{opacity:.5;cursor:default}
 .wallet-heading .tag-address{font-family:monospace;font-size:11px;font-weight:normal}
 .info-line{margin:5px 0;line-height:1.5;overflow-wrap:anywhere}
 .nft-image-preview{display:block;max-width:100%;max-height:190px;min-height:80px;object-fit:contain;margin:10px auto;border:1px solid #bc9357;border-radius:7px;background:#08131d}
-.loaded-nft-preview{display:flex;align-items:center;justify-content:center;gap:12px;padding:7px 10px;margin:0 auto 10px;border:1px solid #294355;border-radius:7px;background:#0b1826;font-size:10px;font-weight:900}
-/* The VCard is the only NFT artwork display; no duplicate image above it. */
-#loadedNFTPreview{display:none!important}
-.loaded-nft-preview img{display:block;max-height:92px;max-width:115px;object-fit:contain;border-radius:5px}
+/* The single VCard preview shows the loaded NFT; no second artwork panel. */
+#creationUnit .workspace.loaded-vcard .card-stand{
+  max-width:285px;
+  margin:0 auto;
+}
+#creationUnit .workspace.loaded-vcard .post-mint{
+  margin-top:4px;
+  padding:8px;
+}
+#creationUnit .workspace.loaded-vcard .post-mint h2{margin-bottom:5px}
+#creationUnit .workspace.loaded-vcard .post-mint .mode-row{margin-bottom:6px}
+#creationUnit .workspace.loaded-vcard .post-mint .effect-grid{margin:5px 0}
+#creationUnit .workspace.loaded-vcard .post-mint .post-mint-note{margin:4px 0 5px}
+#creationUnit .workspace.loaded-vcard .post-mint .action{padding:9px}
 
 
 /* Choose creation or loading before opening the editor. */
@@ -361,10 +371,6 @@ button:disabled{opacity:.5;cursor:default}
       <div class="preview-top">
         <strong>YOUR VCARD</strong>
         <span class="live">● LIVE PREVIEW</span>
-      </div>
-      <div class="loaded-nft-preview" id="loadedNFTPreview" hidden>
-        <img id="loadedNFTImage" alt="Loaded NFT artwork">
-        <span class="tag-nft">NFT IMAGE</span>
       </div>
       <div class="flip-hint" id="flipHint" hidden>CLICK VCARD TO VIEW RECEIPT ↻</div>
       <div class="card-stand">
@@ -651,10 +657,11 @@ function showScreen(screen) {
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
   $("workspaceBackButton").hidden = screen !== "workspace";
+  // Layout only: compact the loaded NFT's right column to expose fees/actions.
+  $("workspace").classList.toggle("loaded-vcard",screen === "workspace" && !!job?.loaded);
 }
 
 function resetForMint() {
-  showNFTImage("loadedNFTImage",null);
   job = null;
   minted = false;
   editMode = null;
@@ -1504,27 +1511,6 @@ async function imageDataFromIPFS(uri) {
     } catch (error) { last = error; }
   }
   throw Error("Cannot load NFT artwork: " + (last?.message || "request failed"));
-}
-
-// Display the NFT's original artwork, retrying alternate IPFS hosts if needed.
-function showNFTImage(id,uri) {
-  const img = $(id);
-  const urls = uri ? nftMediaURLs(uri) : [];
-  const wrapper = id === "loadedNFTImage" ? $("loadedNFTPreview") : null;
-  img.hidden = !urls.length;
-  if (wrapper) wrapper.hidden = !urls.length;
-  img.removeAttribute("src");
-  if (!urls.length) return;
-  let index = 0;
-  img.onerror = () => {
-    if (++index < urls.length) img.src = urls[index];
-    else {
-      img.hidden = true;
-      if (wrapper) wrapper.hidden = true;
-    }
-  };
-  img.onload = () => { img.hidden = false; if (wrapper) wrapper.hidden = false; };
-  img.src = urls[0];
 }
 
 /* These are separate from the off-chain JSON attributes array.
@@ -2952,7 +2938,6 @@ $("loadMintButton").onclick = async () => {
     state.team = chosenTeam;
     state.art = chosenArt;
     state.image = source;
-    showNFTImage("loadedNFTImage",json.image);
     state.effect = effect;
     state.mode = "custom";
     $("nameInput").value = cardDisplayName(json.name || meta.name).slice(0,16);
