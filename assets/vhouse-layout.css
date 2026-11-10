@@ -46,9 +46,10 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
   position: absolute;
   left: 50%;
   top: 50%;
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 1100px;
-  height: max-content;
+  height: 650px;
   min-width: 0;
   max-width: none;
   margin: 0;
@@ -60,17 +61,55 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Keep the original menu size; use the same centered width on LOAD,
-   BURN, and a successfully loaded NFT workspace. MINT remains unchanged. */
-.map-container #creatorRegion #creationUnit:has(> #entryMenu:not([hidden])),
-.map-container #creatorRegion #creationUnit:has(> #loadPanel:not([hidden])),
-.map-container #creatorRegion #creationUnit:has(> #burnPanel:not([hidden])),
-.map-container #creatorRegion #creationUnit[data-vhouse-loaded="true"] {
-  width: 850px;
+/* VCard Creation Unit: one fixed game surface and one shared scale.
+   MINT, LOAD, BURN, START and NFT editing all occupy this same surface. */
+#creatorRegion #creationUnit > h1 { margin:0 0 7px; flex:none; }
+#creatorRegion #creationUnit > .wallet-heading { margin:0 0 8px; padding:5px 6px; flex:none; }
+#creatorRegion #creationUnit > .entry-choice { flex:1; align-content:center; }
+#creatorRegion #creationUnit > .load-panel {
+  width:760px; max-width:calc(100% - 24px); margin:auto; flex:none;
 }
-.map-container #creatorRegion #creationUnit > #loadPanel:not([hidden]),
-.map-container #creatorRegion #creationUnit > #burnPanel:not([hidden]) {
-  width: 100%;
-  max-width: none;
-  margin: 12px auto;
+#creatorRegion #creationUnit > .workspace {
+  flex:0 0 auto; grid-template-columns:minmax(0,42fr) minmax(0,58fr);
+  gap:14px; overflow:visible;
 }
+/* A compact, consistent game-screen arrangement instead of a taller
+   standalone webpage. The NFT card and edit controls share the right side. */
+#creatorRegion #creationUnit .editor-head { padding:7px 12px; }
+#creatorRegion #creationUnit .group { padding:4px 12px; }
+#creatorRegion #creationUnit .group-label { margin-bottom:4px; }
+#creatorRegion #creationUnit .team-button { padding:4px 2px; }
+#creatorRegion #creationUnit .symbol { font-size:18px; margin-bottom:2px; }
+#creatorRegion #creationUnit .name-input,
+#creatorRegion #creationUnit .description-input { padding:6px; }
+#creatorRegion #creationUnit .description-input { height:46px; }
+#creatorRegion #creationUnit .art-button img { height:78px; aspect-ratio:auto; }
+#creatorRegion #creationUnit .upload { padding:5px; margin-top:5px; }
+#creatorRegion #creationUnit .crop-launch { padding:5px; margin-top:5px; }
+#creatorRegion #creationUnit .mode-row { margin-bottom:4px; }
+#creatorRegion #creationUnit .mode-button { padding:5px 3px; }
+#creatorRegion #creationUnit .default-preview { padding:6px; }
+#creatorRegion #creationUnit .actions { padding:6px 12px; }
+#creatorRegion #creationUnit .action { padding:7px 5px; }
+#creatorRegion #creationUnit .preview-wrap {
+  display:grid; grid-template-columns:minmax(0,55fr) minmax(0,45fr);
+  grid-template-rows:auto auto auto auto auto;
+  gap:6px 12px; align-items:start; align-content:start;
+}
+#creatorRegion #creationUnit .preview-top { grid-column:1/3; grid-row:1; margin:0 0 5px; }
+#creatorRegion #creationUnit .card-stand {
+  grid-column:1; grid-row:2/6; width:100%;
+  max-width:none; padding:5px; margin:0;
+}
+#creatorRegion #creationUnit .loaded-nft-preview {
+  grid-column:2; grid-row:2; padding:4px; margin:0;
+}
+#creatorRegion #creationUnit .loaded-nft-preview img { max-height:72px; }
+#creatorRegion #creationUnit .post-mint {
+  grid-column:2; grid-row:3; min-width:0; padding:7px; margin:0;
+}
+#creatorRegion #creationUnit .status {
+  grid-column:2; grid-row:4; padding:7px; margin:0;
+}
+#creatorRegion #creationUnit .preview-wrap:has(.post-mint[hidden]) > .status { grid-row:3; }
+#creatorRegion #creationUnit .flip-hint { grid-column:1; grid-row:5; }
