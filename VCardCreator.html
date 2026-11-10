@@ -15,7 +15,8 @@ html,body{margin:0;color:#eaf9ff}
 .map-container .crop-overlay{position:absolute;inset:0}
 .map-container .crop-panel{max-height:calc(100% - 28px)}
 .map-container .mint-success-overlay{position:absolute}
-.game{background:linear-gradient(140deg,#142132,#080d16)}
+.game{width:min(900px,100%);padding:16px;border:2px solid #bc9357;border-radius:10px;background:linear-gradient(140deg,#142132,#080d16)}
+.workspace{display:grid;grid-template-columns:minmax(0,438fr) minmax(0,336fr);gap:16px;align-items:start}
 h1{margin:0 0 16px;text-align:center;color:#e4c58f;font-size:17px;letter-spacing:2px}
 
 .editor{background:#101b29;border:1px solid #355066;border-radius:10px;overflow:hidden}
@@ -108,7 +109,7 @@ button:disabled{opacity:.5;cursor:default}
 .choice-bubble{width:190px;aspect-ratio:1;border-radius:50%;border:3px solid #bc9357;background:radial-gradient(circle at 35% 30%,#1d5262,#0c1c2b 72%);color:#eaf9ff;box-shadow:0 0 18px #00eaff18;font-size:16px;font-weight:900;letter-spacing:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .choice-bubble:hover,.choice-bubble:focus-visible{border-color:#00eaff;box-shadow:0 0 20px #00eaff66;outline:none}
 .choice-bubble .bubble-symbol{font-size:39px;color:#e4c58f}
-.load-panel{padding:20px;border:1px solid #bc9357;border-radius:10px;background:#0b1826;text-align:center}
+.load-panel{max-width:550px;margin:18px auto 14px;padding:20px;border:1px solid #bc9357;border-radius:10px;background:#0b1826;text-align:center}
 .load-panel h2{font-size:15px;color:#e4c58f;margin:0 0 12px;letter-spacing:1px}
 .nav-back{border:1px solid #bc9357;border-radius:6px;padding:8px 13px;margin:0 0 12px;background:#102335;color:#e4c58f;font-size:11px;font-weight:900}
 .load-panel .mint-load{margin:12px 0}
@@ -153,7 +154,13 @@ button:disabled{opacity:.5;cursor:default}
 .meta-bottom{position:relative;padding:3cqw 9.5cqw 3cqw 1cqw;border-top:.6cqw solid var(--accent);background:#111;text-align:center}
 .meta-footer-text{color:#cfcfcf;font-size:1.6cqw;white-space:nowrap}
 .rarity{position:absolute;right:1.8cqw;top:50%;transform:translateY(-50%);padding:.9cqw 1.5cqw;border-radius:1.2cqw;background:var(--accent);color:white;font-size:3.3cqw;font-weight:900}
-/* Individual screens share a single game-stage geometry in vhouse-layout.css. */
+/* Keep the original Creator layout. Only the surrounding VHouse canvas
+   controls where the complete Creation Unit sits. */
+@media(max-width:720px){
+  .workspace{grid-template-columns:1fr}
+  .preview-wrap{grid-row:1}
+  .card-stand{max-width:355px;margin:auto}
+}
 #creationUnit #workspaceBackButton{display:block;width:max-content}
 #creationUnit #workspaceBackButton[hidden]{display:none}
 
@@ -403,8 +410,8 @@ button:disabled{opacity:.5;cursor:default}
 <a class="vhouse-btn back-button vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
 </div></main>
 <script>
-/* Scale the complete unit once for the VHouse canvas size. Centering, width,
-   height, and overflow rules all belong to vhouse-layout.css. */
+/* Only proportionally fit the unmodified Creation Unit to the game screen.
+   No per-screen positioning, internal layout overrides, or scrolling. */
 (() => {
   const map=document.querySelector(".map-container");
   const unit=document.getElementById("creationUnit");
@@ -412,19 +419,30 @@ button:disabled{opacity:.5;cursor:default}
     const overlay=document.getElementById(id);
     if(overlay) map.appendChild(overlay);
   }
-  function scaleGameUnit(){
+  let pending=false;
+  function fit(){
+    pending=false;
     const width=unit.offsetWidth;
-    const height=unit.offsetHeight;
+    const height=Math.max(unit.offsetHeight,unit.scrollHeight);
     if(!width || !height)return;
-    const scale=Math.min(
-      (map.clientWidth-32)/width,
-      (map.clientHeight-32)/height
+    const scale=Math.min(1.15,
+      (map.clientWidth-28)/width,
+      (map.clientHeight-28)/height
     );
     map.style.setProperty("--vcard-unit-scale",String(Math.max(0.01,scale)));
   }
-  new ResizeObserver(scaleGameUnit).observe(map);
-  window.addEventListener("resize",scaleGameUnit);
-  scaleGameUnit();
+  function queueFit(){
+    if(pending)return;
+    pending=true;
+    requestAnimationFrame(fit);
+  }
+  new ResizeObserver(queueFit).observe(map);
+  new ResizeObserver(queueFit).observe(unit);
+  new MutationObserver(queueFit).observe(unit,{
+    subtree:true,childList:true,attributes:true,attributeFilter:["hidden"]
+  });
+  window.addEventListener("resize",queueFit);
+  queueFit();
 })();
 </script>
 <script src="assets/vhouse-public-config.js"></script>
