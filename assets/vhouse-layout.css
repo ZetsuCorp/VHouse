@@ -60,7 +60,17 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Only the initial MINT / LOAD / BURN screen: narrow its panel, not the editor. */
-.map-container #creatorRegion #creationUnit:has(> #entryMenu:not([hidden])) {
+/* Keep the original menu size; use the same centered width on LOAD,
+   BURN, and a successfully loaded NFT workspace. MINT remains unchanged. */
+.map-container #creatorRegion #creationUnit:has(> #entryMenu:not([hidden])),
+.map-container #creatorRegion #creationUnit:has(> #loadPanel:not([hidden])),
+.map-container #creatorRegion #creationUnit:has(> #burnPanel:not([hidden])),
+.map-container #creatorRegion #creationUnit[data-vhouse-loaded="true"] {
   width: 850px;
+}
+.map-container #creatorRegion #creationUnit > #loadPanel:not([hidden]),
+.map-container #creatorRegion #creationUnit > #burnPanel:not([hidden]) {
+  width: 100%;
+  max-width: none;
+  margin: 12px auto;
 }
