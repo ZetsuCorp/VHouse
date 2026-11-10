@@ -27,8 +27,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 }
 
 
-/* VCard Creation Unit framing — applies ONLY to VCardCreator.html.
-   Overrides legacy inline creator sizing without changing other game pages. */
+/* VCard Creator: shared full-width frame; leave the Creation Unit's
+   internal menu, editor and card CSS to VCardCreator.html. */
 .map-container #creatorRegion {
   position: absolute;
   left: 13.45%;
@@ -38,43 +38,20 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
   margin: 0;
   border: 2px solid #bc9357;
   border-radius: 10px;
-  background: #0c1423;
-  box-shadow: inset 0 0 0 1px #e4c58f50;
   overflow: hidden;
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
+  display: block;
 }
 .map-container #creatorRegion #creationUnit {
+  display: block;
   width: 100%;
   height: 100%;
   min-width: 0;
   max-width: none;
-  flex: 1 1 auto;
   margin: 0;
-  border: none;
+  padding: 12px;
+  border: 0;
   border-radius: 0;
-  padding: clamp(8px, 1.1cqw, 16px);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: auto;
   transform: none;
-}
-.map-container #creatorRegion #creationUnit .entry-choice {
-  width: 100%;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: space-evenly;
-}
-.map-container #creatorRegion #creationUnit .workspace {
-  width: 100%;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr);
-}
-.map-container #creatorRegion #creationUnit .preview-wrap {
-  width: 100%;
-  min-width: 0;
 }
