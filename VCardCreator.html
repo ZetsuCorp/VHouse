@@ -1515,6 +1515,26 @@ async function imageDataFromIPFS(uri) {
   throw Error("Cannot load NFT artwork: " + (last?.message || "request failed"));
 }
 
+// Artwork preview for BURN; retries IPFS gateways without blocking burn checks.
+function showNFTImage(id,uri) {
+  const img=document.getElementById(id);
+  if (!img) return;
+  const urls=uri?nftMediaURLs(uri):[];
+  img.hidden=!urls.length;
+  img.removeAttribute("src");
+  img.onload=null;
+  img.onerror=null;
+  if (!urls.length) return;
+  let index=0;
+  img.onerror=()=>{
+    index++;
+    if (index<urls.length) img.src=urls[index];
+    else img.hidden=true;
+  };
+  img.onload=()=>{img.hidden=false;};
+  img.src=urls[0];
+}
+
 /* These are separate from the off-chain JSON attributes array.
    Token-2022 stores its own key/value pairs in additionalMetadata. */
 function onchainVCardAttributes(data) {
