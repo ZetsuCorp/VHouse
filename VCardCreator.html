@@ -169,6 +169,37 @@ button:disabled{opacity:.5;cursor:default}
   .preview-wrap{grid-row:1}
   .card-stand{max-width:355px;margin:auto}
 }
+
+/* Fit the original Creation Unit's vertical editor and adjacent VCard into the
+   single, centered VHouse game frame. The controls retain their original order. */
+#creationUnit h1{flex:none;margin:0 0 7px;font-size:clamp(13px,1.4cqw,18px)}
+#creationUnit .wallet-heading{flex:none;margin:0 0 8px;padding:6px 10px;font-size:10px}
+#creationUnit #workspaceBackButton{position:absolute;right:12px;top:11px;z-index:6;margin:0;padding:5px 12px;font-size:10px;line-height:1.2}
+#creationUnit .workspace{flex:1;min-height:0;width:min(100%,1050px);margin-inline:auto;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,.9fr);gap:20px;align-items:start;overflow:hidden}
+#creationUnit .editor{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#creationUnit .editor-head{padding:6px 12px;flex:none;font-size:12px}
+#creationUnit .editor>.group{padding:4px 12px;flex:none}
+#creationUnit .editor .group-label{margin-bottom:4px;font-size:10px}
+#creationUnit .editor .team-button{height:42px;min-height:0;padding:5px 2px;font-size:9px;line-height:1.05}
+#creationUnit .editor .team-button .symbol{font-size:18px;margin-bottom:2px}
+#creationUnit .editor .name-input{padding:7px 9px;font-size:12px}
+#creationUnit .editor .art-button{padding:3px;font-size:8px}
+#creationUnit .editor .art-button img{height:46px;aspect-ratio:auto;object-fit:cover;margin-bottom:3px}
+#creationUnit .editor .upload{margin-top:4px;padding:5px;font-size:9px}
+#creationUnit .editor .crop-launch{margin-top:4px;padding:6px;font-size:9px}
+#creationUnit .editor .mode-row{margin-bottom:4px}
+#creationUnit .editor .mode-button{padding:6px 4px;font-size:9px}
+#creationUnit .editor .default-preview{padding:7px 9px;font-size:10px;line-height:1.3}
+#creationUnit .editor .description-input{height:40px;padding:6px;font-size:11px}
+#creationUnit .editor>.actions{margin-top:auto;flex:none;padding:8px 12px}
+#creationUnit .editor .action{padding:8px 5px;font-size:11px}
+#creationUnit .preview-wrap{height:100%;min-height:0;overflow-y:auto;scrollbar-width:none}
+#creationUnit .preview-wrap::-webkit-scrollbar{display:none}
+#creationUnit .card-stand{max-width:260px;margin:0 auto}
+#creationUnit .preview-top{margin:2px 0 8px}
+#creationUnit .entry-choice{flex:1;min-height:0;align-items:center;justify-content:space-evenly;padding:0 15px;gap:18px}
+#creationUnit .choice-bubble{width:clamp(125px,14cqw,180px);font-size:12px}
+#creationUnit .choice-bubble .bubble-symbol{font-size:32px}
 </style>
 
 <script type="importmap">
