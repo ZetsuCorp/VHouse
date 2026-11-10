@@ -452,8 +452,24 @@ button:disabled{opacity:.5;cursor:default}
   function fit(){
     scheduled=false;
     const naturalWidth=unit.offsetWidth;
+    if(!naturalWidth)return;
+    // Only BURN and the loaded NFT workspace can be taller than the frame.
+    // Fit their WIDTH and scroll excess height instead of shrinking text/cards.
+    const tallScreen=!document.getElementById("burnPanel").hidden ||
+      unit.dataset.vhouseLoaded==="true";
+    if(tallScreen){
+      const scale=Math.min(1,Math.max(0.01,(region.clientWidth-24)/naturalWidth));
+      const visibleHeight=Math.max(1,(region.clientHeight-20)/scale);
+      unit.style.height=visibleHeight+"px";
+      unit.style.overflowY="auto";
+      unit.style.overflowX="hidden";
+      unit.style.transform="translate(-50%, -50%) scale("+scale+")";
+      return;
+    }
+    unit.style.height="";
+    unit.style.overflowY="";
+    unit.style.overflowX="";
     const naturalHeight=Math.max(unit.scrollHeight,unit.offsetHeight);
-    if(!naturalWidth || !naturalHeight)return;
     const scale=Math.min(
       1,
       Math.max(0.01,(region.clientWidth-24)/naturalWidth),
@@ -643,6 +659,8 @@ function showScreen(screen) {
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
   $("workspaceBackButton").hidden = screen !== "workspace";
+  // Layout-only marker: distinguishes an imported NFT from the MINT editor.
+  $("creationUnit").dataset.vhouseLoaded = String(screen === "workspace" && !!job?.loaded);
 }
 
 function resetForMint() {
