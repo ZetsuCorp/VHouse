@@ -2,375 +2,3199 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VCard Creator — VHouse</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VHouse — VCard Creator</title>
+
+<link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-buttons.css">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
-.rotate-screen { display:none; position:fixed; inset:0; z-index:9999; background:#000; color:#fff; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:24px; }
-.rotate-icon { font-size:64px; }
-.rotate-screen h2 { font-size:24px; }
-.rotate-screen p { font-size:16px; color:#bbb; }
-@media (orientation:portrait) {
-  .rotate-screen { display:flex; }
-  .game-container { display:none!important; }
-}
-.game-container { width:100vw; height:100vh; height:100dvh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-.map-container { position:relative; width:min(100vw,200dvh); aspect-ratio:2/1; flex-shrink:0; container-type:inline-size; overflow:hidden; }
-.creator-background { display:block; width:100%; height:100%; object-fit:contain; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#eaf9ff;font-family:Arial,sans-serif}
+/* Use VHouse's existing 2:1 game container; only this HTML file is changed. */
+.game-container{width:100vw;height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.map-container{position:relative;width:min(100vw,200dvh);aspect-ratio:2/1;flex-shrink:0;container-type:inline-size;overflow:hidden}
+.creator-background{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.creator-region{position:absolute;left:16.7111%;top:19.85%;width:42.9333%;height:63%;border:1px solid #bc9357;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.creator-region .game{width:900px;max-width:none;flex:0 0 900px;transform-origin:center center;margin:0}
+.creator-region .workspace{grid-template-columns:minmax(0,438fr) minmax(0,336fr)}
+.creator-region .preview-wrap{grid-row:auto}
+.creator-region .card-stand{max-width:none;margin:0}
+.vhouse-creator-back{position:absolute;left:5.56%;top:50%;transform:translate(-50%,-50%);z-index:45}
+.rotate-screen{display:none;position:fixed;inset:0;z-index:9999;background:#000;color:white;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px}
+.rotate-icon{font-size:64px}.rotate-screen h2{font-size:24px}.rotate-screen p{font-size:16px;color:#bbb}
+@media(orientation:portrait){.rotate-screen{display:flex}.game-container{display:none!important}}
+/* Keep crop and success overlays full-size, outside the scaled editor. */
+.map-container .crop-overlay{position:absolute;inset:0}
+.map-container .crop-panel{max-height:calc(100% - 28px)}
+.map-container .mint-success-overlay{position:absolute}
 
-/* Interactive creator lives entirely inside the white rectangle in Vcontainer.png. */
-.creator-region {
-  position:absolute;
-  left:16.7111%;
-  top:19.85%;
-  width:42.9333%;
-  height:63%;
-  border:1px solid #bc9357;
-  border-radius:8px;
-  overflow:hidden;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-.creator-content {
-  --cyan:#00eaff;
-  width:790px;
-  height:530px;
-  flex:0 0 790px;
-  transform-origin:center center;
-  color:#eaf9ff;
-  font-family:Arial,Helvetica,sans-serif;
-}
-.workspace {
-  display:grid;
-  grid-template-columns:438px 336px;
-  gap:16px;
-  height:530px;
-  align-items:start;
-}
-/* Creation controls */
-.editor {
-  height:530px;
-  background:linear-gradient(145deg,#131d2a,#0a1018);
-  border:1px solid #355066;
-  border-radius:12px;
-  overflow:hidden;
-  box-shadow:0 12px 35px #0007;
-}
-.editor-head {
-  height:36px;
-  padding:0 16px;
-  border-bottom:1px solid #294050;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-}
-.editor-title { font-size:15px; font-weight:900; letter-spacing:1.8px; }
-.editor-head small { color:#6b9dab; font-size:10px; letter-spacing:1px; }
-.group { padding:7px 16px; border-bottom:1px solid #253644; }
-.group:last-child { border-bottom:0; }
-.group-label { display:flex; align-items:center; gap:9px; margin-bottom:6px; font-size:11px; font-weight:900; letter-spacing:1.1px; }
-.group-label b { color:var(--cyan); font-size:11px; }
-.name-input,.description-input {
-  display:block;
-  width:100%;
-  background:#080f18;
-  color:white;
-  border:1px solid #385567;
-  border-radius:7px;
-  padding:10px 11px;
-  outline:none;
-  font:inherit;
-  font-size:13px;
-}
-.name-input:focus,.description-input:focus { border-color:var(--cyan); box-shadow:0 0 0 2px #00eaff18; }
-.description-input { height:54px; min-height:54px; resize:none; line-height:1.4; }
-.team-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
-.gallery { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
-.mode-row { display:flex; gap:8px; margin-bottom:8px; }
-.default-preview { padding:9px; border-left:2px solid var(--cyan); background:#0b141e; color:#a8c0c9; font-size:11px; line-height:1.4; }
-.finish-action { padding:10px 16px; display:flex; gap:8px; }
-.finish-action .finish-button { flex:1; min-width:0; }
-/* Finished VCard takes the creation controls' place. */
-.saved-card-display { width:438px; height:530px; display:flex; align-items:center; justify-content:center; }
-.saved-card-inner { width:336px; max-width:100%; }
-.back-button { position:absolute; left:5.56%; top:50%; transform:translate(-50%,-50%); z-index:40; }
-.finish-overlay { position:absolute; inset:0; z-index:30; }
-/* Position the unmodified Index info box entirely inside the open right-hand area. */
-.creator-info-holder {
-  position:absolute;
-  left:69%;
-  top:24%;
-  width:15%;
-  z-index:3;
-  container-type:inline-size;
-}
-.creator-info-holder .vhouse-info {
-  height:134cqw;
-}
-.creator-info-holder .vhouse-info-heading {
-  font-size:5.7cqw;
-  padding:5% 4%;
-}
-.creator-info-holder .vhouse-info-content {
-  font-size:4.8cqw;
-  line-height:1.35;
-  padding:5%;
-  overflow:hidden;
-  scrollbar-width:none;
-}
+.game{width:min(900px,100%);padding:16px;border:2px solid #bc9357;border-radius:10px;background:linear-gradient(140deg,#142132,#080d16)}
+h1{margin:0 0 16px;text-align:center;color:#e4c58f;font-size:17px;letter-spacing:2px}
+.workspace{display:grid;grid-template-columns:minmax(0,438fr) minmax(0,336fr);gap:16px;align-items:start}
+.editor{background:#101b29;border:1px solid #355066;border-radius:10px;overflow:hidden}
+.editor-head{display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #294050;font-size:14px;font-weight:900}
+.editor-head small{color:#8ea9b9}
+.group{padding:12px 16px;border-bottom:1px solid #253644}
+.group-label{margin-bottom:9px;font-size:11px;font-weight:900;letter-spacing:1px}
+.group-label b{color:#00eaff;margin-right:8px}
+button{font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.team-grid,.gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.team-button{padding:9px 3px;border:2px solid #345163;border-radius:8px;background:#142331;color:#b9ced7;font-size:10px;font-weight:900}
+.symbol{display:block;font-size:23px;margin-bottom:4px}
+.team-button.active,.art-button.selected{border-color:#00eaff;background:#14313e;color:white;box-shadow:0 0 12px #00eaff30}
+.name-input,.description-input{width:100%;padding:11px;background:#080f18;border:1px solid #385567;border-radius:6px;color:#fff;font:13px Arial}
+.description-input{height:65px;resize:none}
+.art-button{padding:4px;border:2px solid #293f50;border-radius:7px;background:#080f17;color:#a9bbc9;font-size:9px;font-weight:900;overflow:hidden}
+.art-button img{width:100%;aspect-ratio:4/3;object-fit:cover;object-position:center;background:#0b1620;display:block;margin-bottom:5px;border-radius:4px}
+.upload{display:block;margin-top:9px;padding:9px;text-align:center;border:2px dashed #4b6977;border-radius:7px;color:#b1ccd7;font-size:10px;font-weight:900;cursor:pointer}
+.upload input{display:none}
 
-[hidden] { display:none!important; }
-/* Live card preview */
-.preview-wrap { width:336px; }
-.preview-top { height:26px; display:flex; justify-content:space-between; align-items:center; padding:0 3px; }
-.preview-top strong { font-size:11px; letter-spacing:1.6px; color:#a3b7c3; }
-.live { color:#6be5b4; font-size:9px; letter-spacing:1px; font-weight:bold; }
-.live:before { content:""; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:#4dffc0; box-shadow:0 0 8px #4dffc0; }
-.card-stand { padding:8px; border:1px solid #294355; border-radius:12px; background:radial-gradient(circle at 50% 35%,#19364a,#080e15 73%); box-shadow:0 12px 35px #0007; }
+/* Crop the artwork before it is applied to a MINT or loaded NFT. */
+.crop-launch{display:block;width:100%;margin-top:8px;padding:10px 8px;background:#102a39;border:1px solid #bc9357;border-radius:7px;color:#f6e0b9;font-size:11px;font-weight:900}
+.crop-launch:hover:not(:disabled){border-color:#00eaff}
+.crop-overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:14px;background:#02070ce6}
+.crop-panel{width:min(480px,100%);max-height:calc(100vh - 28px);overflow-y:auto;padding:16px;border:2px solid #bc9357;border-radius:12px;background:#101b29;box-shadow:0 18px 65px #000b}
+.crop-panel h2{margin:0 0 7px;text-align:center;font-size:16px;color:#e4c58f;letter-spacing:1px}
+.crop-panel p{margin:0 0 12px;color:#a9c8d3;font-size:12px;text-align:center}
+.crop-frame{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;border:2px solid #00eaff;border-radius:7px;background:#09121d;touch-action:none;cursor:grab}
+.crop-frame:active{cursor:grabbing}
+.crop-frame img{position:absolute;display:block;max-width:none;max-height:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.crop-zoom{display:flex;align-items:center;gap:12px;margin:14px 0;color:#e4c58f;font-size:12px;font-weight:900}
+.crop-zoom input{flex:1;min-width:0;accent-color:#00eaff}
+.crop-actions{display:flex;gap:10px}
+.crop-actions button{flex:1;padding:11px;border-radius:6px;font-size:12px;font-weight:900}
+.crop-cancel{background:#152636;color:#eaf9ff;border:1px solid #607688}
+.crop-confirm{background:#174851;color:white;border:2px solid #00eaff}
+.mode-row{display:flex;gap:8px;margin-bottom:9px}
+.mode-button{flex:1;padding:9px 5px;background:#0b141e;border:2px solid #355266;border-radius:6px;color:#9fb4c3;font-size:10px;font-weight:900}
+.mode-button.active{border-color:#00eaff;background:#11303c;color:white}
+.default-preview{padding:10px;background:#0b141e;border-left:2px solid #00eaff;color:#a8c0c9;font-size:11px;line-height:1.5}
+.actions{display:flex;gap:9px;padding:12px 16px}
+.action{flex:1;padding:12px 5px;background:linear-gradient(100deg,#164b55,#0e263b);border:2px solid #00eaff;border-radius:7px;color:#fff;font-size:13px;font-weight:900}
+.action:hover:not(:disabled){background:#197687}
+.preview-top{display:flex;justify-content:space-between;margin:4px 0 10px;font-size:11px;font-weight:900;color:#a3b7c3}
+.live{color:#6be5b4;font-size:9px}
+.card-stand{padding:8px;border:1px solid #294355;border-radius:12px;background:radial-gradient(circle,#19364a,#080e15 75%)}
+
+/* VCard front / in-game mint receipt back */
+.card-flip{width:100%;perspective:1200px;cursor:pointer;outline:none}
+.card-flip:focus-visible{outline:2px solid #00eaff;outline-offset:4px;border-radius:8px}
+.card-flip-inner{position:relative;width:100%;transform-style:preserve-3d;transition:transform .55s ease}
+.card-flip.flipped .card-flip-inner{transform:rotateY(180deg)}
+.card-face{width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.card-front{position:relative}
+.card-back{position:absolute;inset:0;transform:rotateY(180deg);overflow:auto;border:2px solid #bc9357;border-radius:12px;background:linear-gradient(155deg,#162b39,#080e16 78%);cursor:default}
+.receipt{min-height:100%;padding:22px 16px;display:flex;flex-direction:column;gap:19px;color:#ecf7ff}
+.receipt-heading{text-align:center;padding-bottom:12px;border-bottom:1px solid #bc9357}
+.receipt-heading strong{display:block;color:#e4c58f;letter-spacing:1px;font-size:17px}
+.receipt-heading small{display:block;margin-top:6px;color:#9cb7c4;font-size:10px}
+.receipt-row{display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #2b4557;padding-bottom:12px}
+.receipt-label{font-size:11px;font-weight:900;letter-spacing:.6px;color:#e4c58f}
+.receipt-row a{font-size:11px;color:#61e9ff;text-decoration:underline;overflow-wrap:anywhere;cursor:pointer}
+.receipt-row a:hover{color:#fff}
+.receipt-detail{font-size:9px;color:#63adff;overflow-wrap:anywhere;user-select:text}
+.receipt-pending{font-size:11px;color:#819baa}
+.receipt-tip{margin-top:auto;text-align:center;font-size:10px;color:#8faab9}
+.flip-hint{font-size:10px;font-weight:900;color:#61e9ff;letter-spacing:.3px;text-align:center;margin:0 0 9px}
+.mint-success-overlay{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;width:min(390px,calc(100% - 32px));padding:15px 16px;border:2px solid #d5b276;border-radius:10px;background:#102e36;box-shadow:0 10px 35px #000a;text-align:center;color:#f1fffd}
+.mint-success-overlay strong{display:block;font-size:15px;color:#e4c58f;letter-spacing:1px}
+.mint-success-overlay p{font-size:12px;line-height:1.5;margin:8px 0 12px}
+.mint-success-overlay button{padding:7px 18px;background:#0b1b2a;color:white;border:1px solid #bc9357;border-radius:5px}
+.wallet-check{margin:6px 0;font-size:11px;color:#fff;overflow-wrap:anywhere}
+/* Creation Unit information colors */
+.tag-nft{color:#e4c58f!important}
+.tag-address{color:#63adff!important;overflow-wrap:anywhere}
+.tag-owner{color:#fff!important;overflow-wrap:anywhere}
+.tag-balance,.money-positive{color:#4bea9b!important}
+.tag-fee,.money-fee{color:#ff4bc8!important}
+.wallet-heading{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin:-8px 0 16px;padding:9px 10px;border:1px solid #355066;border-radius:7px;background:#101b29;text-align:center;font-size:11px;font-weight:900}
+.wallet-heading .tag-address{font-family:monospace;font-size:11px;font-weight:normal}
+.info-line{margin:5px 0;line-height:1.5;overflow-wrap:anywhere}
+.nft-image-preview{display:block;max-width:100%;max-height:190px;min-height:80px;object-fit:contain;margin:10px auto;border:1px solid #bc9357;border-radius:7px;background:#08131d}
+.loaded-nft-preview{display:flex;align-items:center;justify-content:center;gap:12px;padding:7px 10px;margin:0 auto 10px;border:1px solid #294355;border-radius:7px;background:#0b1826;font-size:10px;font-weight:900}
+.loaded-nft-preview img{display:block;max-height:92px;max-width:115px;object-fit:contain;border-radius:5px}
+
+
+/* Choose creation or loading before opening the editor. */
+.entry-choice{display:flex;justify-content:center;align-items:center;gap:35px;padding:28px 10px 34px;flex-wrap:wrap}
+.choice-bubble{width:190px;aspect-ratio:1;border-radius:50%;border:3px solid #bc9357;background:radial-gradient(circle at 35% 30%,#1d5262,#0c1c2b 72%);color:#eaf9ff;box-shadow:0 0 18px #00eaff18;font-size:16px;font-weight:900;letter-spacing:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.choice-bubble:hover,.choice-bubble:focus-visible{border-color:#00eaff;box-shadow:0 0 20px #00eaff66;outline:none}
+.choice-bubble .bubble-symbol{font-size:39px;color:#e4c58f}
+.load-panel{max-width:550px;margin:18px auto 14px;padding:20px;border:1px solid #bc9357;border-radius:10px;background:#0b1826;text-align:center}
+.load-panel h2{font-size:15px;color:#e4c58f;margin:0 0 12px;letter-spacing:1px}
+.nav-back{border:1px solid #bc9357;border-radius:6px;padding:8px 13px;margin:0 0 12px;background:#102335;color:#e4c58f;font-size:11px;font-weight:900}
+.load-panel .mint-load{margin:12px 0}
+@media(max-width:500px){.choice-bubble{width:145px;font-size:13px}.entry-choice{gap:15px}}
+
+/* Paid post-mint editing and visual effects */
+.post-mint{margin-top:12px;padding:12px;border:1px solid #355066;border-radius:8px;background:#0c1926}
+.post-mint h2{margin:0 0 9px;color:#e4c58f;font-size:12px;letter-spacing:1px}
+.post-mint .mode-row{margin:0 0 10px}
+.effect-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:10px 0}
+.effect-button{padding:9px 2px;background:#0b141e;color:#bbced7;border:1px solid #355266;border-radius:5px;font-size:9px;font-weight:bold}
+.effect-button.active{color:white;border-color:#00eaff;background:#103b46}
+.post-mint .action{width:100%;font-size:11px}
+.post-mint-note{color:#a5bdc9;font-size:10px;line-height:1.5;margin:7px 0 11px}
+.mint-load{margin-top:10px;display:flex;gap:8px}
+.mint-load input{min-width:0;flex:1;padding:9px;background:#08131d;border:1px solid #355066;border-radius:5px;color:#fff;font-size:11px}
+.mint-load button{padding:8px;color:#eaf9ff;background:#122f3e;border:1px solid #bc9357;border-radius:5px;font-size:10px;font-weight:bold}
+.vcard[data-effect="glow"]{box-shadow:inset 0 0 5cqw #00eaff,0 0 5cqw #00eaff,0 0 13cqw #00eaff88}
+.vcard[data-effect="glow"] .vcard-inner{box-shadow:inset 0 0 5cqw #00eaffbb}
+.vcard[data-effect="holo"] .card-art{position:relative}
+.vcard[data-effect="holo"] .card-art:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(125deg,transparent 18%,#ff5bd02e 37%,#5df2ff45 51%,transparent 68%);mix-blend-mode:screen}
+.vcard[data-effect="ember"] .card-art{box-shadow:inset 0 0 5cqw #ff7a21,0 0 4cqw #ff7a21}
+.vcard[data-effect="ember"] .vcard-inner{background:radial-gradient(circle at 50% 5%,#602c17,#090d13 60%)}
+.status{margin-top:12px;padding:11px;border:1px solid #355066;border-radius:7px;background:#0b1723;color:#b8cbd6;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.status a{color:#e9c783}
+[hidden]{display:none!important}
+
+.vcard-host{width:100%;container-type:inline-size}
+.vcard{--accent:#2d7bdc;width:100%;border:2.4cqw solid #020305;border-radius:3.6cqw;background:#080808;color:#e0fefe;overflow:hidden;box-shadow:0 0 6cqw var(--accent)}
+.vcard-inner{border:1.2cqw solid var(--accent);border-radius:1.8cqw;overflow:hidden;background:radial-gradient(circle at 50% 5%,#1c2832,#090d13 60%)}
+.card-header{padding:3cqw 2cqw;border-bottom:.6cqw solid var(--accent);background:#03070c;text-align:center}
+.card-name{margin:0;font-size:6.5cqw;line-height:1.1;font-weight:900;letter-spacing:.3cqw;text-transform:uppercase;overflow-wrap:anywhere}
+.card-art{margin:2.1cqw;aspect-ratio:4/3;border:.9cqw solid var(--accent);border-radius:1.8cqw;background:#0b1620;overflow:hidden}
+.card-art img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.card-info{padding:2.4cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#0b131b;font-size:3.9cqw;font-weight:900}
+.card-description{min-height:17cqw;padding:2.7cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#10161b;color:#b8d7d7;font-size:3.3cqw;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.card-stats{display:flex;justify-content:space-around;padding:3cqw 2.4cqw;border-top:.6cqw solid var(--accent);background:#020508}
+.stat{flex:1;text-align:center}
+.stat+.stat{border-left:.35cqw solid #34414b}
+.stat-label{display:block;font-size:3.3cqw;font-weight:900;color:#9abbbe}
+.stat-value{font-size:7.1cqw;font-weight:900;color:#fff}
+.meta-bottom{position:relative;padding:3cqw 9.5cqw 3cqw 1cqw;border-top:.6cqw solid var(--accent);background:#111;text-align:center}
+.meta-footer-text{color:#cfcfcf;font-size:1.6cqw;white-space:nowrap}
+.rarity{position:absolute;right:1.8cqw;top:50%;transform:translateY(-50%);padding:.9cqw 1.5cqw;border-radius:1.2cqw;background:var(--accent);color:white;font-size:3.3cqw;font-weight:900}
+@media(max-width:720px){
+  .workspace{grid-template-columns:1fr}
+  .preview-wrap{grid-row:1}
+  .card-stand{max-width:355px;margin:auto}
+}
 </style>
-<link rel="stylesheet" href="assets/vhouse-layout.css">
-<link rel="stylesheet" href="assets/vhouse-vcard.css">
-<link rel="stylesheet" href="assets/vhouse-message.css">
-<link rel="stylesheet" href="assets/vhouse-info.css">
+
+<script type="importmap">
+{
+  "imports":{
+    "@solana/web3.js":"https://esm.sh/@solana/web3.js@1.99.0?bundle",
+    "@solana/spl-token":"https://esm.sh/@solana/spl-token@0.4.15?bundle&external=@solana/web3.js",
+    "@solana/spl-token-metadata":"https://esm.sh/@solana/spl-token-metadata@0.1.6?bundle&external=@solana/web3.js"
+  }
+}
+</script>
 </head>
+
 <body>
-<div class="rotate-screen">
-  <div class="rotate-icon">↻</div>
-  <h2>Rotate Your Phone</h2>
-  <p>Please turn your device sideways to play.</p>
-</div>
-<main class="game-container">
-  <div class="map-container">
-    <img class="creator-background" src="assets/Vcontainer.png" alt="VCard Creator Menu" draggable="false">
-    <div class="creator-region" id="creatorRegion">
-      <div class="creator-content" id="creatorContent">
-        <div class="workspace">
-          <section class="editor">
-            <div class="editor-head">
-              <span class="editor-title">VCARD CREATION</span>
-              <small>LEVEL 01</small>
-            </div>
-            <div class="group">
-              <div class="group-label"><b>01</b><span>CHOOSE YOUR TEAM</span></div>
-              <div class="team-grid">
-                <button class="vhouse-btn team-button active" data-team="R" type="button"><span class="symbol">🪨</span><span class="team-name">STONE</span></button>
-                <button class="vhouse-btn team-button" data-team="P" type="button"><span class="symbol">🌬️</span><span class="team-name">WIND</span></button>
-                <button class="vhouse-btn team-button" data-team="S" type="button"><span class="symbol">🗡️</span><span class="team-name">BLADE</span></button>
-              </div>
-            </div>
-            <div class="group">
-              <div class="group-label"><b>02</b><span>ENTER A NAME</span></div>
-              <input class="name-input" id="nameInput" type="text" maxlength="16" placeholder="Enter a name" value="Johnny J">
-            </div>
-            <div class="group">
-              <div class="group-label"><b>03</b><span>CHOOSE YOUR IMAGE</span></div>
-              <div class="gallery">
-                <button class="vhouse-btn gallery-tile selected" data-art="0" type="button"><img id="thumb0" alt="Traveler demo art"><span>TRAVELER</span></button>
-                <button class="vhouse-btn gallery-tile" data-art="1" type="button"><img id="thumb1" alt="Guardian demo art"><span>GUARDIAN</span></button>
-                <button class="vhouse-btn gallery-tile" data-art="2" type="button"><img id="thumb2" alt="Rebel demo art"><span>REBEL</span></button>
-              </div>
-              <label class="vhouse-btn upload" id="uploadLabel">
-                <span id="uploadText">＋ &nbsp; CHOOSE IMAGE FROM PC</span>
-                <input type="file" id="fileInput" accept="image/*">
-              </label>
-            </div>
-            <div class="group">
-              <div class="group-label"><b>04</b><span>CHARACTER DESCRIPTION</span></div>
-              <div class="mode-row">
-                <button class="vhouse-btn mode-button active" data-mode="default" type="button">DEFAULT</button>
-                <button class="vhouse-btn mode-button" data-mode="custom" type="button">WRITE MY OWN</button>
-              </div>
-              <div class="default-preview" id="defaultText">A traveler beginning their journey into the unknown.</div>
-              <textarea class="description-input" id="descriptionInput" maxlength="100" placeholder="Write your character's description..." hidden></textarea>
-            </div>
-            <div class="finish-action">
-              <button type="button" class="vhouse-btn finish-button" id="mintButton" title="Minting will be available later">MINT</button>
-              <button type="button" class="vhouse-btn finish-button" id="finishButton">FINISH</button>
-            </div>
-          </section>
-          <div class="saved-card-display" id="savedCardDisplay" hidden>
-            <div class="saved-card-inner" id="savedCardInner"></div>
-          </div>
-          <section class="preview-wrap">
-            <div class="preview-top">
-              <strong>YOUR VCARD</strong>
-              <span class="live">LIVE PREVIEW</span>
-            </div>
-            <div class="card-stand">
-              <div id="vcardHost" class="vhouse-vcard-host"></div>
-            </div>
-          </section>
+<div class="rotate-screen"><div class="rotate-icon">↻</div><h2>Rotate Your Phone</h2><p>Please turn your device sideways to play.</p></div>
+<main class="game-container"><div class="map-container">
+  <img class="creator-background" src="assets/Vcontainer.png" alt="VHouse Creation Unit background" draggable="false">
+  <div class="creator-region" id="creatorRegion"><div class="game" id="creationUnit">
+  <h1>VHOUSE — VCARD CREATION</h1>
+  <div id="walletHeader" class="wallet-heading" hidden>
+    <span class="tag-owner">WALLET OWNER:</span>
+    <span id="walletHeaderAddress" class="tag-address"></span>
+  </div>
+
+  <section class="entry-choice" id="entryMenu">
+    <button class="choice-bubble" id="chooseMintButton" type="button">
+      <span class="bubble-symbol">✦</span><span>MINT VCARD</span>
+    </button>
+    <button class="choice-bubble" id="chooseLoadButton" type="button">
+      <span class="bubble-symbol">◇</span><span>LOAD NFT</span>
+    </button>
+    <button class="choice-bubble" id="chooseBurnButton" type="button">
+      <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
+    </button>
+  </section>
+
+  <section class="load-panel" id="loadPanel" hidden>
+    <h2>LOAD EXISTING NFT</h2>
+    <div class="mint-load">
+      <input id="mintAddressInput" placeholder="NFT mint address" aria-label="NFT mint address">
+      <button id="loadMintButton" type="button">LOAD NFT</button>
+    </div>
+    <button class="nav-back" id="loadBackButton" type="button">BACK</button>
+    <div class="wallet-check" id="connectedWalletInfo" hidden></div>
+    <div class="status" id="loadStatus" hidden></div>
+  </section>
+
+  <section class="load-panel" id="burnPanel" hidden>
+    <h2>BURN VCARD — RECLAIM SOL</h2>
+    <div class="mint-load">
+      <input id="burnMintInput" placeholder="VCard mint address" aria-label="VCard mint address">
+      <button id="burnCheckButton" type="button">CHECK VCARD</button>
+    </div>
+    <div id="burnReview" hidden>
+      <img id="burnNFTImage" class="nft-image-preview" alt="NFT artwork" hidden>
+      <div class="wallet-check" id="burnWallet"></div>
+      <div class="status" id="burnInfo"></div>
+      <div class="status" id="burnPrice"></div>
+      <button class="action" id="burnSubmitButton" type="button" style="width:100%;margin-top:12px">BURN VCARD</button>
+    </div>
+    <div class="status" id="burnStatus" hidden></div>
+    <a id="burnReceiptLink" href="#" target="_blank" rel="noopener noreferrer" hidden style="display:block;margin:12px 0;color:#61e9ff;overflow-wrap:anywhere">VIEW SOLANA TRANSACTION</a>
+    <button class="nav-back" id="burnBackButton" type="button">BACK</button>
+  </section>
+
+  <button class="nav-back" id="workspaceBackButton" type="button" hidden>BACK</button>
+  <div class="workspace" id="workspace" hidden>
+    <section class="editor" id="editor">
+      <div class="editor-head">
+        <span>VCARD CREATION</span>
+        <small>LEVEL 01</small>
+      </div>
+
+      <div class="group">
+        <div class="group-label">
+          <b>01</b> CHOOSE YOUR TEAM
+        </div>
+        <div class="team-grid">
+          <button class="team-button active" data-team="R">
+            <span class="symbol">🪨</span>STONE
+          </button>
+          <button class="team-button" data-team="P">
+            <span class="symbol">🌬️</span>WIND
+          </button>
+          <button class="team-button" data-team="S">
+            <span class="symbol">🗡️</span>BLADE
+          </button>
         </div>
       </div>
-    </div>
-    <div class="creator-info-holder">
-      <div id="creatorInfoBox" role="region" aria-label="Information"></div>
-    </div>
-    <div class="finish-overlay" id="finishOverlay" hidden>
-      <div id="creatorMessage" class="vhouse-message--game" role="dialog" aria-modal="true" aria-label="Card Complete" data-vhouse-message data-header="VCARD CREATED" data-title="Card Complete" data-info="Your VCard has been saved."></div>
-    </div>
-    <a class="vhouse-btn back-button" id="backButton" href="./Vhouse.html">← BACK</a>
+
+      <div class="group">
+        <div class="group-label">
+          <b>02</b> ENTER A NAME
+        </div>
+        <input class="name-input" id="nameInput"
+               maxlength="16" value="Johnny J">
+      </div>
+
+      <div class="group">
+        <div class="group-label">
+          <b>03</b> CHOOSE YOUR IMAGE
+        </div>
+        <div class="gallery">
+          <button class="art-button selected" data-art="0">
+            <img id="thumb0" alt="Traveler">TRAVELER
+          </button>
+          <button class="art-button" data-art="1">
+            <img id="thumb1" alt="Guardian">GUARDIAN
+          </button>
+          <button class="art-button" data-art="2">
+            <img id="thumb2" alt="Rebel">REBEL
+          </button>
+        </div>
+        <label class="upload">
+          ＋ CHOOSE IMAGE FROM PC
+          <input id="fileInput" type="file"
+                 accept="image/png,image/jpeg,image/webp">
+        </label>
+        <button type="button" class="crop-launch" id="positionImageButton">POSITION IMAGE / CROP</button>
+      </div>
+
+      <div class="group">
+        <div class="group-label">
+          <b>04</b> CHARACTER DESCRIPTION
+        </div>
+        <div class="mode-row">
+          <button class="mode-button active" data-mode="default">
+            DEFAULT
+          </button>
+          <button class="mode-button" data-mode="custom">
+            WRITE MY OWN
+          </button>
+        </div>
+        <div class="default-preview" id="defaultText">
+          A traveler beginning their journey into the unknown.
+        </div>
+        <textarea class="description-input"
+                  id="descriptionInput"
+                  maxlength="100"
+                  hidden></textarea>
+      </div>
+
+      <div class="actions" id="editorActions">
+        <button class="action" id="mintButton">
+          MINT · <span class="tag-fee">0.001 SOL</span>
+        </button>
+        <button class="action" id="downloadButton" disabled>
+          PREPARING VCARD...
+        </button>
+      </div>
+    </section>
+
+    <section class="preview-wrap">
+      <div class="preview-top">
+        <strong>YOUR VCARD</strong>
+        <span class="live">● LIVE PREVIEW</span>
+      </div>
+      <div class="loaded-nft-preview" id="loadedNFTPreview" hidden>
+        <img id="loadedNFTImage" alt="Loaded NFT artwork">
+        <span class="tag-nft">NFT IMAGE</span>
+      </div>
+      <div class="flip-hint" id="flipHint" hidden>CLICK VCARD TO VIEW RECEIPT ↻</div>
+      <div class="card-stand">
+        <div class="card-flip" id="cardFlip" role="button" tabindex="0"
+             aria-label="Flip VCard to view receipt" aria-pressed="false">
+          <div class="card-flip-inner">
+            <div class="card-face card-front">
+              <div class="vcard-host" id="vcardHost"></div>
+            </div>
+            <div class="card-face card-back">
+              <div class="receipt">
+                <div class="receipt-heading">
+                  <strong>VCARD RECEIPT</strong>
+                  <small>VHOUSE · NFT INFORMATION</small>
+                </div>
+                <div class="receipt-row">
+                  <span class="receipt-label">MINT LINK</span>
+                  <span class="receipt-pending" id="mintPending">Not minted (test)</span>
+                  <a id="receiptMint" href="#" target="_blank" rel="noopener noreferrer" hidden>VIEW MINT</a>
+                  <span class="receipt-detail" id="mintDetail"></span>
+                </div>
+                <div class="receipt-row">
+                  <span class="receipt-label">FULL VCARD PNG</span>
+                  <span class="receipt-pending" id="imagePending">Awaiting IPFS upload</span>
+                  <a id="receiptImage" href="#" target="_blank" rel="noopener noreferrer" hidden>VIEW FULL VCARD PNG</a>
+                  <span class="receipt-detail" id="imageDetail"></span>
+                </div>
+                <div class="receipt-row">
+                  <span class="receipt-label">NFT JSON</span>
+                  <span class="receipt-pending" id="jsonPending">Awaiting IPFS upload</span>
+                  <a id="receiptJson" href="#" target="_blank" rel="noopener noreferrer" hidden>VIEW NFT JSON</a>
+                  <span class="receipt-detail" id="jsonDetail"></span>
+                </div>
+                <div class="receipt-tip">Click the card to flip back</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="post-mint" id="postMint" hidden>
+        <h2>EXISTING VCARD — UPDATE / CUSTOMIZE</h2>
+        <div class="mode-row">
+          <button class="mode-button" id="updateModeButton">UPDATE · <span class="tag-fee">$0.75</span></button>
+          <button class="mode-button" id="customModeButton">CUSTOMIZE · <span class="tag-fee">$0.75</span></button>
+        </div>
+        <div class="effect-grid" id="effectGrid" hidden>
+          <button class="effect-button active" data-effect="none">NONE</button>
+          <button class="effect-button" data-effect="glow">GLOW</button>
+          <button class="effect-button" data-effect="holo">HOLO</button>
+          <button class="effect-button" data-effect="ember">EMBER</button>
+        </div>
+        <div class="post-mint-note" id="operationNote">Select UPDATE to edit name and description, or CUSTOMIZE to apply a card effect. USD price is converted to SOL when submitted; <span class="tag-fee">$0.50</span> goes to VHouse and <span class="tag-balance">$0.25</span> to this NFT.</div>
+        <button class="action" id="applyButton" hidden>CONFIRM UPDATE</button>
+      </div>
+      <div class="status" id="status">
+        Mint creation fee: <span class="tag-fee">0.001 SOL</span> paid to VHouse.
+        Solana network fees and rent are separate.
+      </div>
+    </section>
   </div>
-</main>
+  <div class="crop-overlay" id="cropOverlay" hidden>
+    <section class="crop-panel" role="dialog" aria-modal="true" aria-labelledby="cropHeading">
+      <h2 id="cropHeading">POSITION VCARD IMAGE</h2>
+      <p>Drag the image with your mouse or finger. Zoom to frame the crop.</p>
+      <div class="crop-frame" id="cropFrame">
+        <img id="cropImage" alt="VCard image crop preview" draggable="false">
+      </div>
+      <label class="crop-zoom" for="cropZoom">ZOOM
+        <input id="cropZoom" type="range" min="1" max="3" step="0.01" value="1">
+      </label>
+      <div class="crop-actions">
+        <button class="crop-cancel" id="cropCancel" type="button">CANCEL</button>
+        <button class="crop-confirm" id="cropConfirm" type="button">CONFIRM CROP</button>
+      </div>
+    </section>
+  </div>
+  <div class="mint-success-overlay" id="mintSuccessOverlay" role="status" aria-live="polite" hidden>
+    <strong>SUCCESSFULLY MINTED VCARD</strong>
+    <p>Your VCard is minted and verified. The receipt is on the back and the PNG download has started.</p>
+    <button id="retryClosetButton" type="button" hidden>RETRY CLOSET SAVE</button>
+    <button id="dismissMintSuccess" type="button">CLOSE</button>
+  </div>
+</div></div>
+<a class="vhouse-btn vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
+</div></main>
+<script>
+/* Fit the complete Creation Unit inside the shared VHouse game frame. */
+(() => {
+  const region=document.getElementById("creatorRegion");
+  const unit=document.getElementById("creationUnit");
+  const map=document.querySelector(".map-container");
+  for(const id of ["cropOverlay","mintSuccessOverlay"]){
+    const overlay=document.getElementById(id);
+    if(overlay) map.appendChild(overlay);
+  }
+  const fit=()=>{
+    const width=unit.offsetWidth||900;
+    const height=unit.scrollHeight||1;
+    const scale=Math.max(.05,Math.min(region.clientWidth/width,region.clientHeight/height,1));
+    unit.style.transform="scale("+scale+")";
+  };
+  new ResizeObserver(fit).observe(region);
+  new ResizeObserver(fit).observe(unit);
+  window.addEventListener("resize",fit);
+  fit();
+})();
+</script>
 <script src="assets/vhouse-public-config.js"></script>
 <script src="assets/vhouse-auth.js"></script>
 <script src="assets/vhouse-cards.js"></script>
-<script src="assets/vhouse-vcard.js"></script>
-<script src="assets/vhouse-message.js"></script>
-<script src="assets/vhouse-info.js"></script>
-<script>
+<script type="module">
+import {toCanvas} from
+  "https://esm.sh/html-to-image@1.11.13";
+
+import {
+  Connection,
+  PublicKey,
+  Keypair,
+  Transaction,
+  SystemProgram
+} from "@solana/web3.js";
+
+import {
+  TOKEN_2022_PROGRAM_ID,
+  ExtensionType,
+  AuthorityType,
+  getMintLen,
+  getMint,
+  getAccount,
+  getNonTransferable,
+  getNonTransferableAccount,
+  getMetadataPointerState,
+  getMintCloseAuthority,
+  getTokenMetadata,
+  createInitializeMintCloseAuthorityInstruction,
+  TYPE_SIZE,
+  LENGTH_SIZE,
+  createInitializeMetadataPointerInstruction,
+  createInitializeNonTransferableMintInstruction,
+  createInitializeMint2Instruction,
+  createAssociatedTokenAccountIdempotentInstruction,
+  getAssociatedTokenAddressSync,
+  createMintToInstruction,
+  createSetAuthorityInstruction,
+  createBurnCheckedInstruction,
+  createCloseAccountInstruction
+} from "@solana/spl-token";
+
+import {
+  pack,
+  Field,
+  createUpdateFieldInstruction,
+  createInitializeInstruction
+} from "@solana/spl-token-metadata";
+
+const NFT_PRICE_SOL = 0.001;
+const NFT_PRICE_LAMPORTS = 1_000_000;
+const EDIT_PRICE_USD = 0.75;
+const BURN_PRICE_USD = 3.00;
+const NFT_DEPOSIT_USD = 0.25; // Exact amount from each $0.75 paid edit.
+const VHOUSE_WALLET = new PublicKey(
+  "CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK"
+);
+const MPL_CORE_PROGRAM_ID = new PublicKey(
+  "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+);
+const SOLSCAN = "https://solscan.io/";
 const $ = id => document.getElementById(id);
-$("mintButton").addEventListener("click",()=>alert("Minting is not connected yet. You can finish creating your VCard without minting."));
-const defaultDescription = "A traveler beginning their journey into the unknown.";
-const teamColors = { R:"#2d7bdc", P:"#1abf96", S:"#b16df4" };
-let descriptionMode="default", artIndex=0, uploadedImage=null, uploadedUrl=null;
 
-/* Keep the full editor and card inside the image's white rectangle at every landscape size. */
-function fitCreator() {
-  const r=$("creatorRegion").getBoundingClientRect();
-  const scale=Math.min(r.width/790,r.height/530);
-  $("creatorContent").style.transform="scale("+scale+")";
+function showConnectedWallet(publicKey) {
+  const address = publicKey?.publicKey || publicKey;
+  const text = address?.toBase58?.() || (typeof address === "string" ? address : "");
+  $("walletHeader").hidden = !text;
+  $("walletHeaderAddress").textContent = text;
 }
-new ResizeObserver(fitCreator).observe($("creatorRegion"));
-window.addEventListener("resize",fitCreator);
+const walletProvider = window.phantom?.solana || window.solana;
+if (walletProvider?.isConnected && walletProvider.publicKey) {
+  showConnectedWallet(walletProvider.publicKey);
+}
+if (typeof walletProvider?.on === "function") {
+  walletProvider.on("connect",key => showConnectedWallet(key || walletProvider.publicKey));
+  walletProvider.on("accountChanged",key => showConnectedWallet(key));
+  walletProvider.on("disconnect",() => showConnectedWallet(null));
+}
 
-/* Embedded demo character images; replace with in-game files when ready. */
-const palettes=[
-  {bg:"#152b40",light:"#2c9bd7",suit:"#124362",armor:"#347b99",face:"#d6a47c",visor:"#62f0ff"},
-  {bg:"#30263c",light:"#aa67dd",suit:"#39304d",armor:"#8276ac",face:"#b98979",visor:"#ffc4ff"},
-  {bg:"#42282d",light:"#ff815f",suit:"#4c2635",armor:"#bb6056",face:"#bc8667",visor:"#ffd18a"}
+
+// NFT marketplace name only. The printed VCard keeps its player-given name.
+function nftMetadataName(name) {
+  return "Vcard " + String(name || "").trim().replace(/^Vcard\s+/i, "");
+}
+function cardDisplayName(name) {
+  return String(name || "").replace(/^Vcard\s+/i, "");
+}
+
+/* Reuse the existing VHouse login session and Supabase client. */
+async function vhouseClient(){
+  if(!window.VHouseAuth) throw Error("VHouse authentication is unavailable.");
+  await window.VHouseAuth.ready;
+  return window.VHouseAuth.getClient();
+}
+async function requireVHousePlayer(){
+  await vhouseClient();
+  const user=window.VHouseAuth.getUser();
+  if(!user?.id) throw Error("Sign in to VHouse before minting a VCard.");
+  return user;
+}
+
+const RPC_URLS = [
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.solanatracker.io/public",
+  "https://api.mainnet-beta.solana.com"
 ];
-function portraitSVG(p,index) {
-  const headpieces=[
-    '<path d="M201 271 Q190 111 320 104 Q447 111 439 271 L411 234 L393 161 Q320 123 247 162 L225 243Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/><path d="M237 170 Q320 116 402 170" fill="none" stroke="LIGHT" stroke-width="6" opacity=".8"/>',
-    '<path d="M215 258 L209 154 L255 92 L385 92 L431 154 L425 258 L395 226 L380 139 L260 139 L245 226Z" fill="ARMOR" stroke="#151e2b" stroke-width="12"/><path d="M275 98 L320 60 L365 98 L354 125 L286 125Z" fill="LIGHT" opacity=".9"/>',
-    '<path d="M209 239 L188 172 L234 183 L218 109 L284 142 L330 93 L348 145 L426 115 L405 198 L440 231 L407 254 Q320 189 233 263Z" fill="#211c29" stroke="LIGHT" stroke-width="5"/>'
-  ];
-  let svg=[
-    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">',
-    '<defs><radialGradient id="sky"><stop stop-color="LIGHT" stop-opacity=".55"/><stop offset="1" stop-color="BG"/></radialGradient><linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="ARMOR"/><stop offset=".5" stop-color="SUIT"/><stop offset="1" stop-color="#0c1420"/></linearGradient><linearGradient id="skin"><stop stop-color="FACE"/><stop offset="1" stop-color="#634941"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="12"/></filter></defs>',
-    '<rect width="640" height="480" fill="url(#sky)"/>',
-    '<circle cx="320" cy="200" r="151" fill="LIGHT" opacity=".17" filter="url(#glow)"/><circle cx="320" cy="200" r="134" fill="none" stroke="LIGHT" stroke-width="2" opacity=".45"/><circle cx="320" cy="200" r="165" fill="none" stroke="LIGHT" stroke-dasharray="22 12" opacity=".2"/>',
-    '<path d="M0 332 L105 255 L180 306 L265 227 L345 315 L439 255 L526 311 L640 245 L640 480 L0 480Z" fill="#0b1524" opacity=".8"/>',
-    '<g stroke="LIGHT" opacity=".23"><path d="M0 390H640 M0 430H640"/><path d="M130 480L270 345 M510 480L370 345"/><path d="M0 458L260 345 M640 458L380 345"/><path d="M50 210H150 M490 210H590"/><path d="M90 240H160 M480 240H550"/></g>',
-    '<path d="M118 480 L138 394 Q157 351 222 330 L273 313 L368 313 L418 330 Q484 351 504 394 L522 480Z" fill="url(#metal)" stroke="#0a111b" stroke-width="13"/>',
-    '<path d="M262 327 L320 394 L378 327 L368 480 L273 480Z" fill="#07131f"/><path d="M236 334 L320 421 L404 334" fill="none" stroke="LIGHT" stroke-width="7" opacity=".85"/>',
-    '<path d="M140 404 L213 363 L252 401 L222 480 L110 480Z" fill="ARMOR" stroke="#132131" stroke-width="9"/><path d="M500 404 L427 363 L388 401 L418 480 L530 480Z" fill="ARMOR" stroke="#132131" stroke-width="9"/>',
-    '<path d="M289 286 H351 L356 353 L320 389 L284 353Z" fill="url(#skin)" stroke="#16202b" stroke-width="7"/>',
-    '<ellipse cx="320" cy="225" rx="89" ry="122" fill="url(#skin)" stroke="#16202b" stroke-width="9"/>',
-    headpieces[index],
-    '<path d="M256 230 L302 231 M338 231 L384 230" stroke="#19202a" stroke-width="14" stroke-linecap="round"/><path d="M263 232 H297 M343 232 H377" stroke="VISOR" stroke-width="5" stroke-linecap="round"/>',
-    '<path d="M288 295 Q320 312 351 295" fill="none" stroke="#46343b" stroke-width="6" opacity=".8"/>',
-    '<path d="M320 411 L338 434 L320 457 L302 434Z" fill="LIGHT" stroke="#b0e6ef" stroke-width="3"/>',
-    '<path d="M0 0H640V480H0Z" fill="none" stroke="LIGHT" stroke-width="8" opacity=".16"/>',
-    '</svg>'
-  ].join("");
-  const colors={BG:p.bg,LIGHT:p.light,SUIT:p.suit,ARMOR:p.armor,FACE:p.face,VISOR:p.visor};
-  svg=svg.replace(/\b(BG|LIGHT|SUIT|ARMOR|FACE|VISOR)\b/g,m=>colors[m]);
-  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+
+let rpc = null;
+
+async function getRpc() {
+  if (rpc) return rpc;
+
+  let error;
+
+  for (const url of RPC_URLS) {
+    try {
+      const candidate = new Connection(url, "confirmed");
+      await candidate.getLatestBlockhash("confirmed");
+      rpc = candidate;
+      return rpc;
+    } catch (e) {
+      error = e;
+    }
+  }
+
+  throw Error(
+    "Solana Mainnet RPC unavailable: " +
+    (error?.message || "request failed")
+  );
 }
-const art=palettes.map(portraitSVG);
-art.forEach((src,i)=>{ $("thumb"+i).src=src; });
-function previewData() {
+
+const teams = {
+  R:{name:"STONE",color:"#2d7bdc"},
+  P:{name:"WIND",color:"#1abf96"},
+  S:{name:"BLADE",color:"#b16df4"}
+};
+
+const footer =
+  "Play directly inside the Zetsu Wall feed. " +
+  "No downloads. No account needed. Uploaded Nov 2025";
+
+const baseDescription =
+  "A traveler beginning their journey into the unknown.";
+
+const state = {
+  team:"R",
+  art:0,
+  image:null,
+  effect:"none",
+  mode:"default"
+};
+
+let busy = false;
+let job = null;
+let minted = false;
+let capturedPNG = null;
+let captureTimer = null;
+let captureVersion = 0;
+let editMode = null;
+let pendingOperation = null;
+
+function showScreen(screen) {
+  if (screen !== "workspace") closeCropEditor();
+  $("entryMenu").hidden = screen !== "menu";
+  $("loadPanel").hidden = screen !== "load";
+  $("burnPanel").hidden = screen !== "burn";
+  $("workspace").hidden = screen !== "workspace";
+  $("workspaceBackButton").hidden = screen !== "workspace";
+}
+
+function resetForMint() {
+  showNFTImage("loadedNFTImage",null);
+  job = null;
+  minted = false;
+  editMode = null;
+  pendingOperation = null;
+  state.team = "R";
+  state.art = 0;
+  state.image = null;
+  state.effect = "none";
+  state.mode = "default";
+  $("nameInput").value = "Johnny J";
+  $("descriptionInput").value = "";
+  $("descriptionInput").hidden = true;
+  $("defaultText").hidden = false;
+  paintMoney($("mintButton"),"MINT · 0.001 SOL",true);
+  $("editorActions").hidden = false;
+  $("postMint").hidden = true;
+  $("effectGrid").hidden = true;
+  $("applyButton").hidden = true;
+  $("mintPending").hidden = false;
+  $("mintPending").textContent = "Not minted (test)";
+  $("imagePending").hidden = false;
+  $("imagePending").textContent = "Awaiting IPFS upload";
+  $("jsonPending").hidden = false;
+  $("jsonPending").textContent = "Awaiting IPFS upload";
+  for (const id of ["receiptMint","receiptImage","receiptJson"]) $(id).hidden = true;
+  for (const id of ["mintDetail","imageDetail","jsonDetail"]) $(id).textContent = "";
+  document.querySelectorAll(".team-button").forEach(b =>
+    b.classList.toggle("active",b.dataset.team === "R")
+  );
+  document.querySelectorAll(".art-button").forEach(b =>
+    b.classList.toggle("selected",b.dataset.art === "0")
+  );
+  document.querySelectorAll(".mode-button[data-mode]").forEach(b =>
+    b.classList.toggle("active",b.dataset.mode === "default")
+  );
+  cardFlip.classList.remove("flipped");
+  cardFlip.setAttribute("aria-pressed","false");
+  cardFlip.setAttribute("aria-label","Flip VCard to view receipt");
+  $("flipHint").hidden = true;
+  $("mintSuccessOverlay").hidden = true;
+  message("Mint creation fee: 0.001 SOL paid to VHouse. Solana network fees and rent are separate.");
+  lock(false);
+  refresh();
+}
+
+$("chooseMintButton").onclick = () => {
+  if (pendingOperation?.signature || (job?.signature && !minted)) {
+    showScreen("workspace");
+    message("A submitted transaction must be verified before starting another VCard.");
+    return;
+  }
+  resetForMint();
+  showScreen("workspace");
+};
+$("chooseLoadButton").onclick = () => {
+  $("mintSuccessOverlay").hidden = true;
+  $("connectedWalletInfo").hidden = true;
+  showScreen("load");
+};
+$("loadBackButton").onclick = () => showScreen("menu");
+$("chooseBurnButton").onclick = () => showScreen("burn");
+$("burnBackButton").onclick = () => showScreen("menu");
+$("workspaceBackButton").onclick = () => showScreen("menu");
+
+function paintMoney(element,text,feeByDefault = false) {
+  const message = String(text ?? "");
+  element.replaceChildren();
+  const pattern = /(?:\$\d+(?:\.\d+)?|\b\d+(?:\.\d+)?\s+SOL\b)/gi;
+  let from = 0, found;
+  while ((found = pattern.exec(message))) {
+    element.append(document.createTextNode(message.slice(from,found.index)));
+    const context = message.slice(Math.max(0,found.index-70),found.index);
+    const span = document.createElement("span");
+    span.className = feeByDefault || /(?:fee|charge|confirm update|confirm customize|VHouse received|TOTAL TO PAY)[^.!|]*$/i.test(context)
+      ? "tag-fee" : "tag-balance";
+    span.textContent = found[0];
+    element.append(span);
+    from = pattern.lastIndex;
+  }
+  element.append(document.createTextNode(message.slice(from)));
+}
+
+function message(text) {
+  paintMoney($("status"),text);
+}
+
+$("dismissMintSuccess").onclick = () => {
+  $("mintSuccessOverlay").hidden = true;
+};
+
+function lock(value) {
+  busy = value;
+  $("mintButton").disabled = value || minted;
+  $("downloadButton").disabled = value || !capturedPNG;
+  const canUpdateCard = minted && editMode === "update";
+  $("nameInput").disabled = value || (minted && !canUpdateCard);
+  $("descriptionInput").disabled = value || (minted && !canUpdateCard);
+  document.querySelectorAll(".team-button,.art-button,#fileInput").forEach(el => {
+    el.disabled = value || (minted && !canUpdateCard) || (!!job && !minted);
+  });
+  document.querySelectorAll(".mode-button[data-mode]").forEach(el => {
+    el.disabled = value || (minted && !canUpdateCard);
+  });
+  document.querySelectorAll("#updateModeButton,#customModeButton,.effect-button").forEach(el => {
+    el.disabled = value;
+  });
+  $("applyButton").disabled = value;
+  $("loadMintButton").disabled = value;
+  // Positioning is available as soon as an NFT image is loaded;
+  // an UPDATE or CUSTOMIZE selection is not required to crop locally.
+  const canPosition = !value && !pendingOperation &&
+    (!job || (minted && job.loaded));
+  $("positionImageButton").disabled = !canPosition;
+}
+
+/* Flip between the VCard face and its in-game receipt. */
+const cardFlip = $("cardFlip");
+
+function flipCard() {
+  const flipped = cardFlip.classList.toggle("flipped");
+  cardFlip.setAttribute("aria-pressed",String(flipped));
+  cardFlip.setAttribute("aria-label",flipped
+    ? "Flip receipt back to VCard"
+    : "Flip VCard to view receipt");
+}
+
+cardFlip.addEventListener("click",event => {
+  if (event.target.closest("a")) return;
+  flipCard();
+});
+
+cardFlip.addEventListener("keydown",event => {
+  if (event.target !== cardFlip) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    flipCard();
+  }
+});
+
+/* Artwork */
+
+function portrait(p,index) {
+  const helmets = [
+    '<path d="M210 245 Q175 85 320 91 Q465 85 430 245 L405 190 Q320 120 235 190Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/>',
+    '<path d="M205 250 L205 130 L265 73 L375 73 L435 130 L435 250 L400 205 L390 135 L250 135 L240 205 L430 245 L405 190 Q320 120 235 190Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/>',
+    '<path d="M205 245 L185 170 L240 175 L230 108 L285 145 L330 88 L350 142 L425 115 L405 196 L445 235Z" fill="#211c29" stroke="LIGHT" stroke-width="7"/>'
+  ];
+
+  let svg = `
+  <svg xmlns="http://www.w3.org/2000/svg"
+       width="640" height="480" viewBox="0 0 640 480">
+    <defs>
+      <radialGradient id="sky">
+        <stop stop-color="LIGHT" stop-opacity=".5"/>
+        <stop offset="1" stop-color="BG"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="640" height="480" fill="url(#sky)"/>
+    <circle cx="320" cy="205" r="158"
+            fill="none" stroke="LIGHT"
+            stroke-width="5" opacity=".5"/>
+
+    <path d="M0 345 L110 250 L180 305
+             L260 230 L350 315 L440 255
+             L530 315 L640 260 V480 H0Z"
+          fill="#0b1524"/>
+
+    <path d="M115 480 L145 380 Q165 320
+             260 305 H380 Q475 320 495 380
+             L525 480Z"
+          fill="ARMOR" stroke="#0a111b"
+          stroke-width="12"/>
+
+    <path d="M285 280 H355 L360 353
+             L320 389 L280 353Z"
+          fill="FACE"/>
+
+    <ellipse cx="320" cy="225"
+             rx="89" ry="120"
+             fill="FACE"
+             stroke="#16202b"
+             stroke-width="9"/>
+
+    ${helmets[index]}
+
+    <path d="M258 232 H300 M340 232 H382"
+          stroke="#17202a"
+          stroke-width="15"
+          stroke-linecap="round"/>
+
+    <path d="M265 232 H295 M345 232 H375"
+          stroke="LIGHT" stroke-width="5"/>
+
+    <path d="M290 295 Q320 313 350 295"
+          fill="none" stroke="#50343b"
+          stroke-width="6"/>
+
+    <path d="M320 400 L340 430
+             L320 462 L300 430Z"
+          fill="LIGHT"/>
+  </svg>`;
+
+  svg = svg.replace(
+    /\b(BG|LIGHT|ARMOR|FACE)\b/g,
+    key => ({
+      BG:p.bg,
+      LIGHT:p.light,
+      ARMOR:p.armor,
+      FACE:p.face
+    })[key]
+  );
+
+  return "data:image/svg+xml;charset=utf-8," +
+    encodeURIComponent(svg);
+}
+
+const arts = [
+  portrait({
+    bg:"#152b40",
+    light:"#2c9bd7",
+    armor:"#347b99",
+    face:"#d6a47c"
+  },0),
+
+  portrait({
+    bg:"#30263c",
+    light:"#aa67dd",
+    armor:"#8276ac",
+    face:"#b98979"
+  },1),
+
+  portrait({
+    bg:"#42282d",
+    light:"#ff815f",
+    armor:"#bb6056",
+    face:"#bc8667"
+  },2)
+];
+
+arts.forEach((src,i) => {
+  $("thumb"+i).src = src;
+});
+
+function cardData() {
   return {
-    team: document.querySelector(".team-button.active")?.dataset.team || "R",
-    name: $("nameInput").value.trim() || "VCARD NAME",
-    image: uploadedImage || art[artIndex],
-    description: descriptionMode === "default" ? defaultDescription : $("descriptionInput").value.slice(0,100),
-    level:1, atk:100, def:100, footer:VHouseVCard.defaultFooter
+    name:$("nameInput").value.trim() || "VCARD NAME",
+    team:state.team,
+    image:state.image || arts[state.art],
+    description:state.mode === "default"
+      ? baseDescription
+      : $("descriptionInput").value.slice(0,100),
+    level:1,
+    atk:100,
+    def:100,
+    price:NFT_PRICE_SOL,
+    effect:state.effect || "none",
+    imageMode:state.image ? "custom" : "preset",
+    artIndex:state.art,
+    footer
   };
 }
-function refreshPreview() { VHouseVCard.render("vcardHost", previewData()); }
-function updateArt() { refreshPreview(); }
-function setTeam(value) {
-  document.querySelectorAll(".team-button").forEach(btn=>btn.classList.toggle("active",btn.dataset.team===value));
-  refreshPreview();
-}
-document.querySelectorAll(".team-button").forEach(btn=>btn.addEventListener("click",()=>setTeam(btn.dataset.team)));
-$("nameInput").addEventListener("input",refreshPreview);
-document.querySelectorAll(".gallery-tile").forEach(tile=>tile.addEventListener("click",()=>{
-  artIndex=Number(tile.dataset.art);
-  uploadedImage=null;
-  $("uploadLabel").classList.remove("selected");
-  document.querySelectorAll(".gallery-tile").forEach(t=>t.classList.toggle("selected",t===tile));
-  updateArt();
-}));
-$("fileInput").addEventListener("change",e=>{
-  const file=e.target.files[0];
-  if(!file||!file.type.startsWith("image/")) return;
-  if(uploadedUrl) URL.revokeObjectURL(uploadedUrl);
-  uploadedUrl=URL.createObjectURL(file);
-  uploadedImage=uploadedUrl;
-  document.querySelectorAll(".gallery-tile").forEach(t=>t.classList.remove("selected"));
-  $("uploadLabel").classList.add("selected");
-  $("uploadText").textContent="✓  "+file.name;
-  updateArt();
-});
-function updateDescription() {
-  refreshPreview();
-}
-document.querySelectorAll(".mode-button").forEach(button=>button.addEventListener("click",()=>{
-  descriptionMode=button.dataset.mode;
-  document.querySelectorAll(".mode-button").forEach(b=>b.classList.toggle("active",b===button));
-  $("defaultText").hidden=descriptionMode!=="default";
-  $("descriptionInput").hidden=descriptionMode!=="custom";
-  updateDescription();
-}));
-$("descriptionInput").addEventListener("input",updateDescription);
-// Save the completed non-minted VCard through the authenticated Supabase connection.
-async function saveCardAndFinish() {
-  const imageElement=$("vcardHost").querySelector(".card-art img");
-  let savedImage=imageElement.src;
 
-  // Blob URLs from PC uploads only last for this browser session.
-  // Store a compact image data URL so the saved card contains its artwork.
-  if (uploadedImage) {
-    await imageElement.decode();
-    const canvas=document.createElement("canvas");
-    canvas.width=640;
-    canvas.height=480;
-    const context=canvas.getContext("2d");
-    const width=imageElement.naturalWidth;
-    const height=imageElement.naturalHeight;
-    const ratio=Math.max(640/width,480/height);
-    const scaledWidth=width*ratio;
-    const scaledHeight=height*ratio;
-    context.drawImage(imageElement,(640-scaledWidth)/2,(480-scaledHeight)/2,scaledWidth,scaledHeight);
-    savedImage=canvas.toDataURL("image/jpeg",0.8);
+function renderCard(host,data) {
+  host.innerHTML = `
+    <div class="vcard">
+      <div class="vcard-inner">
+        <header class="card-header">
+          <h2 class="card-name"></h2>
+        </header>
+
+        <div class="card-art">
+          <img alt="VCard artwork">
+        </div>
+
+        <div class="card-info"></div>
+        <div class="card-description"></div>
+
+        <div class="card-stats">
+          <div class="stat">
+            <span class="stat-label">ATK</span>
+            <span class="stat-value"
+                  data-stat="atk"></span>
+          </div>
+
+          <div class="stat">
+            <span class="stat-label">DEF</span>
+            <span class="stat-value"
+                  data-stat="def"></span>
+          </div>
+        </div>
+
+        <div class="meta-bottom">
+          <div class="meta-footer-text"></div>
+          <div class="rarity"></div>
+        </div>
+      </div>
+    </div>`;
+
+  const card = host.querySelector(".vcard");
+  card.dataset.effect = data.effect || "none";
+
+  card.style.setProperty(
+    "--accent",
+    teams[data.team].color
+  );
+
+  card.querySelector(".card-name").textContent =
+    data.name.slice(0,16);
+
+  card.querySelector(".card-art img").src =
+    data.image;
+
+  card.querySelector(".card-info").textContent =
+    "LEVEL " + data.level;
+
+  card.querySelector(".card-description").textContent =
+    data.description;
+
+  card.querySelector('[data-stat="atk"]').textContent =
+    data.atk;
+
+  card.querySelector('[data-stat="def"]').textContent =
+    data.def;
+
+  card.querySelector(".meta-footer-text").textContent =
+    data.footer;
+
+  card.querySelector(".rarity").textContent =
+    data.team;
+}
+
+function refresh() {
+  if (!busy && (!job || minted)) {
+    renderCard($("vcardHost"),cardData());
+    queueCardCapture();
   }
-
-  const savedCard=await VHouseCardStore.saveCard({...previewData(), image:savedImage});
-
-  // Move the original card into the space formerly occupied by the creator.
-  const completedCard=$("vcardHost");
-  VHouseVCard.render(completedCard,savedCard);
-  $("savedCardInner").replaceChildren(completedCard);
-  document.querySelector(".editor").hidden=true;
-  document.querySelector(".preview-wrap").hidden=true;
-  $("savedCardDisplay").hidden=false;
-  VHouseMessage.set("creatorMessage", {header:"VCARD CREATED", title:"Card Complete", info:String(savedCard.name || "VCard") + " has been saved."});
-  $("finishOverlay").hidden=false;
-  $("backButton").hidden=false;
 }
 
-$("finishButton").addEventListener("click",async()=>{
+/* Position/crop image: drag by mouse or touch and crop only on CONFIRM. */
+let cropSession = null;
+let cropOpening = false;
+let cropPointer = null;
+
+function mayPositionImage() {
+  return !busy && !pendingOperation && !cropOpening &&
+    (!job || (minted && job.loaded));
+}
+
+function cropGeometry() {
+  if (!cropSession) return null;
+  const frame = $("cropFrame");
+  const width = frame.clientWidth;
+  const height = frame.clientHeight;
+  if (!width || !height) return null;
+  const image = cropSession.image;
+  const baseScale = Math.max(
+    width / image.naturalWidth,
+    height / image.naturalHeight
+  );
+  const scale = baseScale * cropSession.zoom;
+  const drawnWidth = image.naturalWidth * scale;
+  const drawnHeight = image.naturalHeight * scale;
+  const maxX = Math.max(0,(drawnWidth - width)/2);
+  const maxY = Math.max(0,(drawnHeight - height)/2);
+  cropSession.panX = Math.min(maxX,Math.max(-maxX,cropSession.panX));
+  cropSession.panY = Math.min(maxY,Math.max(-maxY,cropSession.panY));
+  return {
+    width,height,drawnWidth,drawnHeight,
+    left:(width-drawnWidth)/2+cropSession.panX,
+    top:(height-drawnHeight)/2+cropSession.panY
+  };
+}
+
+function drawCropPreview() {
+  const rect = cropGeometry();
+  if (!rect) return;
+  const image = $("cropImage");
+  image.style.width = rect.drawnWidth + "px";
+  image.style.height = rect.drawnHeight + "px";
+  image.style.left = rect.left + "px";
+  image.style.top = rect.top + "px";
+}
+
+function closeCropEditor() {
+  cropPointer = null;
+  cropSession = null;
+  $("cropOverlay").hidden = true;
+}
+
+async function openCropEditor(source,artIndex = null) {
+  if (!mayPositionImage()) return;
+  cropOpening = true;
   try {
-    await saveCardAndFinish();
-  } catch(error) {
-    console.error("Could not save VCard:",error);
-    alert("Card could not be saved: " + (error.message || "Unknown error"));
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw Error("The selected image could not be loaded.");
+    }
+    if (busy || pendingOperation) return;
+    cropSession = {image,artIndex,zoom:1,panX:0,panY:0};
+    $("cropImage").src = source;
+    $("cropZoom").value = "1";
+    $("cropOverlay").hidden = false;
+    drawCropPreview();
+    $("cropConfirm").focus();
+  } catch (error) {
+    message("Image crop error: " + shortError(error));
+  } finally {
+    cropOpening = false;
   }
+}
+
+$("positionImageButton").onclick = () => {
+  if (!mayPositionImage()) return;
+  openCropEditor(state.image || arts[state.art]);
+};
+
+$("cropCancel").onclick = closeCropEditor;
+$("cropZoom").oninput = event => {
+  if (!cropSession) return;
+  cropSession.zoom = Number(event.target.value);
+  drawCropPreview();
+};
+
+$("cropFrame").addEventListener("pointerdown",event => {
+  if (!cropSession || cropPointer) return;
+  event.preventDefault();
+  cropPointer = {id:event.pointerId,x:event.clientX,y:event.clientY};
+  $("cropFrame").setPointerCapture(event.pointerId);
 });
-$("finishOverlay").addEventListener("click",e=>{ if(e.target===$("finishOverlay")) $("finishOverlay").hidden=true; });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("finishOverlay").hidden=true; });
-VHouseInfo.set("#creatorInfoBox", {heading:"CREATE YOUR VCARD", content:"Choose your team: STONE, WIND, or BLADE. Give your VCard a name, select an image or upload your own, and add a character description.\n\nWhen you're happy with your creation, press FINISH to save your VCard. Your card will be stored in your Closet, where you can select it for your adventures."});
-setTeam("R");
-updateArt();
-updateDescription();
-fitCreator();
+$("cropFrame").addEventListener("pointermove",event => {
+  if (!cropSession || !cropPointer || cropPointer.id !== event.pointerId) return;
+  event.preventDefault();
+  cropSession.panX += event.clientX - cropPointer.x;
+  cropSession.panY += event.clientY - cropPointer.y;
+  cropPointer.x = event.clientX;
+  cropPointer.y = event.clientY;
+  drawCropPreview();
+});
+for (const name of ["pointerup","pointercancel","lostpointercapture"]) {
+  $("cropFrame").addEventListener(name,event => {
+    if (cropPointer?.id === event.pointerId) cropPointer = null;  });
+}
+window.addEventListener("resize",() => {
+  if (cropSession) drawCropPreview();
+});
+
+$("cropConfirm").onclick = () => {
+  if (!cropSession || !mayPositionImage()) return;
+  const rect = cropGeometry();
+  if (!rect) return;
+  const output = document.createElement("canvas");
+  output.width = 1024;
+  output.height = 768;
+  const context = output.getContext("2d");
+  // Draw the same image area shown inside the crop frame, at full output size.
+  context.drawImage(
+    cropSession.image,
+    rect.left * output.width / rect.width,
+    rect.top * output.height / rect.height,
+    rect.drawnWidth * output.width / rect.width,
+    rect.drawnHeight * output.height / rect.height
+  );
+  const chosenArt = cropSession.artIndex;
+  const cropped = output.toDataURL("image/png");
+  if (chosenArt !== null) state.art = chosenArt;
+  state.image = cropped;
+  document.querySelectorAll(".art-button").forEach(b =>
+    b.classList.toggle("selected",chosenArt !== null && Number(b.dataset.art) === chosenArt)
+  );
+  closeCropEditor();
+  refresh();
+};
+
+document.querySelectorAll(".team-button").forEach(btn => {
+  btn.onclick = () => {
+    if (busy || (job && editMode !== "update")) return;
+
+    state.team = btn.dataset.team;
+
+    document.querySelectorAll(".team-button").forEach(b =>
+      b.classList.toggle("active",b === btn)
+    );
+
+    refresh();
+  };
+});
+
+$("nameInput").oninput = refresh;
+
+document.querySelectorAll(".art-button").forEach(btn => {
+  btn.onclick = () => {
+    if (busy || (job && editMode !== "update")) return;
+    const index = Number(btn.dataset.art);
+    openCropEditor(arts[index],index);
+  };
+});
+
+$("fileInput").onchange = async event => {
+  if (busy || (job && editMode !== "update")) return;
+
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (
+    !["image/png","image/jpeg","image/webp"]
+      .includes(file.type) ||
+    file.size > 5_000_000
+  ) {
+    message("Use PNG, JPEG or WebP under 5 MB.");
+    return;
+  }
+
+  try {
+    const original = await new Promise((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    await openCropEditor(original);
+  } catch (error) {
+    message("Image loading error: " + shortError(error));
+  } finally {
+    event.target.value = "";
+  }
+};
+
+document.querySelectorAll(".mode-button[data-mode]").forEach(btn => {
+  btn.onclick = () => {
+    if (busy || (job && editMode !== "update")) return;
+
+    state.mode = btn.dataset.mode;
+
+    document.querySelectorAll(".mode-button[data-mode]").forEach(b =>
+      b.classList.toggle("active",b === btn)
+    );
+
+    $("defaultText").hidden =
+      state.mode !== "default";
+
+    $("descriptionInput").hidden =
+      state.mode !== "custom";
+
+    refresh();
+  };
+});
+
+$("descriptionInput").oninput = refresh;
+
+/* Artwork and metadata upload */
+
+async function makePNG(data) {
+  // Capture the visible full VCard.
+  const host = $("vcardHost");
+  const artwork = host.querySelector(".card-art img");
+
+  if (!artwork) {
+    throw Error("VCard preview is unavailable.");
+  }
+
+  await artwork.decode();
+
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
+  const canvas = await toCanvas(host,{
+    pixelRatio:3,
+    backgroundColor:"#080808"
+  });
+
+  if (canvas.width < 100 || canvas.height < 100) {
+    throw Error("VCard PNG capture has invalid dimensions.");
+  }
+
+  // Reject blank exports.
+  const pixels = canvas.getContext("2d").getImageData(
+    0,0,canvas.width,canvas.height
+  ).data;
+
+  const stepX = Math.max(1,Math.floor(canvas.width/20));
+  const stepY = Math.max(1,Math.floor(canvas.height/20));
+
+  let visibleDetails = 0;
+
+  for (let y=0;y<canvas.height;y+=stepY) {
+    for (let x=0;x<canvas.width;x+=stepX) {
+      const i = (y*canvas.width+x)*4;
+
+      if (
+        Math.max(
+          pixels[i],
+          pixels[i+1],
+          pixels[i+2]
+        ) > 45
+      ) {
+        visibleDetails++;
+      }
+    }
+  }
+
+  if (visibleDetails < 8) {
+    throw Error(
+      "VCard rendered blank; PNG was not saved."
+    );
+  }
+
+  return new Promise((resolve,reject) => {
+    canvas.toBlob(blob => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(
+          Error("VCard PNG generation failed.")
+        );
+      }
+    },"image/png");
+  });
+}
+
+/* Automatically capture the entire VCard */
+
+function queueCardCapture() {
+  const version = ++captureVersion;
+
+  capturedPNG = null;
+
+  $("downloadButton").disabled = true;
+  $("downloadButton").textContent =
+    "PREPARING VCARD...";
+
+  clearTimeout(captureTimer);
+
+  captureTimer = setTimeout(async () => {
+    try {
+      const blob = await makePNG(cardData());
+
+      if (version !== captureVersion) return;
+
+      capturedPNG = blob;
+
+      $("downloadButton").textContent =
+        "DOWNLOAD VCARD";
+
+      $("downloadButton").disabled = busy;
+
+    } catch (error) {
+      if (version !== captureVersion) return;
+
+      console.error("VCard PNG capture:",error);
+
+      $("downloadButton").textContent =
+        "PNG UNAVAILABLE";
+
+      message(
+        "VCard PNG capture failed: " +
+        shortError(error)
+      );
+    }
+  },250);
+}
+
+/* DOWNLOAD saves the complete PNG and sends the same image to IPFS. */
+
+function saveVCardPNG(blob,data) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const name = data.name
+    .replace(/[\\/:*?"<>|]/g,"_")
+    .trim() || "VCARD";
+
+  link.href = url;
+  link.download = name + "-VCard.png";
+  document.body.append(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+}
+
+function receiptLink(id,pendingId,detailId,href,detail) {
+  const link = $(id);
+  link.href = href;
+  link.hidden = false;
+  $(pendingId).hidden = true;
+  $(detailId).textContent = detail;
+}
+
+function showIPFSResult(imageURI,metadataURI) {
+  if (imageURI || metadataURI) $("flipHint").hidden = false;
+  if (imageURI) {
+    receiptLink(
+      "receiptImage","imagePending","imageDetail",
+      assetURL(imageURI),imageURI.replace(/^ipfs:\/\//,"")
+    );
+  }
+  if (metadataURI) {
+    receiptLink(
+      "receiptJson","jsonPending","jsonDetail",
+      assetURL(metadataURI),metadataURI.replace(/^(?:ipfs:\/\/|https:\/\/gateway\.pinata\.cloud\/ipfs\/)/,"")
+    );
+  }
+}
+
+$("downloadButton").onclick = async () => {
+  if (busy || !capturedPNG) return;
+
+  const data = cardData();
+  const png = capturedPNG;
+
+  saveVCardPNG(png,data);
+
+  lock(true);
+  $("downloadButton").textContent = "SENDING TO IPFS...";
+
+  try {
+    await uploadMetadata(data,png);
+    message("IPFS test complete. Click the VCard to view the receipt.");
+  } catch (error) {
+    console.error("VCard IPFS upload:",error);
+    message(
+      "VCard downloaded, but IPFS test failed: " +
+      shortError(error)
+    );
+  } finally {
+    $("downloadButton").textContent = "DOWNLOAD VCARD";
+    lock(false);
+  }
+};
+
+/* Upload the complete VCard PNG and JSON to public IPFS.
+   Pinata JWT stays in Supabase Edge Function secrets. */
+
+async function uploadToIPFS(blob,filename,kind) {
+  const supabase = await vhouseClient();
+  const {data:ticket,error:ticketError} =
+    await supabase.functions.invoke(
+      "pinata-signed-upload",
+      {body:{kind}}
+    );
+
+  if (ticketError || !ticket?.url) {
+    throw Error(
+      "IPFS upload authorization failed: " +
+      (ticketError?.message || "no signed URL")
+    );
+  }
+
+  const form = new FormData();
+  form.append("network","public");
+  form.append(
+    "file",
+    new File([blob],filename,{type:blob.type})
+  );
+  form.append("name",filename);
+  form.append("cid_version","v1");
+
+  const response = await fetch(ticket.url,{
+    method:"POST",
+    body:form
+  });
+
+  const result = await response.json().catch(() => null);
+  const cid = result?.data?.cid;
+
+  if (!response.ok || typeof cid !== "string" || !cid) {
+    throw Error(
+      "IPFS upload failed: " +
+      (result?.error || response.statusText ||
+       "no CID returned")
+    );
+  }
+
+  return "ipfs://" + cid;
+}
+
+async function imageToPNG(src) {
+  const img = new Image();
+  img.src = src;
+  await img.decode();
+  const max = 1024;
+  const scale = Math.min(1,max / Math.max(img.naturalWidth,img.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+  canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+  return new Promise((resolve,reject) => canvas.toBlob(
+    blob => blob ? resolve(blob) : reject(Error("Character PNG failed")),"image/png"
+  ));
+}
+
+function assetURL(uri) {
+  if (typeof uri !== "string" || !uri.trim()) throw Error("NFT metadata URI is missing.");
+  if (uri.startsWith("ipfs://")) {
+    return "https://gateway.pinata.cloud/ipfs/" + uri.slice(7);
+  }
+  if (uri.startsWith("ar://")) {
+    return "https://arweave.net/" + uri.slice(5);
+  }
+  if (/^https:\/\//i.test(uri)) return uri;
+  throw Error("Unsupported NFT metadata or image URI.");
+}
+
+function nftMediaURLs(uri) {
+  if (typeof uri !== "string" || !uri.trim()) return [];
+  const first = assetURL(uri);
+  const match = uri.match(/^ipfs:\/\/(.+)$/i) ||
+    uri.match(/^https?:\/\/[^/]+\/ipfs\/(.+)$/i);
+  if (!match) return [first];
+  const suffix = match[1].replace(/^ipfs\//i,"");
+  return [...new Set([
+    first,
+    "https://ipfs.io/ipfs/" + suffix,
+    "https://" + suffix.split("/")[0] + ".ipfs.dweb.link/" + suffix.split("/").slice(1).join("/"),
+    "https://dweb.link/ipfs/" + suffix
+  ])];
+}
+
+async function ipfsJSON(uri) {
+  let last;
+  for (const url of nftMediaURLs(uri)) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw Error("NFT metadata HTTP " + resp.status);
+      return await resp.json();
+    } catch (error) { last = error; }
+  }
+  throw Error("Cannot load NFT JSON metadata: " + (last?.message || "request failed"));
+}
+
+async function imageDataFromIPFS(uri) {
+  let last;
+  for (const url of nftMediaURLs(uri)) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw Error("NFT artwork HTTP " + resp.status);
+      const blob = await resp.blob();
+      return await new Promise((resolve,reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || Error("NFT image read failed"));
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) { last = error; }
+  }
+  throw Error("Cannot load NFT artwork: " + (last?.message || "request failed"));
+}
+
+// Display the NFT's original artwork, retrying alternate IPFS hosts if needed.
+function showNFTImage(id,uri) {
+  const img = $(id);
+  const urls = uri ? nftMediaURLs(uri) : [];
+  const wrapper = id === "loadedNFTImage" ? $("loadedNFTPreview") : null;
+  img.hidden = !urls.length;
+  if (wrapper) wrapper.hidden = !urls.length;
+  img.removeAttribute("src");
+  if (!urls.length) return;
+  let index = 0;
+  img.onerror = () => {
+    if (++index < urls.length) img.src = urls[index];
+    else {
+      img.hidden = true;
+      if (wrapper) wrapper.hidden = true;
+    }
+  };
+  img.onload = () => { img.hidden = false; if (wrapper) wrapper.hidden = false; };
+  img.src = urls[0];
+}
+
+/* These are separate from the off-chain JSON attributes array.
+   Token-2022 stores its own key/value pairs in additionalMetadata. */
+function onchainVCardAttributes(data) {
+  const fields = [
+    ["Team",teams[data.team].name],
+    ["Level",String(data.level)],
+    ["ATK",String(data.atk)],
+    ["DEF",String(data.def)]
+  ];
+  if (data.effect && data.effect !== "none") {
+    fields.push(["Effect",data.effect.toUpperCase()]);
+  }
+  return fields;
+}
+
+function replaceAttribute(attributes,key,value) {
+  const normalized = key.toLowerCase();
+  const remaining = (Array.isArray(attributes) ? attributes : []).filter(
+    attribute => String(attribute?.trait_type || "").toLowerCase() !== normalized
+  );
+  remaining.push({trait_type:key,value});
+  return remaining;
+}
+
+async function uploadMetadata(data,imageBlob = null,options = {}) {
+  message("Capturing complete VCard for IPFS...");
+
+  const image = imageBlob || await makePNG(data);
+
+  message("Uploading complete VCard PNG to IPFS...");
+
+  const imageURI = await uploadToIPFS(
+    image,
+    "vcard.png",
+    "image"
+  );
+
+  // Keep the original character image available when this NFT is
+  // loaded in a later session. The NFT artwork remains the FULL card PNG.
+  let sourceImageURI = options.sourceImageURI || null;
+  if (data.imageMode === "custom" && !sourceImageURI) {
+    message("Storing character image for later VCard editing...");
+    const sourceBlob = await imageToPNG(data.image);
+    sourceImageURI = await uploadToIPFS(sourceBlob,"vcard-source.png","image");
+  }
+
+  let metadata = {
+    name:nftMetadataName(data.name),
+    symbol:"VCARD",
+    description:data.description,
+    image:imageURI,
+    attributes:[
+      {
+        trait_type:"Team",
+        value:teams[data.team].name
+      },
+      {
+        trait_type:"Zetsu corp",
+        value:"Creator: Artworqq Kevin Suber | Publisher: The Zetsumetsu Corporation | Zetsumetsu EOe™ | Zetsu EDU™ | Zetsu R&D LLC - CAGE: 20UB7 | © 2024 - 2026 Zetsumetsu Corporation™ | Artworqq Kevin Suber"
+      },
+      {
+        trait_type:"Level",
+        value:data.level
+      },
+      {
+        trait_type:"ATK",
+        value:data.atk
+      },
+      {
+        trait_type:"DEF",
+        value:data.def
+      },
+      {
+        trait_type:"Mint Price (SOL)",
+        value:NFT_PRICE_SOL
+      },
+      {
+        trait_type:"Mint Price (Lamports)",
+        value:NFT_PRICE_LAMPORTS
+      }
+    ],
+    properties:{
+      category:"image",
+      files:[{
+        uri:imageURI,
+        type:"image/png"
+      }],
+      vhouse:{
+        team:data.team,
+        imageMode:data.imageMode,
+        artIndex:data.artIndex,
+        sourceImage:sourceImageURI,
+        effect:data.effect || "none",
+        level:data.level,
+        atk:data.atk,
+        def:data.def
+      }
+    }
+  };
+
+  // Keep external NFT attributes, but replace stale VCard values with the
+  // CURRENT Team, Level, stats and effect on every update/customization.
+  if (options.originalMetadata) {
+    const previous = options.originalMetadata;
+    metadata = {
+      ...previous,
+      ...metadata,
+      symbol:previous.symbol || job?.symbol || "VCARD",
+      // Keep outside-NFT attributes while retaining the VCard's standard
+      // JSON attributes (trait_type/value), as in the original working code.
+      // Earlier this replaced the VCard array with the old NFT's array.
+      attributes:[
+        ...(Array.isArray(previous.attributes) ? previous.attributes : []).filter(
+          oldAttribute => !metadata.attributes.some(
+            cardAttribute => String(cardAttribute.trait_type).toLowerCase() ===
+              String(oldAttribute?.trait_type || "").toLowerCase()
+          )
+        ),
+        ...metadata.attributes
+      ],
+      properties:{...(previous.properties || {}),...metadata.properties}
+    };
+    for (const attribute of [
+      ["Team",teams[data.team].name],
+      ["Level",data.level],
+      ["ATK",data.atk],
+      ["DEF",data.def]
+    ]) {
+      metadata.attributes = replaceAttribute(metadata.attributes,...attribute);
+    }
+  }
+  const hadEffectTrait = metadata.attributes.some(a =>
+    String(a?.trait_type || "").toLowerCase() === "effect"
+  );
+  if (options.operation === "customize" ||
+      hadEffectTrait || (data.effect && data.effect !== "none")) {
+    metadata.attributes = replaceAttribute(
+      metadata.attributes,"Effect",(data.effect || "none").toUpperCase()
+    );
+  }
+
+  message("Uploading VCard metadata JSON to IPFS...");
+
+  const json = new Blob(
+    [JSON.stringify(metadata)],
+    {type:"application/json"}
+  );
+
+  const uri = assetURL(await uploadToIPFS(
+    json,
+    "metadata.json",
+    "metadata"
+  ));
+
+  if (new TextEncoder().encode(uri).length > 200) {
+    throw Error("Metadata URI too long.");
+  }
+
+  if (options.publishReceipt !== false) showIPFSResult(imageURI,uri);
+  return {uri,imageURI,sourceImageURI,publishedMetadata:metadata};
+}
+
+/* Token-2022 NFT minter */
+
+function shortError(error) {
+  return error?.message || String(error);
+}
+
+function isNotFound(error) {
+  return /not found|does not exist|could not find|InvalidAccountData|TokenAccountNotFoundError/i
+    .test(shortError(error));
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve,ms));
+}
+
+function mintURL() {
+  return SOLSCAN + "account/" +
+    job.mint.publicKey.toBase58();
+}
+
+function txURL() {
+  return job?.signature
+    ? SOLSCAN + "tx/" + job.signature
+    : null;
+}
+
+/* Verify the VHouse payment ON CHAIN in the same mint transaction.
+   A failed mint cannot charge the service fee: both instructions
+   succeed together or both are rolled back by Solana. */
+async function verifyVHousePayment(signature,owner) {
+  if (!signature || !job) return false;
+
+  const chain = await getRpc();
+  const receipt = await chain.getParsedTransaction(signature,{
+    commitment:"confirmed",
+    maxSupportedTransactionVersion:0
+  });
+
+  if (!receipt) return false;
+  if (receipt.meta?.err !== null) {
+    throw Error("VHouse payment / mint transaction failed on Solana.");
+  }
+
+  const accounts = receipt.transaction.message.accountKeys;
+  const signedByOwner = accounts.some(account =>
+    account.pubkey.equals(owner) && account.signer
+  );
+  const includesMint = accounts.some(account =>
+    account.pubkey.equals(job.mint.publicKey)
+  );
+
+  if (!signedByOwner || !includesMint) {
+    throw Error("VHouse payment is not tied to this wallet and mint.");
+  }
+
+  const paid = receipt.transaction.message.instructions.some(ix => {
+    if (ix.program !== "system" || ix.parsed?.type !== "transfer") {
+      return false;
+    }
+    const transfer = ix.parsed.info;
+    return transfer?.source === owner.toBase58() &&
+      transfer?.destination === VHOUSE_WALLET.toBase58() &&
+      transfer?.lamports === NFT_PRICE_LAMPORTS;
+  });
+
+  if (!paid) {
+    throw Error("Verified mint transaction is missing the 0.001 SOL VHouse fee.");
+  }
+
+  return true;
+}
+
+/* Verify that a real NFT belongs to the wallet */
+
+async function inspectMint(owner) {
+  if (!job) return false;
+
+  const chain = await getRpc();
+  const mint = job.mint.publicKey;
+
+  const info = await chain.getAccountInfo(
+    mint,
+    "confirmed"
+  );
+
+  if (!info) return false;
+
+  if (!info.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+    throw Error(
+      "Mint was created by the wrong program."
+    );
+  }
+
+  const ata = job.tokenAccount || getAssociatedTokenAddressSync(
+    mint,
+    owner,
+    false,
+    TOKEN_2022_PROGRAM_ID
+  );
+
+  let data,account,meta;
+
+  try {
+    data = await getMint(
+      chain,
+      mint,
+      "confirmed",
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    account = await getAccount(
+      chain,
+      ata,
+      "confirmed",
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    meta = await getTokenMetadata(
+      chain,
+      mint,
+      "confirmed",
+      TOKEN_2022_PROGRAM_ID
+    );
+
+  } catch (error) {
+    if (isNotFound(error)) return false;
+    throw error;
+  }
+
+  if (
+    data.decimals !== 0 ||
+    data.supply !== 1n ||
+    (!job.loaded && data.mintAuthority !== null)
+  ) {
+    throw Error(
+      "Mint exists but the NFT supply or authority is incorrect."
+    );
+  }
+
+  // Check the Token-2022 metadata points back to this exact mint.
+  const pointer = getMetadataPointerState(data);
+  if (!job.loaded && !pointer?.metadataAddress?.equals(mint)) {
+    throw Error(
+      "VCard metadata pointer does not point to this NFT mint."
+    );
+  }
+
+  if ((!job.loaded || job.soulbound) && (
+    getNonTransferable(data) === null ||
+    getNonTransferableAccount(account) === null
+  )) {
+    throw Error("Mint exists, but its soulbound token extension is invalid.");
+  }
+
+  if (
+    account.amount !== 1n ||
+    !account.owner.equals(owner)
+  ) {
+    throw Error(
+      "Mint exists, but the wallet does not own the NFT."
+    );
+  }
+
+  if (
+    !meta ||
+    !meta.mint?.equals(mint) ||
+    meta.name !== (job.chainName || nftMetadataName(job.data.name)) ||
+    meta.symbol !== (job.symbol || "VCARD") ||
+    meta.uri !== job.uri ||
+    (!job.loaded && !meta.uri.startsWith("https://gateway.pinata.cloud/ipfs/"))
+  ) {
+    throw Error(
+      "Mint exists, but its on-chain metadata does not match this VCard."
+    );
+  }
+
+  // Close authority is included in newly created VCards, but is NOT required
+  // for loading or updating an older / externally minted NFT.
+  if (!job.loaded && getMintCloseAuthority(data)?.closeAuthority?.equals(owner) !== true) {
+    throw Error("New VCard mint is missing the requested MintCloseAuthority.");
+  }
+
+  // On a newly created mint, verify its original service payment too.
+  // When loading an already existing mint, ownership is verified directly.
+  if (job.signature) return await verifyVHousePayment(job.signature,owner);
+  return true;
+}
+
+/* Read Solana failures */
+
+async function getFailure(signature) {
+  const chain = await getRpc();
+
+  const result = await chain.getSignatureStatuses(
+    [signature],
+    {searchTransactionHistory:true}
+  );
+
+  const status = result.value[0];
+
+  if (!status?.err) return null;
+
+  let logs = "";
+
+  try {
+    const receipt = await chain.getTransaction(
+      signature,
+      {
+        commitment:"confirmed",
+        maxSupportedTransactionVersion:0
+      }
+    );
+
+    logs = (receipt?.meta?.logMessages || [])
+      .filter(line =>
+        /failed|error|insufficient/i.test(line)
+      )
+      .slice(-3)
+      .join(" | ");
+
+  } catch (_) {}
+
+  return (
+    "Solana rejected the mint: " +
+    JSON.stringify(status.err) +
+    (logs ? " — " + logs : "")
+  );
+}
+
+/* Build NFT mint transaction */
+
+async function buildMintTransaction(owner) {
+  const chain = await getRpc();
+  const mint = job.mint.publicKey;
+
+  const metadata = {
+    updateAuthority:owner,
+    mint,
+    name:nftMetadataName(job.data.name),
+    symbol:"VCARD",
+    uri:job.uri,
+    additionalMetadata:onchainVCardAttributes(job.data)
+  };
+
+  if (!job.uri.startsWith("https://gateway.pinata.cloud/ipfs/")) {
+    throw Error("VCard metadata must use the public IPFS HTTPS gateway URI.");
+  }
+
+  const initialSpace = getMintLen([
+    ExtensionType.MetadataPointer,
+    ExtensionType.NonTransferable,
+    ExtensionType.MintCloseAuthority
+  ]);
+
+  const finalSpace =
+    initialSpace +
+    TYPE_SIZE +
+    LENGTH_SIZE +
+    pack(metadata).length;
+
+  const lamports =
+    await chain.getMinimumBalanceForRentExemption(
+      finalSpace,
+      "confirmed"
+    );
+
+  const ata = getAssociatedTokenAddressSync(
+    mint,
+    owner,
+    false,
+    TOKEN_2022_PROGRAM_ID
+  );
+
+  const tx = new Transaction().add(
+
+    // The 0.001 SOL VHouse creation fee is paid atomically with minting.
+    // If any mint instruction fails, the transfer is rolled back too.
+    SystemProgram.transfer({
+      fromPubkey:owner,
+      toPubkey:VHOUSE_WALLET,
+      lamports:NFT_PRICE_LAMPORTS
+    }),
+
+    // 1. Create mint account
+    SystemProgram.createAccount({
+      fromPubkey:owner,
+      newAccountPubkey:mint,
+      lamports,
+      space:initialSpace,
+      programId:TOKEN_2022_PROGRAM_ID
+    }),
+
+    // 2. Metadata pointer
+    createInitializeMetadataPointerInstruction(
+      mint,
+      owner,
+      mint,
+      TOKEN_2022_PROGRAM_ID
+    ),
+
+    // 3. Soulbound extension
+    createInitializeNonTransferableMintInstruction(
+      mint,
+      TOKEN_2022_PROGRAM_ID
+    ),
+
+    // The owner can eventually close the mint if supply reaches zero.
+    createInitializeMintCloseAuthorityInstruction(
+      mint,
+      owner,
+      TOKEN_2022_PROGRAM_ID
+    ),
+
+    // 4. Initialize mint
+    createInitializeMint2Instruction(
+      mint,
+      0,
+      owner,
+      null,
+      TOKEN_2022_PROGRAM_ID
+    ),
+
+    // 5. On-chain metadata
+    createInitializeInstruction({
+      programId:TOKEN_2022_PROGRAM_ID,
+      metadata:mint,
+      updateAuthority:owner,
+      mint,
+      mintAuthority:owner,
+      name:nftMetadataName(job.data.name),
+      symbol:"VCARD",
+      uri:job.uri
+    }),
+
+    // 6. Associated token account
+    createAssociatedTokenAccountIdempotentInstruction(
+      owner,
+      ata,
+      owner,
+      mint,
+      TOKEN_2022_PROGRAM_ID
+    ),
+
+    // 7. Mint one NFT
+    createMintToInstruction(
+      mint,
+      ata,
+      owner,
+      1,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    ),
+
+    // 8. Revoke mint authority
+    createSetAuthorityInstruction(
+      mint,
+      owner,
+      AuthorityType.MintTokens,
+      null,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    )
+  );
+
+  const latest =
+    await chain.getLatestBlockhash("confirmed");
+
+  tx.feePayer = owner;
+  tx.recentBlockhash = latest.blockhash;
+
+  // Initialize standard Token-2022 key/value metadata in the mint
+  // transaction when space permits. The existing mint/payment remains
+  // atomic; if full, complete metadata in a separate signature afterward.
+  const attributeInstructions = onchainVCardAttributes(job.data).map(
+    ([field,value]) => createUpdateFieldInstruction({
+      programId:TOKEN_2022_PROGRAM_ID,
+      metadata:mint,
+      updateAuthority:owner,
+      field,value
+    })
+  );
+  tx.add(...attributeInstructions);
+  const withAttributes = tx.serialize({
+    requireAllSignatures:false,
+    verifySignatures:false
+  }).length;
+  if (withAttributes > 1232) {
+    tx.instructions.splice(-attributeInstructions.length);
+  }
+
+  tx.partialSign(job.mint);
+
+  const size = tx.serialize({
+    requireAllSignatures:false,
+    verifySignatures:false
+  }).length;
+
+  if (size > 1232) {
+    throw Error(
+      "VHouse payment + mint transaction exceeds Solana's 1232-byte limit. No SOL was sent."
+    );
+  }
+
+  return {tx,latest};
+}
+
+/* Check existing mint transactions */
+
+async function verifySubmitted(owner) {
+  const chain = await getRpc();
+  if (await inspectMint(owner)) {
+    return "minted";
+  }
+
+  if (!job.signature) {
+    return "retry";
+  }
+
+  const failure = await getFailure(job.signature);
+
+  if (failure) {
+    job.signature = null;
+    return "retry";
+  }
+
+  const result = await chain.getSignatureStatuses(
+    [job.signature],
+    {searchTransactionHistory:true}
+  );
+
+  const status = result.value[0];
+
+  if (status?.confirmationStatus === "finalized") {
+    if (await inspectMint(owner)) {
+      return "minted";
+    }
+
+    throw Error(
+      "Transaction finalized, but VHouse payment / NFT verification did not pass."
+    );
+  }
+
+  const height = await chain.getBlockHeight("confirmed");
+
+  if (height > job.lastValidBlockHeight) {
+    if (await inspectMint(owner)) {
+      return "minted";
+    }
+
+    const again = await getFailure(job.signature);
+
+    if (again) {
+      job.signature = null;
+      return "retry";
+    }
+
+    if (!status) {
+      job.signature = null;
+      return "retry";
+    }
+  }
+
+  return "pending";
+}
+
+/* Phantom transaction submission */
+
+async function mintInPhantom(phantom,owner) {
+  const current = await verifySubmitted(owner);
+
+  if (current !== "retry") {
+    return current;
+  }
+
+  const chain = await getRpc();
+
+  const existing = await chain.getAccountInfo(
+    job.mint.publicKey,
+    "confirmed"
+  );
+
+  if (existing) {
+    throw Error(
+      "Mint account exists but NFT verification did not succeed."
+    );
+  }
+
+  const {tx,latest} = await buildMintTransaction(owner);
+
+  message("Approve the 0.001 SOL VHouse fee and VCard mint in Phantom...");
+
+  const response =
+    await phantom.signAndSendTransaction(
+      tx,
+      {skipPreflight:false}
+    );
+
+  const signature =
+    typeof response === "string"
+      ? response
+      : response?.signature;
+
+  if (!signature) {
+    throw Error(
+      "Phantom did not return a transaction signature."
+    );
+  }
+
+  job.signature = signature;
+  job.lastValidBlockHeight =
+    latest.lastValidBlockHeight;
+
+  message(
+    "Phantom submitted the transaction. Checking Solana...",
+    txURL()
+  );
+
+  for (let attempt=0;attempt<16;attempt++) {
+    if (await inspectMint(owner)) {
+      return "minted";
+    }
+
+    const failed = await getFailure(signature);
+
+    if (failed) {
+      throw Error(failed);
+    }
+
+    await sleep(1200);
+  }
+
+  return "pending";
+}
+
+/* Verify both kinds of metadata: the IPFS JSON and the on-chain
+   Token-2022 key/value fields. A separate attribute signature is only
+   needed when the full mint transaction cannot hold those instructions. */
+async function finishMintAttributes(phantom,owner) {
+  const chain = await getRpc();
+  const mint = job.mint.publicKey;
+  const meta = await getTokenMetadata(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID);
+  if (!meta) return false;
+  const existing = new Map(meta.additionalMetadata || []);
+  const missing = onchainVCardAttributes(job.data).filter(
+    ([key,value]) => existing.get(key) !== value
+  );
+  if (!missing.length) return true;
+
+  // Never request another signature while one is pending.
+  if (job.attributeSignature) {
+    const receipt = await chain.getSignatureStatuses(
+      [job.attributeSignature],{searchTransactionHistory:true}
+    );
+    if (receipt.value[0]?.err) {
+      job.attributeSignature = null;
+      throw Error("On-chain VCard attributes transaction failed.");
+    }
+    return false;
+  }
+
+  const info = await chain.getAccountInfo(mint,"confirmed");
+  if (!info) return false;
+  const updatedPairs = new Map(existing);
+  for (const [key,value] of missing) updatedPairs.set(key,value);
+  const bytesNeeded = Math.max(0,
+    pack({...meta,additionalMetadata:[...updatedPairs]}).length - pack(meta).length
+  );
+  const rent = await chain.getMinimumBalanceForRentExemption(
+    info.data.length + bytesNeeded,"confirmed"
+  );
+  const topUp = Math.max(0,rent-info.lamports);
+  const tx = new Transaction();
+  if (topUp) {
+    tx.add(SystemProgram.transfer({fromPubkey:owner,toPubkey:mint,lamports:topUp}));
+  }
+  for (const [field,value] of missing) {
+    tx.add(createUpdateFieldInstruction({
+      programId:TOKEN_2022_PROGRAM_ID,
+      metadata:mint,updateAuthority:owner,field,value
+    }));
+  }
+  const latest = await chain.getLatestBlockhash("confirmed");
+  tx.feePayer = owner;
+  tx.recentBlockhash = latest.blockhash;
+  if (tx.serialize({requireAllSignatures:false,verifySignatures:false}).length > 1232) {
+    throw Error("On-chain attributes transaction exceeds Solana size limit.");
+  }
+  message("Approve writing the VCard's on-chain attributes in Phantom. No additional VHouse fee.");
+  const result = await phantom.signAndSendTransaction(tx,{skipPreflight:false});
+  job.attributeSignature = typeof result === "string" ? result : result?.signature;
+  if (!job.attributeSignature) throw Error("Phantom returned no metadata transaction signature.");
+  for (let attempt=0;attempt<14;attempt++) {
+    await sleep(1000);
+    const current = await getTokenMetadata(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID);
+    const fields = new Map(current?.additionalMetadata || []);
+    if (onchainVCardAttributes(job.data).every(
+      ([key,value]) => fields.get(key) === value
+    )) return true;
+  }
+  return false;
+}
+
+/* Register a verified NFT in the existing VHouse card/inventory system.
+   The current Supabase RPC cannot write mint_address; do not modify the DB. */
+async function saveMintedCardToVHouse(){
+  if(!job || job.loaded || !job.mint?.publicKey) return;
+  if(job.vhouseCardId) return job.vhouseCardId;
+  await requireVHousePlayer();
+  const store=window.VHouseCardStore;
+  if(!store?.saveCard) throw Error("VHouse VCard storage is unavailable.");
+  const data=job.data;
+  const image=job.sourceImageURI ? assetURL(job.sourceImageURI) : data.image;
+  const saved=await store.saveCard({name:data.name,image,description:data.description,team:data.team});
+  if(!saved?.id) throw Error("VHouse did not return a saved VCard.");
+  job.vhouseCardId=saved.id;
+  return saved.id;
+}
+async function attemptClosetSync(){
+  try{
+    await saveMintedCardToVHouse();
+    $("retryClosetButton").hidden=true;
+    message("Successfully minted VCard and saved to your VHouse Closet. Receipt is on the back.");
+  }catch(error){
+    console.error("[VHouse Closet sync]",error);
+    $("retryClosetButton").hidden=false;
+    message("NFT minted and verified. VHouse Closet save failed: " + shortError(error) + ". Use RETRY CLOSET SAVE.");
+  }
+}
+$("retryClosetButton").onclick=async()=>{
+  if(busy) return;
+  lock(true);
+  try{await attemptClosetSync();}finally{lock(false);}
+};
+async function displayMinted() {
+  minted = true;
+  $("mintButton").textContent = "MINTED ✓";
+  const address = job.mint.publicKey.toBase58();
+  showPostMintUI();
+  receiptLink("receiptMint","mintPending","mintDetail",mintURL(),address);
+  $("flipHint").hidden = false;
+  cardFlip.classList.add("flipped");
+  cardFlip.setAttribute("aria-pressed","true");
+  cardFlip.setAttribute("aria-label","Flip receipt back to VCard");
+  // Download the exact PNG already uploaded to IPFS, not a second rendering.
+  if (job.png) saveVCardPNG(job.png,job.data);
+  $("mintSuccessOverlay").hidden = false;
+  message("Successfully minted VCard. Receipt is on the back of the card.");
+  await attemptClosetSync();
+}
+
+/* MINT button */
+
+$("mintButton").onclick = async () => {
+  if (busy || minted) return;
+
+  lock(true);
+
+  try {
+    const phantom =
+      window.phantom?.solana || window.solana;
+
+    if (
+      !phantom?.isPhantom ||
+      typeof phantom.signAndSendTransaction !== "function"
+    ) {
+      throw Error(
+        "Open this page in a browser with Phantom installed."
+      );
+    }
+
+    await requireVHousePlayer();
+    message("Connecting Phantom...");
+
+    const owner = (await phantom.connect()).publicKey;
+    showConnectedWallet(owner);
+
+    if (!owner) {
+      throw Error("Phantom did not connect.");
+    }
+
+    if (!job) {
+      const data = cardData();
+
+      if (!$("nameInput").value.trim()) {
+        throw Error("Enter a VCard name.");
+      }
+
+      const png = capturedPNG || await makePNG(data);
+      const {uri,imageURI,sourceImageURI,publishedMetadata} = await uploadMetadata(data,png);
+
+      job = {
+        data,
+        png,
+        uri,
+        imageURI,
+        sourceImageURI,
+        originalMetadata:publishedMetadata,
+        owner:owner.toBase58(),
+        mint:Keypair.generate(),
+        signature:null,
+        lastValidBlockHeight:0,
+        symbol:"VCARD",
+        soulbound:true,
+        loaded:false
+      };
+    }
+
+    if (job.owner !== owner.toBase58()) {
+      throw Error(
+        "Reconnect the Phantom wallet that started this mint."
+      );
+    }
+
+    const result = await mintInPhantom(
+      phantom,
+      owner
+    );
+
+    if (result === "minted") {
+      if (await finishMintAttributes(phantom,owner)) {
+        await displayMinted();
+      } else {
+        $("mintButton").textContent = "CHECK MINT";
+        message("NFT minted. Confirming on-chain attributes; press CHECK MINT without paying again.");
+      }
+
+    } else {
+      $("mintButton").textContent = "CHECK MINT";
+
+      message(
+        "Transaction submitted. Confirmation is still pending; press CHECK MINT to refresh its status.",
+        txURL()
+      );
+    }
+
+  } catch (error) {
+    console.error("VCard mint:",error);
+
+    paintMoney($("mintButton"),job?.signature ? "CHECK MINT" : "MINT · 0.001 SOL",true);
+
+    message(
+      "Mint error: " + shortError(error),
+      txURL()
+    );
+
+  } finally {
+    lock(false);
+  }
+};
+
+/* UPDATE and CUSTOMIZE existing VCards: same mint, new IPFS metadata. */
+
+function showPostMintUI() {
+  $("postMint").hidden = false;
+  $("editorActions").hidden = true;
+  $("mintAddressInput").value = job.mint.publicKey.toBase58();
+  lock(false);
+}
+
+function setEditMode(mode) {
+  if (!minted || busy || pendingOperation) return;
+  if (editMode !== mode && job?.data) {
+    // A different paid action must not silently include edits from another action.
+    $("nameInput").value = job.data.name;
+    $("descriptionInput").value = job.data.description;
+    state.team = job.data.team;
+    state.art = job.data.artIndex;
+    state.image = job.data.imageMode === "custom" ? job.data.image : null;
+    document.querySelectorAll(".team-button").forEach(b =>
+      b.classList.toggle("active",b.dataset.team === state.team)
+    );
+    document.querySelectorAll(".art-button").forEach(b =>
+      b.classList.toggle("selected",!state.image && Number(b.dataset.art) === state.art)
+    );
+    state.effect = job.data.effect || "none";
+    state.mode = "custom";
+    $("descriptionInput").hidden = false;
+    $("defaultText").hidden = true;
+    document.querySelectorAll(".mode-button[data-mode]").forEach(b =>
+      b.classList.toggle("active",b.dataset.mode === "custom")
+    );
+    document.querySelectorAll(".effect-button").forEach(b =>
+      b.classList.toggle("active",b.dataset.effect === state.effect)
+    );
+  }
+  if (job?.standard === "mpl-core") {
+    message("Metaplex Core ownership verified. Its UPDATE/CUSTOMIZE transaction requires the Core program; Token-2022 instructions cannot edit it.");
+    return;
+  }
+  if (job?.updateAuthorized === false) {
+    message("The wallet owns this NFT but is not its on-chain metadata update authority.");
+    return;
+  }
+  editMode = mode;
+  cardFlip.classList.remove("flipped");
+  cardFlip.setAttribute("aria-pressed","false");
+  cardFlip.setAttribute("aria-label","Flip VCard to view receipt");
+  refresh();
+  $("updateModeButton").classList.toggle("active",mode === "update");
+  $("customModeButton").classList.toggle("active",mode === "customize");
+  $("effectGrid").hidden = mode !== "customize";
+  $("applyButton").hidden = false;
+  paintMoney($("applyButton"),mode === "update" ? "CONFIRM UPDATE · $0.75" : "CONFIRM CUSTOMIZE · $0.75",true);
+  $("operationNote").textContent = mode === "update"
+    ? "Edit team, name, image or description above, then confirm the paid UPDATE."
+    : "Select a visual effect below, then confirm the paid CUSTOMIZE.";
+  lock(false);
+}
+
+$("updateModeButton").onclick = () => setEditMode("update");
+$("customModeButton").onclick = () => setEditMode("customize");
+
+document.querySelectorAll(".effect-button").forEach(btn => {
+  btn.onclick = () => {
+    if (busy || editMode !== "customize") return;
+    state.effect = btn.dataset.effect;
+    document.querySelectorAll(".effect-button").forEach(b =>
+      b.classList.toggle("active",b === btn)
+    );
+    refresh();
+  };
+});
+
+async function getEditQuote() {
+  const resp = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd&include_last_updated_at=true",
+    {cache:"no-store"}
+  );
+  if (!resp.ok) throw Error("SOL/USD quote unavailable; no charge submitted.");
+  const json = await resp.json();
+  const price = Number(json?.solana?.usd);
+  const updated = Number(json?.solana?.last_updated_at);
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(updated) ||
+      Math.abs(Date.now()/1000 - updated) > 600) {
+    throw Error("SOL/USD quote is invalid or stale; no charge submitted.");
+  }
+  const total = Math.ceil(EDIT_PRICE_USD / price * 1e9);
+  // The player's $0.75 payment sends $0.25 to the NFT and $0.50 to VHouse.
+  // Convert both pieces using the same live SOL/USD quote; preserve total exactly.
+  const nftPart = Math.round(NFT_DEPOSIT_USD / price * 1e9);
+  return {total,vhousePart:total-nftPart,nftPart,usdPrice:EDIT_PRICE_USD,solUSD:price};
+}
+
+function transferExists(instructions,from,to,amount) {
+  return instructions.some(ix => ix.program === "system" &&
+    ix.parsed?.type === "transfer" &&
+    ix.parsed?.info?.source === from.toBase58() &&
+    ix.parsed?.info?.destination === to.toBase58() &&
+    Number(ix.parsed?.info?.lamports) === amount);
+}
+
+async function submitEditTransaction(phantom,owner,update) {
+  const chain = await getRpc();
+  const mint = job.mint.publicKey;
+  const [info,mintData,oldMeta] = await Promise.all([
+    chain.getAccountInfo(mint,"confirmed"),
+    getMint(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID),
+    getTokenMetadata(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID)
+  ]);
+  if (!info || !oldMeta || !oldMeta.updateAuthority?.equals(owner)) {
+    throw Error("Connected wallet is not the VCard metadata update authority.");
+  }
+  const existingPairs = Array.isArray(oldMeta.additionalMetadata)
+    ? oldMeta.additionalMetadata.map(pair => [...pair]) : [];
+  function storeField(key,value) {
+    const index = existingPairs.findIndex(pair => pair[0] === key);
+    if (index >= 0) existingPairs[index][1] = value;
+    else existingPairs.push([key,value]);
+  }
+  for (const [key,value] of onchainVCardAttributes(update.data)) {
+    storeField(key,value);
+  }
+  // Preserve an existing Effect field even when the effect is removed.
+  if (existingPairs.some(([key]) => key === "Effect") &&
+      !onchainVCardAttributes(update.data).some(([key]) => key === "Effect")) {
+    storeField("Effect","NONE");
+  }
+  const newMeta = {
+    ...oldMeta,name:nftMetadataName(update.data.name),uri:update.uri,
+    additionalMetadata:existingPairs
+  };
+  const extraBytes = Math.max(0,pack(newMeta).length-pack(oldMeta).length);
+  const neededSpace = info.data.length + extraBytes;
+  const requiredRent = await chain.getMinimumBalanceForRentExemption(neededSpace);
+  const extraRent = Math.max(0,requiredRent-info.lamports-update.quote.nftPart);
+  update.extraRent = extraRent;
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey:owner,toPubkey:VHOUSE_WALLET,lamports:update.quote.vhousePart
+    }),
+    SystemProgram.transfer({
+      fromPubkey:owner,toPubkey:mint,lamports:update.quote.nftPart
+    })
+  );
+  if (extraRent) {
+    tx.add(SystemProgram.transfer({
+      fromPubkey:owner,toPubkey:mint,lamports:extraRent
+    }));
+  }
+  if (oldMeta.name !== nftMetadataName(update.data.name)) {
+    tx.add(createUpdateFieldInstruction({
+      programId:TOKEN_2022_PROGRAM_ID,
+      metadata:mint,updateAuthority:owner,
+      field:Field.Name,value:nftMetadataName(update.data.name)
+    }));
+  }
+  tx.add(createUpdateFieldInstruction({
+    programId:TOKEN_2022_PROGRAM_ID,
+    metadata:mint,updateAuthority:owner,
+    field:Field.Uri,value:update.uri
+  }));
+  const oldFields = new Map(oldMeta.additionalMetadata || []);
+  for (const [key,value] of existingPairs) {
+    if (["Team","Level","ATK","DEF","Effect"].includes(key) && oldFields.get(key) !== value) {
+      tx.add(createUpdateFieldInstruction({
+        programId:TOKEN_2022_PROGRAM_ID,
+        metadata:mint,updateAuthority:owner,field:key,value
+      }));
+    }
+  }
+  update.onchainFields = existingPairs.filter(([key]) =>
+    ["Team","Level","ATK","DEF","Effect"].includes(key)
+  );
+  const latest = await chain.getLatestBlockhash("confirmed");
+  tx.feePayer = owner;
+  tx.recentBlockhash = latest.blockhash;
+  if (tx.serialize({requireAllSignatures:false,verifySignatures:false}).length > 1232) {
+    throw Error("Update transaction exceeds Solana size limit; no payment sent.");
+  }
+  message(`Approve ${update.mode.toUpperCase()}: $${EDIT_PRICE_USD.toFixed(2)} (~${(update.quote.total/1e9).toFixed(6)} SOL) plus network fees and any rent top-up.`);
+  const response = await phantom.signAndSendTransaction(tx,{skipPreflight:false});
+  update.signature = typeof response === "string" ? response : response?.signature;
+  if (!update.signature) throw Error("Phantom returned no update transaction signature.");
+  update.lastValidBlockHeight = latest.lastValidBlockHeight;
+  return update.signature;
+}
+
+// Verification reads transaction history from several RPCs. The preferred RPC
+// may support mint lookups but lag or omit parsed transaction history.
+async function findEditReceipt(signature) {
+  const preferred = await getRpc();
+  const urls = [...new Set([preferred.rpcEndpoint,...RPC_URLS])];
+  let confirmed = false;
+  let lastError = null;
+  for (const url of urls) {
+    const chain = url === preferred.rpcEndpoint
+      ? preferred : new Connection(url,"confirmed");
+    try {
+      const receipt = await chain.getParsedTransaction(signature,{
+        commitment:"confirmed",maxSupportedTransactionVersion:0
+      });
+      if (receipt) return {chain,receipt,confirmed:true};
+      // Confirmation alone is insufficient to prove the fee split.
+      const statuses = await chain.getSignatureStatuses([signature],{
+        searchTransactionHistory:true
+      });
+      const status = statuses.value[0];
+      if (status?.err) {
+        throw Error("CUSTOMIZE/UPDATE failed on Solana: " + JSON.stringify(status.err));
+      }
+      if (status?.confirmationStatus === "confirmed" ||
+          status?.confirmationStatus === "finalized") confirmed = true;
+    } catch (error) {
+      // A definitive on-chain failure must not be treated as pending.
+      if (/failed on Solana/i.test(shortError(error))) throw error;
+      lastError = error;
+    }
+  }
+  return {chain:null,receipt:null,confirmed,lastError};
+}
+
+async function verifyEditTransaction(owner,update) {
+  if (!update.signature) return false;
+  const result = await findEditReceipt(update.signature);
+  const {chain,receipt} = result;
+  if (!receipt) {
+    update.confirmed = result.confirmed;
+    return false;
+  }
+  if (!receipt.meta || receipt.meta.err !== null) {
+    throw Error("Edit transaction failed on Solana: " + JSON.stringify(receipt.meta?.err));
+  }
+  const signedByOwner = receipt.transaction.message.accountKeys.some(x =>
+    x.pubkey.equals(owner) && x.signer
+  );
+  const instructions = receipt.transaction.message.instructions;
+  if (!signedByOwner ||
+      !transferExists(instructions,owner,VHOUSE_WALLET,update.quote.vhousePart) ||
+      !transferExists(instructions,owner,job.mint.publicKey,update.quote.nftPart) ||
+      (update.extraRent && !transferExists(instructions,owner,job.mint.publicKey,update.extraRent))) {
+    throw Error("VHouse fee and NFT-value transfers were not verified.");
+  }
+  const newMeta = await getTokenMetadata(chain,job.mint.publicKey,"confirmed",TOKEN_2022_PROGRAM_ID);
+  if (!newMeta?.mint?.equals(job.mint.publicKey) ||
+      newMeta.name !== nftMetadataName(update.data.name) || newMeta.uri !== update.uri ||
+      (update.onchainFields || []).some(([key,value]) =>
+        !(newMeta.additionalMetadata || []).some(pair =>
+          pair[0] === key && pair[1] === value
+        )
+      )) {
+    // The transaction is visible, but this RPC's account state may lag.
+    return false;
+  }
+  const token = await getAccount(chain,
+    job.tokenAccount || getAssociatedTokenAddressSync(
+      job.mint.publicKey,owner,false,TOKEN_2022_PROGRAM_ID
+    ),"confirmed",TOKEN_2022_PROGRAM_ID);
+  if (!token.owner.equals(owner) || token.amount !== 1n ||
+      (job.soulbound && getNonTransferableAccount(token) === null)) {
+    throw Error("NFT ownership changed or the token account is invalid.");
+  }
+  return true;
+}
+
+function finishEdit(update) {
+  job.data = update.data;
+  job.chainName = nftMetadataName(update.data.name);
+  job.uri = update.uri;
+  job.imageURI = update.imageURI;
+  job.sourceImageURI = update.sourceImageURI;
+  // The newly published VHouse JSON is now the active base for this VCard.
+  job.originalMetadata = update.publishedMetadata || job.originalMetadata;
+  showIPFSResult(update.imageURI,update.uri);
+  // Download exactly the completed PNG that was uploaded and verified.
+  if (update.png) saveVCardPNG(update.png,update.data);
+  pendingOperation = null;
+  editMode = null;
+  $("updateModeButton").classList.remove("active");
+  $("customModeButton").classList.remove("active");
+  $("effectGrid").hidden = true;
+  $("applyButton").hidden = true;
+  message("VCard " + update.mode.toUpperCase() + " verified on Solana. Click the VCard to flip and view its updated receipt.");
+  lock(false);
+  refresh();
+}
+
+$("applyButton").onclick = async () => {
+  if (busy || !minted || !editMode) return;
+  lock(true);
+  try {
+    const phantom = window.phantom?.solana || window.solana;
+    if (!phantom?.isPhantom || !phantom.signAndSendTransaction) throw Error("Phantom is required.");
+    const owner = (await phantom.connect()).publicKey;
+    showConnectedWallet(owner);
+    if (owner.toBase58() !== job.owner) throw Error("Connect the wallet that owns this VCard.");
+    if (pendingOperation) {
+      if (await verifyEditTransaction(owner,pendingOperation)) finishEdit(pendingOperation);
+      else message(pendingOperation.confirmed
+        ? "Transaction confirmed; waiting for readable receipt/metadata to verify. CHECK again; do not pay twice."
+        : "Transaction not yet confirmed. CHECK again; no new charge.");
+      return;
+    }
+    if (!(await inspectMint(owner))) throw Error("Original NFT could not be verified.");
+    const data = cardData();
+    if (editMode === "update" &&
+        data.name === job.data.name &&
+        data.description === job.data.description &&
+        data.team === job.data.team &&
+        data.image === job.data.image) {
+      throw Error("Change the name, description, team or image first.");
+    }
+    if (editMode === "customize" && data.effect === job.data.effect &&
+        data.image === job.data.image) {
+      throw Error("Change the card effect or position the image first.");
+    }
+    const quote = await getEditQuote();
+    // Upload current full card so visible changes match the on-chain JSON.
+    const png = await makePNG(data);
+    const sourceChanged = data.image !== job.data.image ||
+      data.imageMode !== job.data.imageMode;
+    const {uri,imageURI,sourceImageURI,publishedMetadata} = await uploadMetadata(data,png,{
+      publishReceipt:false,
+      sourceImageURI:sourceChanged ? null : job.sourceImageURI,
+      originalMetadata:job.originalMetadata || null,
+      operation:editMode
+    });
+    const update = {
+      mode:editMode,quote,data,uri,imageURI,sourceImageURI,
+      publishedMetadata,png,signature:null,extraRent:0
+    };
+    pendingOperation = update;
+    await submitEditTransaction(phantom,owner,update);
+    $("applyButton").textContent = "CHECK " + editMode.toUpperCase();
+    for (let i=0;i<15;i++) {
+      if (await verifyEditTransaction(owner,update)) {
+        finishEdit(update);
+        return;
+      }
+      await sleep(1200);
+    }
+    message(update.confirmed
+      ? "Transaction confirmed; receipt verification is pending. Press CHECK; no new charge."
+      : "Transaction submitted. Press CHECK to verify; it will not charge again.");
+  } catch (error) {
+    console.error("VCard edit:",error);
+    if (pendingOperation && !pendingOperation.signature) {
+      pendingOperation = null;
+    } else if (pendingOperation?.signature) {
+      // A definitively failed on-chain transaction is atomic: no fees transferred.
+      try {
+        const failure = await getFailure(pendingOperation.signature);
+        if (failure) {
+          pendingOperation = null;
+          paintMoney($("applyButton"),editMode === "update"
+            ? "CONFIRM UPDATE · $0.75" : "CONFIRM CUSTOMIZE · $0.75",true);
+        }
+      } catch (_) {}
+    }
+    message("VCard edit error: " + shortError(error));
+  } finally {
+    lock(false);
+  }
+};
+
+/* Metaplex Core NFTs have their owner on the Asset account, not in an ATA.
+   Import the Core reader only when an MPL Core asset is loaded, so the
+   already-working Token-2022 path remains independent of this SDK. */
+async function readCoreAsset(chain,address) {
+  const [bundle,core,umiPackage] = await Promise.all([
+    import("https://esm.sh/@metaplex-foundation/umi-bundle-defaults@1.6.0?bundle&external=@solana/web3.js"),
+    import("https://esm.sh/@metaplex-foundation/mpl-core@1.10.0?bundle"),
+    import("https://esm.sh/@metaplex-foundation/umi@1.6.0?bundle")
+  ]);
+  const umi = bundle.createUmi(chain.rpcEndpoint).use(core.mplCore());
+  return await core.fetchAsset(umi,umiPackage.publicKey(address.toBase58()),{
+    skipDerivePlugins:true
+  });
+}
+
+/* Check Phantom's connected wallet first, using the NFT's direct ATA.
+   Only if the ATA is empty, check for a non-associated token account with
+   alternative RPCs (never the PublicNode endpoint that rejects indexed calls). */
+async function findOwnedNFTTokenAccount(chain,mint,owner) {
+  const address = getAssociatedTokenAddressSync(
+    mint,owner,false,TOKEN_2022_PROGRAM_ID
+  );
+  try {
+    const token = await getAccount(
+      chain,address,"confirmed",TOKEN_2022_PROGRAM_ID
+    );
+    if (token.owner.equals(owner) && token.mint.equals(mint) && token.amount === 1n) {
+      return {token,address};
+    }
+  } catch (error) {
+    if (!isNotFound(error)) throw error;
+  }
+
+  let couldCheckOtherAccounts = false;
+  for (const url of RPC_URLS.filter(x => !x.includes("publicnode"))) {
+    try {
+      const other = url === chain.rpcEndpoint ? chain : new Connection(url,"confirmed");
+      const accounts = await other.getTokenAccountsByOwner(owner,{
+        mint
+      },"confirmed");
+      couldCheckOtherAccounts = true;
+      for (const item of accounts.value) {
+        const token = await getAccount(other,item.pubkey,"confirmed",TOKEN_2022_PROGRAM_ID);
+        if (token.owner.equals(owner) && token.mint.equals(mint) && token.amount === 1n) {
+          return {token,address:item.pubkey};
+        }
+      }
+    } catch (error) {
+      console.warn("Non-ATA wallet lookup unavailable:",url,shortError(error));
+    }
+  }
+  const wallet = owner.toBase58();
+  throw Error(couldCheckOtherAccounts
+    ? `Wallet ${wallet} does not currently hold this Token-2022 NFT.`
+    : `Could not confirm NFT ownership for wallet ${wallet}. Direct token account is empty; indexed lookup unavailable.`);
+}
+
+$("loadMintButton").onclick = async () => {
+  if (busy) return;
+  lock(true);
+  $("loadStatus").hidden = true;
+  try {
+    if (pendingOperation) throw Error("An update is pending. Verify it first.");
+    const phantom = window.phantom?.solana || window.solana;
+    if (!phantom?.isPhantom) throw Error("Connect Phantom to load your NFT.");
+    const owner = (await phantom.connect()).publicKey;
+    showConnectedWallet(owner);
+    if (!owner) throw Error("Phantom did not return a connected wallet.");
+    $("connectedWalletInfo").replaceChildren();
+    burnLine($("connectedWalletInfo"),"WALLET OWNER",owner.toBase58(),"tag-owner");
+    $("connectedWalletInfo").hidden = false;
+    const mint = new PublicKey($("mintAddressInput").value.trim());
+    const chain = await getRpc();
+    const mintInfo = await chain.getAccountInfo(mint,"confirmed");
+    if (!mintInfo) throw Error("NFT account not found on Solana Mainnet.");
+
+    let standard,meta,held,mintData = null,updateAuthorized = false;
+    let coreAsset = null;
+    if (mintInfo.owner.equals(MPL_CORE_PROGRAM_ID)) {
+      // Core stores ownership directly in its Asset account.
+      standard = "mpl-core";
+      coreAsset = await readCoreAsset(chain,mint);
+      if (String(coreAsset.owner) !== owner.toBase58()) {
+        throw Error("Phantom wallet " + owner.toBase58() +
+          " does not own this Metaplex Core NFT. On-chain owner: " + coreAsset.owner);
+      }
+      meta = {
+        name:coreAsset.name,
+        symbol:"CORE",
+        uri:coreAsset.uri
+      };
+      held = {address:mint};
+      updateAuthorized = coreAsset.updateAuthority?.type === "Address" &&
+        String(coreAsset.updateAuthority.address) === owner.toBase58();
+    } else if (mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+      // Preserve the existing Token-2022 ownership and metadata checks.
+      standard = "token-2022";
+      const [token,tokenMeta,owned] = await Promise.all([
+        getMint(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID),
+        getTokenMetadata(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID),
+        findOwnedNFTTokenAccount(chain,mint,owner)
+      ]);
+      mintData = token;
+      meta = tokenMeta;
+      held = owned;
+      if (mintData.decimals !== 0 || mintData.supply !== 1n || !meta?.mint?.equals(mint)) {
+        throw Error("Mint must be a Token-2022 NFT with readable on-chain token metadata.");
+      }
+      updateAuthorized = meta.updateAuthority?.equals(owner) === true;
+    } else {
+      throw Error("Unsupported NFT program: " + mintInfo.owner.toBase58());
+    }
+
+    const json = await ipfsJSON(meta.uri);
+    const v = json?.properties?.vhouse;
+    const hasVHouseSource = v && ["R","P","S"].includes(v.team);
+    let source = null;
+    let sourceImageURI = null;
+    let chosenArt = 0;
+    let chosenTeam = "R";
+    let effect = "none";
+    if (hasVHouseSource) {
+      chosenTeam = v.team;
+      chosenArt = [0,1,2].includes(v.artIndex) ? v.artIndex : 0;
+      effect = v.effect || "none";
+      if (v.imageMode === "custom" && v.sourceImage) {
+        try {
+          source = await imageDataFromIPFS(v.sourceImage);
+          sourceImageURI = v.sourceImage;
+        } catch (error) {
+          console.warn("VCard source artwork unavailable; loading NFT image:",error);
+        }
+      }
+      if (v.imageMode === "custom" && !source && json.image) {
+        source = await imageDataFromIPFS(json.image);
+        sourceImageURI = json.image;
+      }
+    } else {
+      // Existing external NFTs usually have no VHouse-specific JSON fields.
+      // Use their existing artwork and keep the original metadata intact.
+      const teamTrait = json?.attributes?.find?.(a => a?.trait_type === "Team")?.value;
+      chosenTeam = ({STONE:"R",WIND:"P",BLADE:"S"})[String(teamTrait).toUpperCase()] || "R";
+      if (!json?.image) throw Error("NFT metadata has no artwork URI to load.");
+      sourceImageURI = json.image;
+      source = await imageDataFromIPFS(json.image);
+    }
+    state.team = chosenTeam;
+    state.art = chosenArt;
+    state.image = source;
+    showNFTImage("loadedNFTImage",json.image);
+    state.effect = effect;
+    state.mode = "custom";
+    $("nameInput").value = cardDisplayName(json.name || meta.name).slice(0,16);
+    $("descriptionInput").value = String(json.description || "").slice(0,100);
+    $("descriptionInput").hidden = false;
+    $("defaultText").hidden = true;
+    document.querySelectorAll(".mode-button[data-mode]").forEach(b =>
+      b.classList.toggle("active",b.dataset.mode === "custom")
+    );
+    document.querySelectorAll(".team-button").forEach(b =>
+      b.classList.toggle("active",b.dataset.team === state.team)
+    );
+    document.querySelectorAll(".art-button").forEach(b =>
+      b.classList.toggle("selected",!source && Number(b.dataset.art) === state.art)
+    );
+    document.querySelectorAll(".effect-button").forEach(b =>
+      b.classList.toggle("active",b.dataset.effect === state.effect)
+    );
+    editMode = null;
+    pendingOperation = null;
+    job = {
+      mint:{publicKey:mint},data:null,uri:meta.uri,
+      imageURI:json.image,sourceImageURI,
+      owner:owner.toBase58(),signature:null,loaded:true,standard,
+      tokenAccount:standard === "token-2022" ? held.address : null,
+      symbol:meta.symbol,
+      chainName:meta.name,
+      soulbound:mintData ? getNonTransferable(mintData) !== null : false,
+      updateAuthorized,
+      closeEnabled:mintData
+        ? getMintCloseAuthority(mintData)?.closeAuthority?.equals(owner) === true
+        : false,
+      originalMetadata:json
+    };
+    minted = true;
+    job.data = cardData();
+    $("mintButton").textContent = "MINTED ✓";
+    renderCard($("vcardHost"),job.data);
+    queueCardCapture();
+    showIPFSResult(job.imageURI,job.uri);
+    receiptLink("receiptMint","mintPending","mintDetail",mintURL(),mint.toBase58());
+    showPostMintUI();
+    showScreen("workspace");
+    message(standard === "mpl-core"
+      ? "Metaplex Core NFT loaded. Wallet ownership verified."
+      : job.updateAuthorized
+        ? "Token-2022 NFT loaded. Choose UPDATE or CUSTOMIZE."
+        : "Token-2022 NFT loaded. This wallet is not the on-chain metadata update authority.");
+  } catch (error) {
+    console.error("NFT load:",error);
+    message("Load error: " + shortError(error));
+    // Show the loading error on the loading screen, not a hidden workspace.
+    $("loadStatus").textContent = "Load error: " + shortError(error);
+    $("loadStatus").hidden = false;
+  } finally {
+    lock(false);
+  }
+};
+
+
+/* BURN: reuse LOAD's Phantom wallet and Token-2022 ownership lookup.
+   One Phantom signature includes the service fee, burn, and both closures. */
+let burnSelection = null;
+let burnSubmitting = false;
+let burnSignature = null;
+
+function burnNotice(text) {
+  paintMoney($("burnStatus"),text);
+  $("burnStatus").hidden = !text;
+}
+
+function burnSOL(lamports) {
+  return (lamports / 1e9).toFixed(9) + " SOL";
+}
+
+function burnLine(target,label,value,cls) {
+  const div = document.createElement("div");
+  div.className = "info-line";
+  const name = document.createElement("strong");
+  name.className = cls;
+  name.textContent = label + ": ";
+  const content = document.createElement("span");
+  content.className = cls;
+  content.textContent = value;
+  div.append(name,content);
+  target.append(div);
+}
+
+function burnPriceText(selection,networkLamports) {
+  const feeLamports = selection.feeLamports;
+  const totalLamports = feeLamports + networkLamports;
+  const totalUSD = totalLamports / 1e9 * selection.solUSD;
+  const netLamports = totalLamports - selection.recoveredLamports;
+  const target = $("burnPrice");
+  target.replaceChildren();
+  burnLine(target,"VHouse burn fee","$3.00 (" + burnSOL(feeLamports) + ")","tag-fee");
+  burnLine(target,"Solana network fee",burnSOL(networkLamports),"tag-fee");
+  burnLine(target,"TOTAL TO PAY","$" + totalUSD.toFixed(4) + " (" + burnSOL(totalLamports) + ")","tag-fee");
+  burnLine(target,"SOL RETURNED FROM NFT",burnSOL(selection.recoveredLamports),"tag-balance");
+  burnLine(target,"NET WALLET COST","$" + (netLamports / 1e9 * selection.solUSD).toFixed(4) +
+    " (" + burnSOL(netLamports) + ")","tag-balance");
+}
+
+async function burnExchangeRate() {
+  const resp = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+    {cache:"no-store"}
+  );
+  if (!resp.ok) throw Error("SOL/USD price unavailable.");
+  const value = Number((await resp.json())?.solana?.usd);
+  if (!Number.isFinite(value) || value <= 0) throw Error("SOL/USD price unavailable.");
+  return value;
+}
+
+// A finalized blockhash is recognized across Solana RPC nodes, including
+// Phantom's submission RPC. Match the preflight commitment to that blockhash.
+async function buildBurnTransaction(chain,selection) {
+  const latest = await chain.getLatestBlockhash("finalized");
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey:selection.owner,
+      toPubkey:VHOUSE_WALLET,
+      lamports:selection.feeLamports
+    }),
+    createBurnCheckedInstruction(
+      selection.tokenAccount,selection.mint,selection.owner,
+      1,selection.decimals,[],TOKEN_2022_PROGRAM_ID
+    ),
+    createCloseAccountInstruction(
+      selection.tokenAccount,selection.owner,selection.owner,[],TOKEN_2022_PROGRAM_ID
+    ),
+    createCloseAccountInstruction(
+      selection.mint,selection.owner,selection.owner,[],TOKEN_2022_PROGRAM_ID
+    )
+  );
+  tx.feePayer = selection.owner;
+  tx.recentBlockhash = latest.blockhash;
+  return tx;
+}
+
+$("burnMintInput").oninput = () => {
+  if (burnSubmitting || burnSignature) return;
+  burnSelection = null;
+  showNFTImage("burnNFTImage",null);
+  $("burnReview").hidden = true;
+  $("burnReceiptLink").hidden = true;
+  burnNotice("");
+};
+
+$("burnCheckButton").onclick = async () => {
+  if (burnSubmitting || burnSignature) return;
+  burnSubmitting = true;
+  $("burnCheckButton").disabled = true;
+  $("burnReview").hidden = true;
+  $("burnReceiptLink").hidden = true;
+  burnNotice("Checking Solana...");
+  try {
+    const phantom = window.phantom?.solana || window.solana;
+    if (!phantom?.isPhantom || !phantom.signAndSendTransaction) {
+      throw Error("Connect Phantom to burn your VCard.");
+    }
+    let connection;
+    try {
+      connection = await phantom.connect();
+    } catch (err) {
+      console.error("Phantom connect:",err?.code,err?.message,err);
+      throw Error("Phantom CONNECT | code: " + (err?.code ?? "unavailable") +
+        " | message: " + (err?.message ?? String(err)));
+    }
+    const owner = connection.publicKey;
+    showConnectedWallet(owner);
+    const mint = new PublicKey($("burnMintInput").value.trim());
+    const chain = await getRpc();
+    const mintInfo = await chain.getAccountInfo(mint,"confirmed");
+    if (!mintInfo) throw Error("NFT mint account not found on Solana.");
+    if (!mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+      throw Error("This address is not a Token-2022 mint account.");
+    }    const [mintData,held] = await Promise.all([
+      getMint(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID),
+      findOwnedNFTTokenAccount(chain,mint,owner)
+    ]);
+    const tokenInfo = await chain.getAccountInfo(held.address,"confirmed");
+    const solUSD = await burnExchangeRate();
+    const selection = {
+      owner,mint,tokenAccount:held.address,decimals:mintData.decimals,
+      solUSD,feeLamports:Math.ceil(BURN_PRICE_USD / solUSD * 1e9),
+      mintBalanceLamports:mintInfo.lamports,
+      recoveredLamports:mintInfo.lamports + tokenInfo.lamports
+    };
+    // Estimate the network cost for the SAME four-instruction transaction.
+    const tx = await buildBurnTransaction(chain,selection);
+    const feeResult = await chain.getFeeForMessage(tx.compileMessage(),"finalized");
+    if (feeResult.value == null) throw Error("Solana network fee unavailable.");
+    let name = mint.toBase58();
+    showNFTImage("burnNFTImage",null);
+    try {
+      const meta = await getTokenMetadata(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID);
+      if (meta?.name) name = cardDisplayName(meta.name);
+      if (meta?.uri) {
+        try {
+          const metadata = await ipfsJSON(meta.uri);
+          showNFTImage("burnNFTImage",metadata?.image);
+        } catch (error) { console.warn("BURN NFT image unavailable:",error); }
+      }
+    } catch (_) {} // Artwork/name display is optional; never blocks the burn.
+    burnSelection = selection;
+    $("burnWallet").replaceChildren();
+    burnLine($("burnWallet"),"WALLET OWNER",owner.toBase58(),"tag-owner");
+    $("burnInfo").replaceChildren();
+    burnLine($("burnInfo"),"NFT",name,"tag-nft");
+    burnLine($("burnInfo"),"ADDRESS",mint.toBase58(),"tag-address");
+    burnLine($("burnInfo"),"ACCOUNT BALANCE",burnSOL(selection.mintBalanceLamports),"tag-balance");
+    burnPriceText(selection,feeResult.value);
+    $("burnReview").hidden = false;
+    burnNotice("");
+  } catch (error) {
+    burnSelection = null;
+    burnNotice("BURN: " + shortError(error));
+  } finally {
+    burnSubmitting = false;
+    $("burnCheckButton").disabled = false;
+  }
+};
+
+$("burnSubmitButton").onclick = async () => {
+  if (!burnSelection || burnSubmitting || burnSignature) return;
+  burnSubmitting = true;
+  $("burnSubmitButton").disabled = true;
+  $("burnCheckButton").disabled = true;
+  try {
+    const phantom = window.phantom?.solana || window.solana;
+    const chain = await getRpc();
+    const tx = await buildBurnTransaction(chain,burnSelection);
+    // Refresh the displayed total for this exact transaction, then hand it
+    // to Phantom. No separate payment, signing, broadcasting, or fee gate.
+    const feeResult = await chain.getFeeForMessage(tx.compileMessage(),"finalized");
+    if (feeResult.value != null) burnPriceText(burnSelection,feeResult.value);
+    burnNotice("Approve the complete BURN transaction in Phantom...");
+    let response;
+    try {
+      response = await phantom.signAndSendTransaction(tx,{
+        skipPreflight:false,preflightCommitment:"finalized"
+      });
+    } catch (err) {
+      console.error("Phantom BURN submission:",err?.code,err?.message,err);
+      throw Error("Phantom SUBMIT | code: " + (err?.code ?? "unavailable") +
+        " | message: " + (err?.message ?? String(err)));
+    }
+    const signature = typeof response === "string" ? response : response?.signature;
+    if (!signature) throw Error("Phantom returned no transaction signature.");
+    burnSignature = signature;
+    $("burnReceiptLink").href = SOLSCAN + "tx/" + signature;
+    $("burnReceiptLink").hidden = false;
+    burnNotice("Transaction submitted. Checking Solana...");
+    for (let i=0;i<25;i++) {
+      const result = await chain.getSignatureStatuses([signature],{
+        searchTransactionHistory:true
+      });
+      const status = result.value[0];
+      if (status?.err) {
+        burnSignature = null;
+        throw Error("Solana transaction failed: " + JSON.stringify(status.err));
+      }
+      if (status?.confirmationStatus === "confirmed" ||
+          status?.confirmationStatus === "finalized") {
+        burnNotice("VCARD SUCCESSFULLY BURNED. Recovered " +
+          burnSOL(burnSelection.recoveredLamports) +
+          ". VHouse received the $3.00 service fee.");
+        $("burnReview").hidden = true;
+        burnSignature = null;
+        burnSelection = null;
+        return;
+      }
+      await sleep(1200);
+    }
+    burnNotice("Transaction submitted. See the Solana transaction link for its status.");
+  } catch (error) {
+    burnNotice("BURN: " + shortError(error));
+  } finally {
+    burnSubmitting = false;
+    if (!burnSignature) {
+      $("burnSubmitButton").disabled = false;
+      $("burnCheckButton").disabled = false;
+    }
+  }
+};
+
+refresh();
 </script>
 </body>
 </html>
