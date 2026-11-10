@@ -31,14 +31,14 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
    2:1 stage. The Creation Unit keeps its own vertical editor layout. */
 .map-container #creatorRegion {
   position: absolute;
-  left: 10%;
-  top: 17%;
-  width: 80%;
-  height: 70%;
+  left: 1%;
+  top: 18%;
+  width: 98%;
+  height: 82%;
   margin: 0;
-  border: 2px solid #bc9357;
-  border-radius: 10px;
-  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
 }
 .map-container #creatorRegion #creationUnit {
   /* Preserve the entire original Creation Unit at natural size, then center
@@ -48,8 +48,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
   top: 50%;
   display: flex;
   flex-direction: column;
-  width: 1100px;
-  height: 650px;
+  width: 1300px;
+  height: 640px;
   min-width: 0;
   max-width: none;
   margin: 0;
@@ -67,7 +67,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 #creatorRegion #creationUnit > .wallet-heading { margin:0 0 8px; padding:5px 6px; flex:none; }
 #creatorRegion #creationUnit > .entry-choice { flex:1; align-content:center; }
 #creatorRegion #creationUnit > .load-panel {
-  width:760px; max-width:calc(100% - 24px); margin:auto; flex:none;
+  width:980px; max-width:calc(100% - 24px); margin:auto; flex:none;
 }
 #creatorRegion #creationUnit > .workspace {
   flex:0 0 auto; grid-template-columns:minmax(0,42fr) minmax(0,58fr);
@@ -113,3 +113,36 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 }
 #creatorRegion #creationUnit .preview-wrap:has(.post-mint[hidden]) > .status { grid-row:3; }
 #creatorRegion #creationUnit .flip-hint { grid-column:1; grid-row:5; }
+
+/* BURN uses the same large surface; arrange its existing content across
+   the available width instead of pushing below the frame or adding scroll. */
+#creatorRegion #creationUnit #burnPanel { padding:14px; }
+#creatorRegion #creationUnit #burnReview:not([hidden]) {
+  display:grid;
+  grid-template-columns:minmax(0,33fr) minmax(0,67fr);
+  gap:7px 14px;
+  align-items:center;
+}
+#creatorRegion #creationUnit #burnNFTImage:not([hidden]) {
+  grid-column:1; grid-row:1 / 4;
+  max-width:100%; max-height:210px; margin:0 auto;
+}
+#creatorRegion #creationUnit #burnWallet { grid-column:2; grid-row:1; }
+#creatorRegion #creationUnit #burnInfo { grid-column:2; grid-row:2; }
+#creatorRegion #creationUnit #burnPrice { grid-column:2; grid-row:3; }
+#creatorRegion #creationUnit #burnSubmitButton {
+  grid-column:1 / -1; grid-row:4; margin-top:5px!important;
+}
+/* Readable labels throughout the same unit at desktop game size. */
+#creatorRegion #creationUnit .wallet-heading,
+#creatorRegion #creationUnit .wallet-heading .tag-address { font-size:12px; }
+#creatorRegion #creationUnit .group-label,
+#creatorRegion #creationUnit .preview-top { font-size:12px; }
+#creatorRegion #creationUnit .status { font-size:13px; }
+#creatorRegion #creationUnit .team-button,
+#creatorRegion #creationUnit .mode-button,
+#creatorRegion #creationUnit .upload,
+#creatorRegion #creationUnit .crop-launch { font-size:12px; }
+#creatorRegion #creationUnit .art-button { font-size:11px; }
+#creatorRegion #creationUnit .load-panel .mint-load input,
+#creatorRegion #creationUnit .load-panel .mint-load button { font-size:13px; }
