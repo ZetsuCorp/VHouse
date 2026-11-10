@@ -14,30 +14,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 .game-container{width:100vw;height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .map-container{position:relative;width:min(100vw,200dvh);aspect-ratio:2/1;flex-shrink:0;container-type:inline-size;overflow:hidden}
 .creator-background{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
-/* The gold frame spans VHouse's complete central display, not the old half-width creator slot. */
-.creator-region{position:absolute;left:13.45%;top:19.85%;width:73.1%;height:63%;border:2px solid #bc9357;border-radius:10px;overflow:hidden;display:flex;align-items:stretch;justify-content:stretch}
-.creator-region .game{width:100%;height:100%;max-width:none;min-width:0;flex:1 1 auto;margin:0;padding:clamp(8px,1.15cqw,17px);border:0;border-radius:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;transform:none}
-.creator-region .game h1{flex:0 0 auto;margin:0 0 9px;font-size:clamp(13px,1.15cqw,19px)}
-.creator-region .wallet-heading{flex:0 0 auto;margin:0 0 8px;padding:7px 10px}
-.creator-region .entry-choice{flex:1 1 auto;min-height:0;align-items:center;justify-content:space-evenly;gap:clamp(12px,2cqw,35px);padding:12px 20px}
-.creator-region .choice-bubble{width:clamp(145px,14cqw,210px);max-width:28%;flex-shrink:1}
-.creator-region .load-panel{width:min(850px,100%);max-width:none;max-height:calc(100% - 45px);overflow-y:auto}
-.creator-region .workspace{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr);gap:clamp(9px,1.2cqw,18px);align-items:stretch;overflow:hidden}
-.creator-region .editor{height:100%;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto auto minmax(0,1fr) auto;overflow-y:auto;scrollbar-width:thin}
-.creator-region .editor>.editor-head{grid-column:1/-1;grid-row:1;padding:8px 14px}
-.creator-region .editor>.group{min-width:0;padding:9px 12px}
-.creator-region .editor>.group:nth-child(2){grid-column:1;grid-row:2;border-right:1px solid #253644}
-.creator-region .editor>.group:nth-child(3){grid-column:2;grid-row:2}
-.creator-region .editor>.group:nth-child(4){grid-column:1;grid-row:3;border-right:1px solid #253644}
-.creator-region .editor>.group:nth-child(5){grid-column:2;grid-row:3}
-.creator-region .editor>.actions{grid-column:1/-1;grid-row:4;align-self:end;margin-top:auto;padding:9px 12px}
-.creator-region .editor .art-button img{max-height:72px}
-.creator-region .preview-wrap{width:100%;height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;grid-row:auto;scrollbar-width:thin;container-type:size}
-.creator-region .card-stand{width:min(100%,56cqh);max-width:285px;margin:0 auto}
-.creator-region .preview-top{height:25px;margin:0 0 5px}
-.creator-region .post-mint{margin-top:8px}
-.creator-region .status{margin-top:8px;padding:8px}
-/* All panels stay inside the shared game frame; no scaling or stretched artwork. */
+/* The shared stylesheet owns the full-size gold frame. This page keeps the
+   Creation Unit's original editor, menu, and card layouts unchanged. */
+.creator-background{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .vhouse-creator-back{position:absolute;left:5.56%;top:50%;transform:translate(-50%,-50%);z-index:45}
 .rotate-screen{display:none;position:fixed;inset:0;z-index:9999;background:#000;color:white;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px}
 .rotate-icon{font-size:64px}.rotate-screen h2{font-size:24px}.rotate-screen p{font-size:16px;color:#bbb}
@@ -433,7 +412,7 @@ button:disabled{opacity:.5;cursor:default}
     <button id="dismissMintSuccess" type="button">CLOSE</button>
   </div>
 </div></div>
-<a class="vhouse-btn vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
+<a class="vhouse-btn back-button vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
 </div></main>
 <script>
 /* Fit the complete Creation Unit inside the shared VHouse game frame. */
