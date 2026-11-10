@@ -146,3 +146,16 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 #creatorRegion #creationUnit .art-button { font-size:11px; }
 #creatorRegion #creationUnit .load-panel .mint-load input,
 #creatorRegion #creationUnit .load-panel .mint-load button { font-size:13px; }
+
+/* Readable game-size controls on the expanded Creator surface. */
+#creatorRegion #creationUnit .load-panel h2 { font-size:18px; }
+#creatorRegion #creationUnit .load-panel .wallet-check,
+#creatorRegion #creationUnit .load-panel .info-line { font-size:14px; }
+#creatorRegion #creationUnit .load-panel .status { font-size:15px; }
+#creatorRegion #creationUnit .load-panel .nav-back,
+#creatorRegion #creationUnit .load-panel .action { font-size:15px; }
+#creatorRegion #creationUnit .editor-head { font-size:16px; }
+#creatorRegion #creationUnit .group-label { font-size:14px; }
+#creatorRegion #creationUnit .preview-top { font-size:14px; }
+#creatorRegion #creationUnit .name-input,
+#creatorRegion #creationUnit .description-input { font-size:15px; }
