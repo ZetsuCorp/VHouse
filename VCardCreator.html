@@ -458,15 +458,17 @@ button:disabled{opacity:.5;cursor:default}
     const overlay=document.getElementById(id);
     if(overlay) map.appendChild(overlay);
   }
+  // Use MINT's game-screen footprint as the fixed scale reference.
+  // LOAD/BURN verification and loaded NFT details must NOT rescale the unit.
+  const referenceHeight=839;
   let pending=false;
   function fit(){
     pending=false;
     const width=unit.offsetWidth;
-    const height=Math.max(unit.offsetHeight,unit.scrollHeight);
-    if(!width || !height)return;
+    if(!width)return;
     const scale=Math.min(1.15,
       (map.clientWidth-28)/width,
-      (map.clientHeight-28)/height
+      (map.clientHeight-28)/referenceHeight
     );
     map.style.setProperty("--vcard-unit-scale",String(Math.max(0.01,scale)));
   }
@@ -476,10 +478,6 @@ button:disabled{opacity:.5;cursor:default}
     requestAnimationFrame(fit);
   }
   new ResizeObserver(queueFit).observe(map);
-  new ResizeObserver(queueFit).observe(unit);
-  new MutationObserver(queueFit).observe(unit,{
-    subtree:true,childList:true,attributes:true,attributeFilter:["hidden"]
-  });
   window.addEventListener("resize",queueFit);
   queueFit();
 })();
