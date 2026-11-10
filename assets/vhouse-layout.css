@@ -59,3 +59,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
   transform-origin: center center;
   transform: translate(-50%, -50%) scale(1);
 }
+
+/* Only the initial MINT / LOAD / BURN screen: narrow its panel, not the editor. */
+.map-container #creatorRegion #creationUnit:has(> #entryMenu:not([hidden])) {
+  width: 850px;
+}
