@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse — VCard Billboard</title>
+<link rel="stylesheet" href="assets/vhouse-layout.css">
 
 <style>
 *{box-sizing:border-box}
@@ -271,10 +272,129 @@ button{
   .detail{font-size:10px}
   .metadata{gap:2px 8px}
 }
+
+/* VHouse stage: use the same 2:1 game geometry as the other menus. */
+html,body{width:100%;height:100%;min-height:0;overflow:hidden;background:#060408}
+.map-container{
+  background:radial-gradient(ellipse at 50% 30%,#42223d 0%,#241326 44%,#0c0812 85%);
+}
+#billboard{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:85%;
+  height:86%;
+  min-width:0;
+  min-height:0;
+  padding:clamp(6px,.8cqw,13px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:2px solid #bc9357;
+  border-radius:10px;
+  background:
+    radial-gradient(ellipse at 10% 0%,#422345 0%,transparent 48%),
+    radial-gradient(ellipse at 100% 100%,#421722 0%,transparent 52%),
+    linear-gradient(145deg,#221729,#100d1b 75%);
+  box-shadow:0 0 0 2px #67293788,0 0 25px #e5a44a36,inset 0 0 22px #0b071b;
+}
+#billboard .nav{
+  flex:0 0 auto;
+  border-color:#805535;
+  height:31px;
+  padding:0 4px;
+}
+#billboard .tab{color:#c8acc1}
+#billboard .tab.active{color:#ffe2ac}
+#billboard .tab.active:after{background:#e5b66e}
+#billboard .brand{color:#ffe2ac}
+#billboard .billboard-back{
+  color:#ffe2ac;
+  border:1px solid #a87b4c;
+  background:#371b33;
+  text-decoration:none;
+  padding:3px 7px;
+  border-radius:4px;
+  font-weight:900;
+  font-size:10px;
+}
+#billboard .billboard-back:hover,
+#billboard .billboard-back:focus-visible{background:#67243b;border-color:#f2cb83}
+#billboard .cols{
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  scrollbar-color:#a57b4c #1e1528;
+  scrollbar-width:thin;
+  padding-right:4px;
+}
+#billboard .activity{
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  scrollbar-color:#a57b4c #1e1528;
+}
+#billboard .art{background:linear-gradient(145deg,#21172a,#140d1b);border-color:#bc9357}
+#billboard .artfoot{color:#e4c58f}
+#billboard .sect{color:#ffe2ac;border-color:#95633f}
+#billboard .detail{border-color:#68445c70}
+#billboard .dk,#billboard .meta span{color:#c3a7bc}
+#billboard .dv{color:#e8d0e7}
+#billboard .metric{
+  background:linear-gradient(145deg,#301e38,#231722);
+  border:1px solid #78536a;
+  border-left-color:#ac7945;
+}
+#billboard .metric small{color:#d4b5ca}
+#billboard .metric strong{color:#e4c58f;font-size:12px}
+#billboard #initialMint,
+#billboard #mintPrice{color:#ff4bc8!important}
+#billboard #depositedSol,
+#billboard #recoverableSol,
+#billboard #growthPercent{color:#4bea9b!important}
+#billboard #updates,
+#billboard #customizations{color:#e4c58f!important}
+#billboard #mintAddress,
+#billboard #metadataUri,
+#billboard #ipfsImage{color:#63adff!important}
+#billboard #ownerWallet,
+#billboard #updateAuthority,
+#billboard #closeAuthority{color:#ffffff!important}
+#billboard #nftName,
+#billboard #nftSymbol,
+#billboard #vcardId{color:#e4c58f!important}
+#billboard .chartbox{
+  background:linear-gradient(145deg,#261728,#190e1d);
+  border-color:#856047;
+}
+#billboard .graph span{color:#e1b8cb}
+#billboard .trait{
+  background:linear-gradient(145deg,#291b35,#231422);
+  border-color:#77556b;
+  border-top-color:#ac7945;
+}
+#billboard .trait small{color:#c8b0c5}
+#billboard .trait strong{color:#fff}
+#billboard #team{color:#e4c58f}
+#billboard .meta{border-color:#68445c70}
+#billboard .meta strong{color:#f1e2ee}
+#billboard .activity th{background:#341e34;border-color:#986c48;color:#ffe2ac}
+#billboard .activity td{border-color:#694458;color:#d0b8cb}
+@media(max-width:510px){
+  #billboard{width:94%;height:92%;padding:5px}
+  #billboard .nav{gap:3px}
+  #billboard .billboard-back{padding:2px 4px;font-size:9px}
+  #billboard .brand{letter-spacing:0;font-size:9px}
+}
 </style>
 </head>
 
 <body>
+<div class="rotate-screen"><div class="rotate-icon">↻</div><h2>Rotate Your Phone</h2><p>Please turn your device sideways to play.</p></div>
+<div class="game-container">
+  <div class="map-container">
 <main id="billboard">
 
   <header class="nav">
@@ -287,6 +407,7 @@ button{
       </button>
     </div>
     <span class="brand">VCARD MARKET</span>
+    <a class="billboard-back" href="./Vhouse.html">← BACK</a>
   </header>
 
   <div class="cols" id="overview">
@@ -515,6 +636,8 @@ button{
   </section>
 
 </main>
+  </div>
+</div>
 
 <script>
 (() => {
