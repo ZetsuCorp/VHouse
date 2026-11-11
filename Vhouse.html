@@ -324,19 +324,34 @@ const billboardOverlay = document.getElementById("billboardOverlay");
 const billboardMenuContent = document.getElementById("billboardMenuContent");
 let billboardLoading = false;
 
-// Fit every section inside the room window without internal scrollbars.
+// Measure against Overview only so changing tabs never changes the frame size.
 function fitBillboard() {
   const menu = billboardMenuContent.shadowRoot?.getElementById("billboard");
   if (!menu || billboardOverlay.hidden) return;
-  menu.style.setProperty("--billboard-scale", "1");
   const availableWidth = billboardMenuContent.clientWidth;
   const availableHeight = billboardMenuContent.clientHeight;
   if (!availableWidth || !availableHeight) return;
-  const scale = Math.min(1,
-    (availableWidth - 2) / Math.max(1, menu.scrollWidth),
-    (availableHeight - 2) / Math.max(1, menu.scrollHeight)
-  );
-  menu.style.setProperty("--billboard-scale", String(scale));
+
+  const overview = menu.querySelector("#overview");
+  const activity = menu.querySelector("#activity");
+  const overviewDisplay = overview.style.display;
+  const activityDisplay = activity.style.display;
+
+  // Measure the full Overview at its natural size, even when Activity is open.
+  overview.style.display = "grid";
+  activity.style.display = "none";
+  menu.style.height = "auto";
+  menu.style.setProperty("--billboard-scale", "1");
+  const naturalWidth = menu.scrollWidth;
+  const naturalHeight = menu.scrollHeight;
+  menu.style.height = naturalHeight + "px";
+  menu.style.setProperty("--billboard-scale", String(Math.min(1,
+    (availableWidth - 2) / Math.max(1, naturalWidth),
+    (availableHeight - 2) / Math.max(1, naturalHeight)
+  )));
+
+  overview.style.display = overviewDisplay;
+  activity.style.display = activityDisplay;
 }
 new ResizeObserver(fitBillboard).observe(billboardMenuContent);
 
@@ -388,7 +403,7 @@ async function loadBillboard() {
           item.classList.toggle("active", item === tab));
         menu.querySelector("#overview").style.display = overview ? "grid" : "none";
         menu.querySelector("#activity").style.display = overview ? "none" : "block";
-        requestAnimationFrame(fitBillboard);
+        // Keep the existing frame height and scale for both tabs.
       });
     });
     menu.querySelector(".billboard-back")?.addEventListener("click", event => {
