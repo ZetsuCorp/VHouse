@@ -592,6 +592,32 @@ async function requireVHousePlayer(){
   return user;
 }
 
+// Link the Phantom wallet used for minting to this authenticated VHouse account.
+async function linkMintWallet(owner){
+  const user=await requireVHousePlayer();
+  const address=owner.toBase58();
+  const client=await vhouseClient();
+  const {data:account,error:readError}=await client.from("vhouse_accounts")
+    .select("wallet_address").eq("id",user.id).maybeSingle();
+  if(readError) throw readError;
+  if(!account) throw Error("VHouse account not found. Sign in again.");
+  if(account.wallet_address===address) return;
+  if(account.wallet_address) {
+    throw Error("Your VHouse account is linked to a different Phantom wallet.");
+  }
+  if(window.VHouseAuth.getUser()?.id!==user.id) {
+    throw Error("VHouse account changed. Sign in again before minting.");
+  }
+  const {data:linked,error:saveError}=await client.from("vhouse_accounts")
+    .update({wallet_address:address})
+    .eq("id",user.id).is("wallet_address",null)
+    .select("wallet_address").maybeSingle();
+  if(saveError) throw saveError;
+  if(linked?.wallet_address!==address) {
+    throw Error("Unable to link Phantom to your VHouse account.");
+  }
+}
+
 const RPC_URLS = [
   "https://solana-rpc.publicnode.com",
   "https://rpc.solanatracker.io/public",
@@ -2409,6 +2435,8 @@ $("mintButton").onclick = async () => {
         "Reconnect the Phantom wallet that started this mint."
       );
     }
+
+    await linkMintWallet(owner);
 
     const result = await mintInPhantom(
       phantom,
