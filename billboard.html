@@ -1,0 +1,542 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse — VCard Billboard</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  min-height:100%;
+  background:#0d1114;
+  color:#e1e9ed;
+  font:11px/1.3 Consolas,"Courier New",monospace;
+}
+
+#billboard{
+  width:100%;
+  padding:9px;
+}
+
+button{
+  font:inherit;
+  cursor:pointer;
+}
+
+.nav{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-block:1px solid #354047;
+  height:29px;
+  margin-bottom:9px;
+}
+
+.tabs{
+  display:flex;
+  gap:9px;
+  height:100%;
+}
+
+.tab{
+  border:0;
+  background:none;
+  color:#a4b3bd;
+  font-weight:900;
+  font-size:10px;
+  padding:0 4px;
+  position:relative;
+}
+
+.tab.active{color:#7fdded}
+
+.tab.active:after{
+  content:"";
+  height:2px;
+  background:#7fdded;
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+}
+
+.brand{
+  color:#e5c38a;
+  letter-spacing:1px;
+  font-weight:900;
+  font-size:10px;
+}
+
+.cols{
+  display:grid;
+  grid-template-columns:minmax(0,40fr) minmax(0,60fr);
+  gap:12px;
+  align-items:start;
+}
+
+.left,.right{min-width:0}
+
+.art{
+  width:124px;
+  max-width:100%;
+  aspect-ratio:3/4;
+  margin:0 auto 5px;
+  background:#161c21;
+  border:1px solid #46515a;
+  overflow:hidden;
+}
+
+.art img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+.artfoot{
+  display:flex;
+  justify-content:space-between;
+  color:#86c5d6;
+  font-size:9px;
+  margin-bottom:10px;
+}
+
+.sect{
+  font-weight:900;
+  font-size:10px;
+  color:#f7f8fa;
+  border-bottom:1px solid #36434b;
+  padding-bottom:3px;
+  margin:0 0 5px;
+  letter-spacing:.2px;
+}
+
+.detail{
+  display:flex;
+  justify-content:space-between;
+  gap:7px;
+  padding:3px 0;
+  border-bottom:1px solid #263139;
+  font-size:9px;
+}
+
+.dk{
+  color:#a5b3bd;
+  font-weight:800;
+}
+
+.dv{
+  color:#87cbdd;
+  text-align:right;
+  overflow-wrap:anywhere;
+}
+
+.metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:4px;
+  margin-bottom:8px;
+}
+
+.metric{
+  padding:5px;
+  background:#162027;
+  border:1px solid #34434b;
+  min-width:0;
+}
+
+.metric small{
+  display:block;
+  font-size:8px;
+  color:#9badb8;
+}
+
+.metric strong{
+  display:block;
+  color:#8ff5ca;
+  font-size:12px;
+  margin-top:2px;
+}
+
+.chartbox{
+  border:1px solid #34434b;
+  padding:6px;
+  margin-bottom:10px;
+  background:#11191e;
+}
+
+.graph{
+  position:relative;
+  height:83px;
+}
+
+.graph svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+.graph span{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#99aab4;
+  font-size:9px;
+}
+
+.traits{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:4px;
+  margin-bottom:9px;
+}
+
+.trait{
+  background:#151e24;
+  border:1px solid #34434b;
+  padding:5px;
+}
+
+.trait small{
+  display:block;
+  color:#98adb8;
+  font-size:8px;
+}
+
+.trait strong{
+  display:block;
+  font-size:11px;
+  color:#e9f2f5;
+  margin-top:2px;
+}
+
+.metadata{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:3px 12px;
+}
+
+.meta{
+  display:flex;
+  justify-content:space-between;
+  gap:4px;
+  font-size:9px;
+  padding:3px 0;
+  border-bottom:1px solid #253139;
+}
+
+.meta span{color:#9aabb5}
+
+.meta strong{
+  color:#dce6eb;
+  text-align:right;
+  overflow-wrap:anywhere;
+}
+
+.activity{display:none}
+
+.activity table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:10px;
+}
+
+.activity th{
+  background:#182127;
+  color:#e5c38a;
+  text-align:left;
+  padding:8px;
+  border:1px solid #35434b;
+}
+
+.activity td{
+  padding:12px;
+  color:#98aab4;
+  text-align:center;
+  border:1px solid #35434b;
+}
+
+@media(max-width:510px){
+  .cols{
+    grid-template-columns:1fr;
+    gap:11px;
+  }
+
+  .art{width:115px}
+  .detail{font-size:10px}
+  .metadata{gap:2px 8px}
+}
+</style>
+</head>
+
+<body>
+<main id="billboard">
+
+  <header class="nav">
+    <div class="tabs">
+      <button class="tab active" data-view="overview">
+        OVERVIEW
+      </button>
+      <button class="tab" data-view="activity">
+        ACTIVITY
+      </button>
+    </div>
+    <span class="brand">VCARD MARKET</span>
+  </header>
+
+  <div class="cols" id="overview">
+
+    <!-- LEFT COLUMN -->
+    <div class="left">
+
+      <!-- VCARD IMAGE CONTAINER -->
+      <div class="art" id="vcardImage"></div>
+
+      <div class="artfoot">
+        <span>VCARD</span>
+        <span id="vcardId">—</span>
+      </div>
+
+      <section>
+        <div class="sect">NFT DETAILS</div>
+
+        <div class="detail">
+          <span class="dk">NAME</span>
+          <span class="dv" id="nftName">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">SYMBOL</span>
+          <span class="dv" id="nftSymbol">VCARD</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">MINT ADDRESS</span>
+          <span class="dv" id="mintAddress">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">OWNER WALLET</span>
+          <span class="dv" id="ownerWallet">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">MINT DATE</span>
+          <span class="dv" id="mintDate">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">TOKEN STANDARD</span>
+          <span class="dv" id="tokenStandard">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">SOULBOUND</span>
+          <span class="dv" id="soulbound">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">UPDATE AUTHORITY</span>
+          <span class="dv" id="updateAuthority">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">CLOSE AUTHORITY</span>
+          <span class="dv" id="closeAuthority">—</span>
+        </div>
+
+        <div class="detail">
+          <span class="dk">METADATA URI</span>
+          <span class="dv" id="metadataUri">—</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right">
+
+      <section>
+        <div class="sect">NFT GROWTH · SOLANA</div>
+
+        <div class="metrics">
+          <div class="metric">
+            <small>INITIAL MINT</small>
+            <strong id="initialMint">—</strong>
+          </div>
+
+          <div class="metric">
+            <small>DEPOSITED SOL</small>
+            <strong id="depositedSol">—</strong>
+          </div>
+
+          <div class="metric">
+            <small>RECOVERABLE SOL</small>
+            <strong id="recoverableSol">—</strong>
+          </div>
+
+          <div class="metric">
+            <small>UPDATES</small>
+            <strong id="updates">—</strong>
+          </div>
+
+          <div class="metric">
+            <small>CUSTOMIZATIONS</small>
+            <strong id="customizations">—</strong>
+          </div>
+
+          <div class="metric">
+            <small>GROWTH %</small>
+            <strong id="growthPercent">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- GROWTH CHART -->
+      <section class="chartbox">
+        <div class="sect">SOL GROWTH HISTORY</div>
+
+        <div class="graph" id="growthChart">
+          <svg viewBox="0 0 350 90"
+               preserveAspectRatio="none"
+               aria-label="SOL growth chart placeholder">
+
+            <g stroke="#29363e" stroke-width=".8">
+              <path d="M25 8H345 M25 27H345
+                       M25 46H345 M25 65H345"/>
+            </g>
+
+            <g fill="#81949f"
+               font-family="monospace"
+               font-size="9">
+
+              <text x="1" y="13">SOL</text>
+              <text x="26" y="85">MINT</text>
+              <text x="160" y="85">UPDATE</text>
+              <text x="293" y="85">LATEST</text>
+            </g>
+          </svg>
+
+          <span id="chartStatus">
+            AWAITING BLOCKCHAIN DATA
+          </span>
+        </div>
+      </section>
+
+      <!-- VCARD ATTRIBUTES -->
+      <section>
+        <div class="sect">VCARD ATTRIBUTES</div>
+
+        <div class="traits">
+          <div class="trait">
+            <small>TEAM</small>
+            <strong id="team">—</strong>
+          </div>
+
+          <div class="trait">
+            <small>LEVEL</small>
+            <strong id="level">—</strong>
+          </div>
+
+          <div class="trait">
+            <small>ATK</small>
+            <strong id="atk">—</strong>
+          </div>
+
+          <div class="trait">
+            <small>DEF</small>
+            <strong id="def">—</strong>
+          </div>
+
+          <div class="trait">
+            <small>EFFECT</small>
+            <strong id="effect">—</strong>
+          </div>
+
+          <div class="trait">
+            <small>MINT PRICE</small>
+            <strong id="mintPrice">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- METADATA -->
+      <section>
+        <div class="sect">NFT METADATA</div>
+
+        <div class="metadata">
+          <div class="meta">
+            <span>CREATOR</span>
+            <strong>Artworqq Kevin Suber</strong>
+          </div>
+
+          <div class="meta">
+            <span>IMAGE / IPFS</span>
+            <strong id="ipfsImage">—</strong>
+          </div>
+
+          <div class="meta">
+            <span>PUBLISHER</span>
+            <strong>The Zetsumetsu Corporation</strong>
+          </div>
+
+          <div class="meta">
+            <span>DESCRIPTION</span>
+            <strong id="nftDescription">—</strong>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- NFT ACTIVITY -->
+  <section class="activity" id="activity">
+    <div class="sect">NFT ACTIVITY</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>DATE</th>
+          <th>EVENT</th>
+          <th>SOL / TRANSACTION</th>
+        </tr>
+      </thead>
+
+      <tbody id="activityHistory">
+        <tr>
+          <td colspan="3">NO NFT HISTORY LOADED</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const billboard = document.getElementById("billboard");
+  const overview = document.getElementById("overview");
+  const activity = document.getElementById("activity");
+
+  billboard.querySelectorAll("[data-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      const showOverview = button.dataset.view === "overview";
+
+      billboard.querySelectorAll("[data-view]").forEach(tab => {
+        tab.classList.toggle("active", tab === button);
+      });
+
+      overview.style.display = showOverview ? "grid" : "none";
+      activity.style.display = showOverview ? "none" : "block";
+    });
+  });
+})();
+</script>
+</body>
+</html>
