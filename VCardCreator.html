@@ -92,6 +92,11 @@ button:disabled{opacity:.5;cursor:default}
 .mint-success-overlay p{font-size:12px;line-height:1.5;margin:8px 0 12px}
 .mint-success-overlay button{padding:7px 18px;background:#0b1b2a;color:white;border:1px solid #bc9357;border-radius:5px}
 .wallet-check{margin:6px 0;font-size:11px;color:#fff;overflow-wrap:anywhere}
+/* Separate player wallet connection; no change to mint controls. */
+.wallet-connect-control{position:absolute;top:10px;right:16px;z-index:10;display:flex;align-items:center;gap:7px;max-width:41%}
+.wallet-connect-control button{border:2px solid #bc9357;border-radius:6px;padding:7px 10px;background:#162b39;color:#e4c58f;font-size:11px;font-weight:900;white-space:nowrap}
+.wallet-connect-control button:hover,.wallet-connect-control button:focus-visible{background:#273b50;border-color:#ffe2ac}
+.wallet-connect-control .wallet-link-status{font-size:10px;color:#4bea9b;font-weight:800;overflow-wrap:anywhere;text-align:right}
 /* Creation Unit information colors */
 .tag-nft{color:#e4c58f!important}
 .tag-address{color:#63adff!important;overflow-wrap:anywhere}
@@ -236,6 +241,10 @@ button:disabled{opacity:.5;cursor:default}
   <img class="creator-background" src="assets/Vcontainer.png" alt="VHouse Creation Unit background" draggable="false">
   <div class="creator-region" id="creatorRegion"><div class="game" id="creationUnit">
   <h1>VHOUSE — VCARD CREATION</h1>
+  <div class="wallet-connect-control">
+    <button id="connectWalletButton" type="button">CONNECT WALLET</button>
+    <span id="walletLinkStatus" class="wallet-link-status" role="status" aria-live="polite"></span>
+  </div>
   <div id="walletHeader" class="wallet-heading" hidden>
     <span class="tag-owner">WALLET OWNER:</span>
     <span id="walletHeaderAddress" class="tag-address"></span>
@@ -592,8 +601,8 @@ async function requireVHousePlayer(){
   return user;
 }
 
-// Link the Phantom wallet used for minting to this authenticated VHouse account.
-async function linkMintWallet(owner){
+// Store the player-connected Phantom wallet under their existing VHouse account.
+async function linkPlayerWallet(owner){
   const user=await requireVHousePlayer();
   const address=owner.toBase58();
   const client=await vhouseClient();
@@ -617,6 +626,33 @@ async function linkMintWallet(owner){
     throw Error("Unable to link Phantom to your VHouse account.");
   }
 }
+
+// CONNECT WALLET is independent of MINT, LOAD, UPDATE and BURN.
+$("connectWalletButton").addEventListener("click", async () => {
+  const button=$("connectWalletButton");
+  const status=$("walletLinkStatus");
+  if(button.disabled) return;
+  button.disabled=true;
+  status.textContent="CONNECTING…";
+  try {
+    await requireVHousePlayer();
+    const phantom=window.phantom?.solana || window.solana;
+    if(!phantom?.isPhantom || typeof phantom.connect!=="function") {
+      throw Error("Open VHouse in a browser with Phantom installed.");
+    }
+    const owner=(await phantom.connect()).publicKey;
+    if(!owner) throw Error("Phantom did not return a wallet address.");
+    showConnectedWallet(owner);
+    status.textContent="LINKING…";
+    await linkPlayerWallet(owner);
+    status.textContent="LINKED TO VHOUSE ✓";
+  } catch(error) {
+    status.textContent=error?.message || "Wallet connection failed.";
+    console.error("[VHouse wallet link]",error);
+  } finally {
+    button.disabled=false;
+  }
+});
 
 const RPC_URLS = [
   "https://solana-rpc.publicnode.com",
@@ -2435,8 +2471,6 @@ $("mintButton").onclick = async () => {
         "Reconnect the Phantom wallet that started this mint."
       );
     }
-
-    await linkMintWallet(owner);
 
     const result = await mintInPhantom(
       phantom,
