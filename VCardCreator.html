@@ -93,10 +93,11 @@ button:disabled{opacity:.5;cursor:default}
 .mint-success-overlay button{padding:7px 18px;background:#0b1b2a;color:white;border:1px solid #bc9357;border-radius:5px}
 .wallet-check{margin:6px 0;font-size:11px;color:#fff;overflow-wrap:anywhere}
 /* Separate player wallet connection; no change to mint controls. */
-.wallet-connect-control{position:absolute;top:10px;right:16px;z-index:10;display:flex;align-items:center;gap:7px;max-width:41%}
-.wallet-connect-control button{border:2px solid #bc9357;border-radius:6px;padding:7px 10px;background:#162b39;color:#e4c58f;font-size:11px;font-weight:900;white-space:nowrap}
-.wallet-connect-control button:hover,.wallet-connect-control button:focus-visible{background:#273b50;border-color:#ffe2ac}
-.wallet-connect-control .wallet-link-status{font-size:10px;color:#4bea9b;font-weight:800;overflow-wrap:anywhere;text-align:right}
+.wallet-connect-control{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:0 auto 12px}
+.wallet-connect-control button{border:3px solid #f5d685;border-radius:9px;padding:12px 28px;background:linear-gradient(120deg,#5727a5,#8642dc);color:#fff;font-size:15px;font-weight:900;letter-spacing:1px;box-shadow:0 0 18px #a767ff88;white-space:nowrap}
+.wallet-connect-control button:hover:not(:disabled),.wallet-connect-control button:focus-visible{background:linear-gradient(120deg,#6d35cb,#a361ff);border-color:#fff0bb;box-shadow:0 0 24px #ac70ffbb}
+.wallet-connect-control .wallet-link-status{max-width:270px;font-size:12px;color:#d9c9ff;font-weight:900;overflow-wrap:anywhere;text-align:center}
+.choice-bubble:disabled,.choice-bubble:disabled:hover,.choice-bubble:disabled:focus-visible{opacity:.38;cursor:not-allowed;filter:grayscale(1);border-color:#56616b;box-shadow:none;outline:none}
 /* Creation Unit information colors */
 .tag-nft{color:#e4c58f!important}
 .tag-address{color:#63adff!important;overflow-wrap:anywhere}
@@ -251,13 +252,13 @@ button:disabled{opacity:.5;cursor:default}
   </div>
 
   <section class="entry-choice" id="entryMenu">
-    <button class="choice-bubble" id="chooseMintButton" type="button">
+    <button class="choice-bubble" id="chooseMintButton" type="button" disabled>
       <span class="bubble-symbol">✦</span><span>MINT VCARD</span>
     </button>
-    <button class="choice-bubble" id="chooseLoadButton" type="button">
+    <button class="choice-bubble" id="chooseLoadButton" type="button" disabled>
       <span class="bubble-symbol">◇</span><span>LOAD NFT</span>
     </button>
-    <button class="choice-bubble" id="chooseBurnButton" type="button">
+    <button class="choice-bubble" id="chooseBurnButton" type="button" disabled>
       <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
     </button>
   </section>
@@ -568,6 +569,11 @@ function showConnectedWallet(publicKey) {
   const text = address?.toBase58?.() || (typeof address === "string" ? address : "");
   $("walletHeader").hidden = !text;
   $("walletHeaderAddress").textContent = text;
+  const connectedAddress = walletProvider?.isConnected && walletProvider.publicKey?.toBase58?.();
+  const connected = Boolean(text && connectedAddress === text);
+  for (const id of ["chooseMintButton","chooseLoadButton","chooseBurnButton"]) {
+    $(id).disabled = !connected;
+  }
 }
 const walletProvider = window.phantom?.solana || window.solana;
 if (walletProvider?.isConnected && walletProvider.publicKey) {
@@ -575,8 +581,14 @@ if (walletProvider?.isConnected && walletProvider.publicKey) {
 }
 if (typeof walletProvider?.on === "function") {
   walletProvider.on("connect",key => showConnectedWallet(key || walletProvider.publicKey));
-  walletProvider.on("accountChanged",key => showConnectedWallet(key));
-  walletProvider.on("disconnect",() => showConnectedWallet(null));
+  walletProvider.on("accountChanged",key => {
+    showConnectedWallet(key);
+    $("walletLinkStatus").textContent = key ? "WALLET CHANGED" : "WALLET DISCONNECTED";
+  });
+  walletProvider.on("disconnect",() => {
+    showConnectedWallet(null);
+    $("walletLinkStatus").textContent = "WALLET DISCONNECTED";
+  });
 }
 
 
