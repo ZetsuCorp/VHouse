@@ -565,12 +565,12 @@ const SOLSCAN = "https://solscan.io/";
 const $ = id => document.getElementById(id);
 
 function showConnectedWallet(publicKey) {
-  const address = publicKey?.publicKey || publicKey;
-  const text = address?.toBase58?.() || (typeof address === "string" ? address : "");
-  $("walletHeader").hidden = !text;
+  const phantom = window.phantom?.solana || window.solana;
+  const connected = Boolean(phantom?.isPhantom && phantom.isConnected && phantom.publicKey);
+  const text = connected ? phantom.publicKey.toBase58() : "";
+  $("walletHeader").hidden = !connected;
   $("walletHeaderAddress").textContent = text;
-  const connectedAddress = walletProvider?.isConnected && walletProvider.publicKey?.toBase58?.();
-  const connected = Boolean(text && connectedAddress === text);
+  $("connectWalletButton").textContent = connected ? "WALLET CONNECTED" : "CONNECT WALLET";
   for (const id of ["chooseMintButton","chooseLoadButton","chooseBurnButton"]) {
     $(id).disabled = !connected;
   }
@@ -580,10 +580,14 @@ if (walletProvider?.isConnected && walletProvider.publicKey) {
   showConnectedWallet(walletProvider.publicKey);
 }
 if (typeof walletProvider?.on === "function") {
-  walletProvider.on("connect",key => showConnectedWallet(key || walletProvider.publicKey));
+  walletProvider.on("connect",key => {
+    showConnectedWallet(key || walletProvider.publicKey);
+    void showSavedWalletStatus();
+  });
   walletProvider.on("accountChanged",key => {
     showConnectedWallet(key);
     $("walletLinkStatus").textContent = key ? "WALLET CHANGED" : "WALLET DISCONNECTED";
+    if (key) void showSavedWalletStatus();
   });
   walletProvider.on("disconnect",() => {
     showConnectedWallet(null);
@@ -665,6 +669,42 @@ $("connectWalletButton").addEventListener("click", async () => {
     button.disabled=false;
   }
 });
+
+// Read the existing VHouse link; reconnect Phantom only when the player already trusted VHouse.
+async function showSavedWalletStatus() {
+  const phantom = window.phantom?.solana || window.solana;
+  if (!phantom?.isPhantom || !phantom.isConnected || !phantom.publicKey) return;
+  const address = phantom.publicKey.toBase58();
+  try {
+    const client = await vhouseClient();
+    const user = window.VHouseAuth.getUser();
+    if (!user?.id) return;
+    const {data,error} = await client.from("vhouse_accounts")
+      .select("wallet_address").eq("id",user.id).maybeSingle();
+    if (error) throw error;
+    if (window.VHouseAuth.getUser()?.id !== user.id ||
+        !phantom.isConnected || phantom.publicKey?.toBase58() !== address) return;
+    $("walletLinkStatus").textContent =
+      data?.wallet_address === address ? "LINKED TO VHOUSE ✓" : "WALLET CONNECTED";
+  } catch (error) {
+    console.warn("[VHouse wallet status]",error);
+  }
+}
+async function restoreKnownWallet() {
+  const phantom = window.phantom?.solana || window.solana;
+  if (!phantom?.isPhantom || typeof phantom.connect !== "function") return;
+  if (!phantom.isConnected) {
+    try {
+      // No Phantom popup: reconnect only a wallet that previously approved this site.
+      await phantom.connect({onlyIfTrusted:true});
+    } catch {
+      // No previous permission, wallet is locked, or permission was revoked.
+    }
+  }
+  showConnectedWallet(phantom.publicKey);
+  if (phantom.isConnected) await showSavedWalletStatus();
+}
+void restoreKnownWallet();
 
 const RPC_URLS = [
   "https://solana-rpc.publicnode.com",
