@@ -324,8 +324,28 @@ const billboardOverlay = document.getElementById("billboardOverlay");
 const billboardMenuContent = document.getElementById("billboardMenuContent");
 let billboardLoading = false;
 
+// Fit every section inside the room window without internal scrollbars.
+function fitBillboard() {
+  const menu = billboardMenuContent.shadowRoot?.getElementById("billboard");
+  if (!menu || billboardOverlay.hidden) return;
+  menu.style.setProperty("--billboard-scale", "1");
+  const availableWidth = billboardMenuContent.clientWidth;
+  const availableHeight = billboardMenuContent.clientHeight;
+  if (!availableWidth || !availableHeight) return;
+  const scale = Math.min(1,
+    (availableWidth - 2) / Math.max(1, menu.scrollWidth),
+    (availableHeight - 2) / Math.max(1, menu.scrollHeight)
+  );
+  menu.style.setProperty("--billboard-scale", String(scale));
+}
+new ResizeObserver(fitBillboard).observe(billboardMenuContent);
+
 async function loadBillboard() {
-  if (billboardLoading || billboardMenuContent.shadowRoot?.querySelector("#billboard")) return;
+  if (billboardLoading) return;
+  if (billboardMenuContent.shadowRoot?.querySelector("#billboard")) {
+    requestAnimationFrame(fitBillboard);
+    return;
+  }
   billboardLoading = true;
   try {
     const response = await fetch("./billboard.html", { cache: "no-store" });
@@ -340,12 +360,24 @@ async function loadBillboard() {
       billboardMenuContent.attachShadow({mode:"open"});
     const sheet = document.createElement("style");
     sheet.textContent = css + `
-      :host{display:block;width:100%;height:100%;min-width:0;min-height:0}
+      :host{
+        display:block;position:relative;
+        width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;
+      }
       #billboard{
-        position:relative;left:auto;top:auto;transform:none;
-        width:100%;height:100%;
+        position:absolute;left:50%;top:50%;
+        transform:translate(-50%,-50%) scale(var(--billboard-scale,1));
+        transform-origin:center center;
+        width:100%;height:auto;min-width:0;min-height:0;
+        overflow:visible;
         font:11px/1.3 Consolas,"Courier New",monospace;
         color:#e1e9ed;
+      }
+      #billboard .cols,
+      #billboard .activity{
+        flex:0 0 auto;
+        overflow:visible;
+        min-height:0;
       }
     `;
     const menu = document.importNode(template, true);
@@ -356,6 +388,7 @@ async function loadBillboard() {
           item.classList.toggle("active", item === tab));
         menu.querySelector("#overview").style.display = overview ? "grid" : "none";
         menu.querySelector("#activity").style.display = overview ? "none" : "block";
+        requestAnimationFrame(fitBillboard);
       });
     });
     menu.querySelector(".billboard-back")?.addEventListener("click", event => {
@@ -363,6 +396,7 @@ async function loadBillboard() {
       billboardOverlay.hidden = true;
     });
     shadow.replaceChildren(sheet, menu);
+    requestAnimationFrame(fitBillboard);
   } catch(error) {
     console.error("VHouse Billboard:", error);
     const shadow = billboardMenuContent.shadowRoot ||
