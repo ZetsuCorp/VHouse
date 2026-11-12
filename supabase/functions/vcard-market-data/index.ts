@@ -33,6 +33,74 @@ async function heliusRpc(key: string, method: string, params: unknown) {
   return data.result;
 }
 
+
+/* The NFT Load screen reads the Token-2022 mint extensions and the IPFS JSON
+   directly. Read those same fields here through Helius Solana RPC; DAS is
+   additional market data, not the sole source of the NFT's identity. */
+const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function metadataURL(uri: unknown) {
+  const value = stringValue(uri);
+  if (!value) return null;
+  if (/^ipfs:\/\/([a-zA-Z0-9/._-]+)$/.test(value))
+    return "https://gateway.pinata.cloud/ipfs/" + value.slice(7);
+  try {
+    const u = new URL(value);
+    // These are the IPFS metadata gateways VHouse's Load/Mint already use.
+    if (u.protocol === "https:" &&
+        ["gateway.pinata.cloud","ipfs.io","dweb.link"].includes(u.hostname) &&
+        u.pathname.startsWith("/ipfs/")) return value;
+  } catch { /* The URI is not a VHouse IPFS metadata URL. */ }
+  return null;
+}
+async function readMintInfo(key: string, mint: string, receipt: Obj) {
+  const result = obj(await heliusRpc(key,"getAccountInfo",
+    [mint,{encoding:"jsonParsed",commitment:"confirmed"}]));
+  const account = obj(result.value);
+  if (!Object.keys(account).length) throw Error("Mint account not found");
+  const info = obj(obj(obj(account.data).parsed).info);
+  const extensions = Array.isArray(info.extensions) ? info.extensions.map(obj) : [];
+  const extension = (key: string) => extensions.find(e =>
+    String(e.extension || "").toLowerCase() === key.toLowerCase());
+  const tokenMetadata = obj(extension("tokenMetadata")?.state);
+  const close = obj(extension("mintCloseAuthority")?.state);
+  const metadataUri = stringValue(tokenMetadata.uri) ||
+    stringValue(receipt.metadata_uri);
+  const offchainURL = metadataURL(metadataUri);
+  let json: Obj = {};
+  if (offchainURL) {
+    try {
+      const response = await fetch(offchainURL,{signal:AbortSignal.timeout(10000)});
+      if (response.ok) json = obj(await response.json());
+    } catch (error) {
+      console.warn("[vcard-market-data] NFT IPFS JSON:", error instanceof Error ? error.message : error);
+    }
+  }
+  const additional = Array.isArray(tokenMetadata.additionalMetadata)
+    ? tokenMetadata.additionalMetadata : [];
+  const traits = Array.isArray(json.attributes) ? json.attributes :
+    additional.filter((pair: unknown) => Array.isArray(pair) && pair.length === 2)
+      .map((pair: unknown) => ({trait_type:(pair as string[])[0], value:(pair as string[])[1]}));
+  return {
+    tokenStandard: account.owner === TOKEN_2022_PROGRAM ? "Token-2022" : null,
+    nftName: stringValue(tokenMetadata.name) || stringValue(json.name),
+    symbol: stringValue(tokenMetadata.symbol) || stringValue(json.symbol),
+    metadataUri,
+    updateAuthority:stringValue(tokenMetadata.updateAuthority),
+    closeAuthority:stringValue(close.closeAuthority),
+    soulbound:account.owner === TOKEN_2022_PROGRAM &&
+      Boolean(extension("nonTransferable")),
+    imageUri:stringValue(json.image) || stringValue(receipt.image_uri),
+    description:stringValue(json.description),
+    attributes:traits,
+    mintAccountLamports:typeof account.lamports === "number" ? account.lamports : null,
+    supply:stringValue(info.supply),
+    decimals:typeof info.decimals === "number" ? info.decimals : null,
+  };
+}
+
 function mintAccountEvent(tx: unknown, mint: string, signature: string, fallbackTime: number | null) {
   const record = obj(tx);
   const message = obj(obj(record.transaction).message);
@@ -87,7 +155,7 @@ Deno.serve(async (request: Request) => {
         .eq("player_id", playerId).eq("thing", cardId).eq("type", "VCard")
         .gt("quantity", 0).maybeSingle(),
       client.from("vcard_list")
-        .select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,created_at")
+        .select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt,created_at")
         .eq("card_id", cardId).maybeSingle(),
     ]);
     if (inventoryResult.error) throw inventoryResult.error;
@@ -121,21 +189,63 @@ Deno.serve(async (request: Request) => {
     const apiKey = Deno.env.get("HELIUS_API_KEY");
     if (!apiKey) return send({ status: "helius_unconfigured", vhouse });
 
-    // DAS supplies the current asset; ordinary Solana RPC supplements SOL history.
-    const [assetResponse, balanceResponse, signaturesResponse] = await Promise.allSettled([
-      heliusRpc(apiKey, "getAsset", { id: mint }),
-      heliusRpc(apiKey, "getBalance", [mint, { commitment: "confirmed" }]),
-      heliusRpc(apiKey, "getSignaturesForAddress", [mint, { limit: 20 }]),
+    // Load's source of truth: the mint extensions + its current IPFS metadata.
+    // Helius DAS adds indexed asset data without replacing those fields.
+    const receipt = obj(card.mint_receipt);
+    const [mintResponse, assetResponse, signaturesResponse] = await Promise.allSettled([
+      readMintInfo(apiKey,mint,receipt),
+      heliusRpc(apiKey,"getAsset",{id:mint}),
+      heliusRpc(apiKey,"getSignaturesForAddress",[mint,{limit:20}]),
     ]);
     const failures: string[] = [];
+    const loaded = mintResponse.status === "fulfilled" ? mintResponse.value : null;
+    if (mintResponse.status === "rejected")
+      failures.push("Mint account: " + String(mintResponse.reason));
     const asset = assetResponse.status === "fulfilled" ? assetResponse.value : null;
-    if (!asset) failures.push("DAS asset data unavailable");
-    const balance = balanceResponse.status === "fulfilled"
-      ? obj(balanceResponse.value).value : null;
-    if (balanceResponse.status === "rejected") failures.push("Mint SOL balance unavailable");
+    if (assetResponse.status === "rejected")
+      failures.push("DAS: " + String(assetResponse.reason));
     const signatures = signaturesResponse.status === "fulfilled" &&
       Array.isArray(signaturesResponse.value) ? signaturesResponse.value : [];
-    if (signaturesResponse.status === "rejected") failures.push("Solana activity unavailable");
+    if (signaturesResponse.status === "rejected")
+      failures.push("Transaction history: " + String(signaturesResponse.reason));
+    // Load verifies ownership using Token-2022 accounts. Read the linked wallet
+    // from the already-verified mint receipt rather than asking for a new wallet.
+    const recordedOwner = stringValue(receipt.owner_wallet);
+    let currentOwner: string | null = null;
+    if (recordedOwner && isMint(recordedOwner) && loaded?.supply === "1") {
+      try {
+        const accounts = obj(await heliusRpc(apiKey,"getTokenAccountsByOwner",[
+          recordedOwner,{mint},{encoding:"jsonParsed",commitment:"confirmed"}
+        ]));
+        const matches = Array.isArray(accounts.value) ? accounts.value : [];
+        if (matches.some((row: unknown) => {
+          const info = obj(obj(obj(obj(row).account).data).parsed);
+          const token = obj(info.info);
+          return token.mint === mint && token.owner === recordedOwner &&
+            obj(token.tokenAmount).amount === "1";
+        })) currentOwner = recordedOwner;
+      } catch (error) {
+        failures.push("Token owner lookup: " + String(error));
+      }
+    }
+    // Transaction signature is already stored on the original mint receipt.
+    // Read its initial mint-account SOL once for actual before/after growth.
+    let initialMintLamports: number | null = null;
+    let mintedAt: number | null = null;
+    if (isSignature(receipt.transaction_signature)) {
+      try {
+        const original = await heliusRpc(apiKey,"getTransaction",[
+          receipt.transaction_signature,{encoding:"jsonParsed",
+            maxSupportedTransactionVersion:0,commitment:"confirmed"}
+        ]);
+        const originalEvent = mintAccountEvent(original,mint,
+          String(receipt.transaction_signature),null);
+        initialMintLamports = originalEvent?.afterLamports ?? null;
+        mintedAt = obj(original).blockTime as number | null;
+      } catch (error) {
+        failures.push("Mint receipt transaction: " + String(error));
+      }
+    }
 
     // Limit work per viewing; do not claim this is complete history when truncated.
     const recent = signatures.slice(0, 12);
@@ -158,16 +268,20 @@ Deno.serve(async (request: Request) => {
     const historyComplete = signatures.length <= 12 &&
       transactions.length === signatures.filter((row: unknown) => !obj(row).err).length;
     return send({
-      status: asset ? "ok" : "chain_partial",
+      status: loaded || asset ? "ok" : "chain_partial",
       vhouse,
       chain: {
+        loaded,
+        currentOwner: currentOwner || stringValue(obj(asset?.ownership).owner),
+        initialMintLamports,
+        mintedAt,
         asset: asset ? {
           id: asset.id, interface: asset.interface, content: asset.content,
           ownership: asset.ownership, authorities: asset.authorities,
           mint_extensions: asset.mint_extensions, token_info: asset.token_info,
           burnt: asset.burnt, system: asset.system,
         } : null,
-        balanceLamports: typeof balance === "number" ? balance : null,
+        balanceLamports: loaded?.mintAccountLamports ?? null,
         history: transactions,
         historyComplete,
         signatures: signatures
