@@ -359,6 +359,7 @@ async function loadBillboard() {
   if (billboardLoading) return;
   if (billboardMenuContent.shadowRoot?.querySelector("#billboard")) {
     requestAnimationFrame(fitBillboard);
+    void window.VHouseBillboardData?.mount(billboardMenuContent.shadowRoot);
     return;
   }
   billboardLoading = true;
@@ -412,6 +413,7 @@ async function loadBillboard() {
     });
     shadow.replaceChildren(sheet, menu);
     requestAnimationFrame(fitBillboard);
+    void window.VHouseBillboardData?.mount(shadow);
   } catch(error) {
     console.error("VHouse Billboard:", error);
     const shadow = billboardMenuContent.shadowRoot ||
@@ -543,6 +545,7 @@ document.addEventListener("keydown", (event) => {
 </script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-stuff.js"></script>
+<script src="assets/vhouse-billboard-data.js"></script>
 <script src="assets/vhouse-player.js"></script>
 </body>
 </html>
