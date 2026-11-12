@@ -114,6 +114,56 @@ async function mintOrigin(mint:string,receipt:O){
    initialMintLamports:initial};
  }catch{return {mintedAt:null,initialMintLamports:null};}
 }
+// The existing VCard's paid edits are recorded only after chain confirmation.
+const VHOUSE_TREASURY="CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK";
+async function recordEdit(client:ReturnType<typeof createClient>,admin:ReturnType<typeof createClient>,
+ playerId:string,payload:O){
+ const mint=str(payload.mintAddress),sign=str(payload.signature);
+ const mode=str(payload.mode)?.toLowerCase(),owner=str(payload.ownerWallet);
+ if(!address(mint)||!signature(sign)||!address(owner)||
+    (mode!=="update"&&mode!=="customize"))return send({error:"Invalid VCard edit receipt"},400);
+ const [cardResult,accountResult,inventoryResult]=await Promise.all([
+  client.from("vcard_list").select("card_id,mint_address,mint_receipt")
+    .eq("mint_address",mint).maybeSingle(),
+  client.from("vhouse_accounts").select("wallet_address").eq("id",playerId).maybeSingle(),
+  client.from("vhouse_player_inventory").select("thing")
+    .eq("player_id",playerId).eq("type","VCard").gt("quantity",0)
+ ]);
+ for(const result of [cardResult,accountResult,inventoryResult])if(result.error)throw result.error;
+ const card=cardResult.data,storedOwner=str(obj(card?.mint_receipt).owner_wallet);
+ if(!card||storedOwner!==owner||accountResult.data?.wallet_address!==owner||
+    !(inventoryResult.data||[]).some((row:O)=>row.thing===card.card_id))
+   return send({error:"VCard is not owned by this VHouse player"},403);
+ const tx=obj(await rpc("getTransaction",[sign,{
+   encoding:"jsonParsed",maxSupportedTransactionVersion:0,commitment:"confirmed"
+ }]));
+ const meta=obj(tx.meta),message=obj(obj(tx.transaction).message);
+ if(!Object.keys(tx).length||!Object.keys(meta).length||meta.err!==null||
+    typeof tx.blockTime!=="number")
+   return send({error:"VCard edit not confirmed"},409);
+ const keys=Array.isArray(message.accountKeys)?message.accountKeys:[];
+ if(!keys.some((k:unknown)=>obj(k).pubkey===owner&&obj(k).signer===true))
+   return send({error:"Wallet did not sign this transaction"},403);
+ const instructions=Array.isArray(message.instructions)?message.instructions.map(obj):[];
+ const transfers=instructions.filter(i=>i.program==="system"&&obj(i.parsed).type==="transfer")
+   .map(i=>obj(obj(i.parsed).info));
+ const housePayments=transfers.filter(t=>t.source===owner&&t.destination===VHOUSE_TREASURY)
+   .map(t=>num(t.lamports)??0);
+ const mintPayments=transfers.filter(t=>t.source===owner&&t.destination===mint)
+   .map(t=>num(t.lamports)??0);
+ const paid=housePayments.some(h=>h>=100000&&mintPayments.some(m=>
+   m>=50000&&Math.abs(h-2*m)<=3));
+ const hasEdit=instructions.some(i=>i.programId===TOKEN_2022&&
+   obj(obj(i.parsed).info).metadata===mint&&
+   obj(i.parsed).type==="updateTokenMetadataField");
+ if(!hasEdit||!paid)return send({error:"Paid VCard edit not found in transaction"},403);
+ const {data,error}=await admin.rpc("vhouse_record_verified_vcard_edit",{
+  p_card_id:card.card_id,p_mint_address:mint,p_mode:mode,
+  p_signature:sign,p_confirmed_at:new Date(tx.blockTime*1000).toISOString()
+ });
+ if(error)throw error;
+ return send({status:"ok",...obj(data)});
+}
 Deno.serve(async(request:Request)=>{
  if(request.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(request.method!=="POST")return send({error:"Method not allowed"},405);
@@ -127,13 +177,20 @@ Deno.serve(async(request:Request)=>{
   const {data:auth,error:authError}=await client.auth.getUser(token);
   if(authError||!auth.user?.id)return send({error:"VHouse sign-in expired"},401);
   const playerId=auth.user.id;
-  const cardId=obj(await request.json().catch(()=>({}))).cardId;
+  const payload=obj(await request.json().catch(()=>({})));
+  if(payload.action==="record_edit"){
+   const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+   if(!serviceKey)throw Error("VHouse storage unavailable");
+   const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+   return await recordEdit(client,admin,playerId,payload);
+  }
+  const cardId=payload.cardId;
   if(typeof cardId!=="string"||!cardId||cardId.length>150)return send({error:"Active VCard required"},400);
   const [accountResult,invResult,cardResult,checksResult,chainResult]=await Promise.all([
    client.from("vhouse_accounts").select("active_vcard_id").eq("id",playerId).maybeSingle(),
    client.from("vhouse_player_inventory").select("thing").eq("player_id",playerId)
     .eq("thing",cardId).eq("type","VCard").gt("quantity",0).maybeSingle(),
-   client.from("vcard_list").select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt")
+   client.from("vcard_list").select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt,updates,customizations")
     .eq("card_id",cardId).maybeSingle(),
    client.from("vcard_verification_chain").select("event_id,card_id,state,ex,own,use,quantity,source,checked_at")
     .eq("player_id",playerId).eq("card_id",cardId).order("checked_at",{ascending:true}).limit(200),
