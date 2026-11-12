@@ -1,301 +1,234 @@
-/* VHouse Billboard data bridge. The active VCard comes from the authenticated
-   player's EXISTING account record; do not create a second selection store. */
+/* VHouse Billboard: existing VCard receipt + Load/Burn Solana RPC + Solscan balance.
+   Only server reads SOLSCAN_API_KEY. Real balance snapshots are stored for graph history. */
 import { createClient } from "npm:@supabase/supabase-js@2.49.8";
 
 const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Origin":"*",
+  "Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods":"POST, OPTIONS",
 };
-const send = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
+const send=(body:unknown,status=200)=>new Response(JSON.stringify(body),{
+  status,headers:{...cors,"Content-Type":"application/json","Cache-Control":"no-store"}
+});
+type O=Record<string,unknown>;
+const obj=(v:unknown):O=>v && typeof v==="object" && !Array.isArray(v)?v as O:{};
+const str=(v:unknown)=>typeof v==="string" && v.trim()?v.trim():null;
+const num=(v:unknown)=>v!==null && v!==undefined && v!=="" && Number.isSafeInteger(Number(v)) && Number(v)>=0?Number(v):null;
+const address=(v:unknown)=>typeof v==="string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v);
+const signature=(v:unknown)=>typeof v==="string" && /^[1-9A-HJ-NP-Za-km-z]{60,90}$/.test(v);
+const TOKEN_2022="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const RPC_URLS=[
+ "https://solana-rpc.publicnode.com",
+ "https://rpc.solanatracker.io/public",
+ "https://api.mainnet-beta.solana.com",
+]; // Exactly the existing VCard Load/Burn endpoint order.
+const RECENT=100;
 
-type Obj = Record<string, unknown>;
-const obj = (x: unknown): Obj => x && typeof x === "object" && !Array.isArray(x) ? x as Obj : {};
-const isMint = (value: unknown) => typeof value === "string" &&
-  /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value);
-const isSignature = (value: unknown) => typeof value === "string" &&
-  /^[1-9A-HJ-NP-Za-km-z]{60,90}$/.test(value);
-
-async function heliusRpc(key: string, method: string, params: unknown) {
-  const response = await fetch("https://mainnet.helius-rpc.com/?api-key=" + encodeURIComponent(key), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw Error("Helius HTTP " + response.status);
-  const data = await response.json();
-  if (data.error) throw Error("Helius " + method + ": " + (data.error.message || "RPC error"));
-  return data.result;
+async function rpc(method:string,params:unknown){
+ let last="";
+ for(const url of RPC_URLS){
+  try{
+   const response=await fetch(url,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({jsonrpc:"2.0",id:1,method,params}),
+    signal:AbortSignal.timeout(5500)
+   });
+   if(!response.ok)throw Error("HTTP "+response.status);
+   const result=await response.json();
+   if(result.error)throw Error(str(result.error.message)||"Solana RPC error");
+   return result.result;
+  }catch(e){last=e instanceof Error?e.message:String(e);}
+ }
+ throw Error("Solana RPC unavailable: "+last);
 }
-
-
-/* The NFT Load screen reads the Token-2022 mint extensions and the IPFS JSON
-   directly. Read those same fields here through Helius Solana RPC; DAS is
-   additional market data, not the sole source of the NFT's identity. */
-const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+function nftURL(uri:unknown){
+ const value=str(uri);
+ if(!value)return null;
+ if(/^ipfs:\/\/[a-zA-Z0-9/._-]+$/.test(value))
+  return "https://gateway.pinata.cloud/ipfs/"+value.slice(7);
+ try{
+  const u=new URL(value);
+  if(u.protocol==="https:" && ["gateway.pinata.cloud","ipfs.io","dweb.link"].includes(u.hostname) && u.pathname.startsWith("/ipfs/"))
+   return value;
+ }catch{ /* invalid URL */ }
+ return null;
 }
-function metadataURL(uri: unknown) {
-  const value = stringValue(uri);
-  if (!value) return null;
-  if (/^ipfs:\/\/([a-zA-Z0-9/._-]+)$/.test(value))
-    return "https://gateway.pinata.cloud/ipfs/" + value.slice(7);
-  try {
-    const u = new URL(value);
-    // These are the IPFS metadata gateways VHouse's Load/Mint already use.
-    if (u.protocol === "https:" &&
-        ["gateway.pinata.cloud","ipfs.io","dweb.link"].includes(u.hostname) &&
-        u.pathname.startsWith("/ipfs/")) return value;
-  } catch { /* The URI is not a VHouse IPFS metadata URL. */ }
-  return null;
+async function mintDetails(mint:string,receipt:O){
+ const value=obj(obj(await rpc("getAccountInfo",[mint,{encoding:"jsonParsed",commitment:"confirmed"}])).value);
+ if(!Object.keys(value).length)throw Error("NFT mint not found");
+ const info=obj(obj(obj(value.data).parsed).info);
+ const extensions=(Array.isArray(info.extensions)?info.extensions:[]).map(obj);
+ const find=(name:string)=>extensions.find(e=>String(e.extension||"").toLowerCase()===name.toLowerCase());
+ // Account extensions use parsed info.state. Load/Burn obtains the same fields via getMint/getTokenMetadata.
+ const tokenMeta=obj(find("tokenMetadata")?.state);
+ const close=obj(find("mintCloseAuthority")?.state);
+ const uri=str(tokenMeta.uri)||str(receipt.metadata_uri);
+ let metadata:O={};
+ const url=nftURL(uri);
+ if(url){
+  try{
+   const response=await fetch(url,{signal:AbortSignal.timeout(6500)});
+   if(response.ok)metadata=obj(await response.json());
+  }catch(e){console.warn("[VHouse Billboard] NFT JSON",e instanceof Error?e.message:String(e));}
+ }
+ const raw=Array.isArray(tokenMeta.additionalMetadata)?tokenMeta.additionalMetadata:[];
+ const onchainTraits=raw.filter((x:unknown)=>Array.isArray(x)&&x.length===2).map((x:unknown)=>({
+  trait_type:(x as string[])[0],value:(x as string[])[1]
+ }));
+ return {
+  tokenStandard:value.owner===TOKEN_2022?"Token-2022":null,
+  nftName:str(tokenMeta.name)||str(metadata.name),
+  symbol:str(tokenMeta.symbol)||str(metadata.symbol),
+  metadataUri:uri,
+  updateAuthority:str(tokenMeta.updateAuthority),
+  closeAuthority:str(close.closeAuthority)||str(close.authority),
+  soulbound:value.owner===TOKEN_2022 ? Boolean(find("nonTransferable")):null,
+  imageUri:str(metadata.image)||str(receipt.image_uri),
+  description:str(metadata.description),
+  attributes:Array.isArray(metadata.attributes)?metadata.attributes:onchainTraits,
+  supply:str(info.supply), decimals:num(info.decimals),
+ };
 }
-async function readMintInfo(key: string, mint: string, receipt: Obj) {
-  const result = obj(await heliusRpc(key,"getAccountInfo",
-    [mint,{encoding:"jsonParsed",commitment:"confirmed"}]));
-  const account = obj(result.value);
-  if (!Object.keys(account).length) throw Error("Mint account not found");
-  const info = obj(obj(obj(account.data).parsed).info);
-  const extensions = Array.isArray(info.extensions) ? info.extensions.map(obj) : [];
-  const extension = (key: string) => extensions.find(e =>
-    String(e.extension || "").toLowerCase() === key.toLowerCase());
-  const tokenMetadata = obj(extension("tokenMetadata")?.state);
-  const close = obj(extension("mintCloseAuthority")?.state);
-  const metadataUri = stringValue(tokenMetadata.uri) ||
-    stringValue(receipt.metadata_uri);
-  const offchainURL = metadataURL(metadataUri);
-  let json: Obj = {};
-  if (offchainURL) {
-    try {
-      const response = await fetch(offchainURL,{signal:AbortSignal.timeout(10000)});
-      if (response.ok) json = obj(await response.json());
-    } catch (error) {
-      console.warn("[vcard-market-data] NFT IPFS JSON:", error instanceof Error ? error.message : error);
-    }
+async function solscan(path:string,params:Record<string,string>,key:string){
+ const url=new URL("https://pro-api.solscan.io/v2.0/"+path);
+ for(const [k,v] of Object.entries(params))url.searchParams.set(k,v);
+ const response=await fetch(url,{headers:{accept:"application/json",token:key},signal:AbortSignal.timeout(8500)});
+ if(!response.ok)throw Error("Solscan HTTP "+response.status);
+ const payload=obj(await response.json());
+ if(payload.success!==true)throw Error("Solscan request rejected");
+ return payload.data;
+}
+async function mintOrigin(mint:string,receipt:O){
+ if(!signature(receipt.transaction_signature))return {mintedAt:null,initialMintLamports:null};
+ try{
+  const tx=obj(await rpc("getTransaction",[receipt.transaction_signature,{
+   encoding:"jsonParsed",maxSupportedTransactionVersion:0,commitment:"confirmed"
+  }]));
+  const message=obj(obj(tx.transaction).message);
+  const keys=Array.isArray(message.accountKeys)?message.accountKeys:[];
+  const index=keys.findIndex((x:unknown)=>typeof x==="string"?x===mint:obj(x).pubkey===mint);
+  const post=obj(tx.meta).postBalances;
+  const initial=Array.isArray(post)&&index>=0?num(post[index]):null;
+  return {mintedAt:typeof tx.blockTime==="number"?tx.blockTime:null,
+   initialMintLamports:initial};
+ }catch{return {mintedAt:null,initialMintLamports:null};}
+}
+Deno.serve(async(request:Request)=>{
+ if(request.method==="OPTIONS")return new Response("ok",{headers:cors});
+ if(request.method!=="POST")return send({error:"Method not allowed"},405);
+ try{
+  const token=request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if(!token)return send({error:"VHouse sign-in required"},401);
+  const url=Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("SUPABASE_ANON_KEY");
+  if(!url||!anon)throw Error("Account service unavailable");
+  const client=createClient(url,anon,{global:{headers:{Authorization:"Bearer "+token}},
+   auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:auth,error:authError}=await client.auth.getUser(token);
+  if(authError||!auth.user?.id)return send({error:"VHouse sign-in expired"},401);
+  const playerId=auth.user.id;
+  const cardId=obj(await request.json().catch(()=>({}))).cardId;
+  if(typeof cardId!=="string"||!cardId||cardId.length>150)return send({error:"Active VCard required"},400);
+  const [accountResult,invResult,cardResult,checksResult,chainResult]=await Promise.all([
+   client.from("vhouse_accounts").select("active_vcard_id").eq("id",playerId).maybeSingle(),
+   client.from("vhouse_player_inventory").select("thing").eq("player_id",playerId)
+    .eq("thing",cardId).eq("type","VCard").gt("quantity",0).maybeSingle(),
+   client.from("vcard_list").select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt")
+    .eq("card_id",cardId).maybeSingle(),
+   client.from("vcard_verification_chain").select("event_id,card_id,state,ex,own,use,quantity,source,checked_at")
+    .eq("player_id",playerId).eq("card_id",cardId).order("checked_at",{ascending:true}).limit(200),
+   client.from("vhouse_chain").select("event_id,item,state,ex,own,use,quantity,source,checked_at")
+    .eq("player_id",playerId).in("item",[cardId]).order("checked_at",{ascending:true}).limit(200),
+  ]);
+  for(const result of [accountResult,invResult,cardResult,checksResult,chainResult])
+   if(result.error)throw result.error;
+  if(!accountResult.data?.active_vcard_id)return send({status:"no_active"});
+  if(accountResult.data.active_vcard_id!==cardId)return send({error:"Active VCard changed"},409);
+  if(!invResult.data||!cardResult.data)return send({error:"VCard is not in player's inventory"},403);
+  const card=cardResult.data,mint=card.mint_address,receipt=obj(card.mint_receipt);
+  const vhouse={card,verification:checksResult.data||[],events:chainResult.data||[]};
+  if(!address(mint))return send({status:"no_mint",vhouse});
+  // Existing RLS read is used for VHouse data; balance history is server-only.
+  const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if(!serviceKey)throw Error("Balance history storage unavailable");
+  const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:stored,error:historyError}=await admin.from("vcard_balance_history")
+   .select("lamports,checked_at,sample_minute").eq("player_id",playerId).eq("card_id",cardId)
+   .eq("mint_address",mint).order("checked_at",{ascending:false}).limit(RECENT);
+  if(historyError)throw historyError;
+  const history=(stored||[]).reverse().map(x=>({
+   time:x.checked_at,lamports:Number(x.lamports)
+  }));
+  const warnings:string[]=[];
+  const newest=history[history.length-1];
+  let balanceLamports:number|null=null;
+  let sampled=false;
+  const key=Deno.env.get("SOLSCAN_API_KEY");
+  if(newest && Date.now()-Date.parse(newest.time)<60000){
+   balanceLamports=newest.lamports;
+  } else if(!key){
+   warnings.push("SOLSCAN_API_KEY not configured");
+  }else{
+   try{
+    const detail=obj(await solscan("account/detail",{address:mint},key));
+    const amount=num(detail.lamports);
+    if(amount===null||detail.account!==mint)throw Error("Solscan balance data invalid");
+    balanceLamports=amount;
+    const now=new Date(),minute=new Date(Math.floor(now.getTime()/60000)*60000).toISOString();
+    const {error:writeError}=await admin.from("vcard_balance_history").upsert({
+     player_id:playerId,card_id:cardId,mint_address:mint,lamports:amount,
+     sample_minute:minute,checked_at:now.toISOString()
+    },{onConflict:"player_id,card_id,sample_minute"});
+    if(writeError)throw writeError;
+    sampled=true;
+    // Only store real reads; each minute creates one observation.
+    if(history.length && history[history.length-1].time.slice(0,16)===now.toISOString().slice(0,16))
+     history[history.length-1]={time:now.toISOString(),lamports:amount};
+    else history.push({time:now.toISOString(),lamports:amount});
+    if(history.length>RECENT)history.shift();
+   }catch(e){
+    warnings.push("Solscan balance: "+(e instanceof Error?e.message:String(e)));
+    // Old observation is not presented as a live balance.
+   }
   }
-  const additional = Array.isArray(tokenMetadata.additionalMetadata)
-    ? tokenMetadata.additionalMetadata : [];
-  const traits = Array.isArray(json.attributes) ? json.attributes :
-    additional.filter((pair: unknown) => Array.isArray(pair) && pair.length === 2)
-      .map((pair: unknown) => ({trait_type:(pair as string[])[0], value:(pair as string[])[1]}));
-  return {
-    tokenStandard: account.owner === TOKEN_2022_PROGRAM ? "Token-2022" : null,
-    nftName: stringValue(tokenMetadata.name) || stringValue(json.name),
-    symbol: stringValue(tokenMetadata.symbol) || stringValue(json.symbol),
-    metadataUri,
-    updateAuthority:stringValue(tokenMetadata.updateAuthority),
-    closeAuthority:stringValue(close.closeAuthority),
-    soulbound:account.owner === TOKEN_2022_PROGRAM &&
-      Boolean(extension("nonTransferable")),
-    imageUri:stringValue(json.image) || stringValue(receipt.image_uri),
-    description:stringValue(json.description),
-    attributes:traits,
-    mintAccountLamports:typeof account.lamports === "number" ? account.lamports : null,
-    supply:stringValue(info.supply),
-    decimals:typeof info.decimals === "number" ? info.decimals : null,
-  };
-}
-
-function mintAccountEvent(tx: unknown, mint: string, signature: string, fallbackTime: number | null) {
-  const record = obj(tx);
-  const message = obj(obj(record.transaction).message);
-  const accountKeys = Array.isArray(message.accountKeys) ? message.accountKeys : [];
-  const index = accountKeys.findIndex((key: unknown) =>
-    typeof key === "string" ? key === mint : obj(key).pubkey === mint);
-  const meta = obj(record.meta);
-  const previous = Array.isArray(meta.preBalances) ? Number(meta.preBalances[index]) : NaN;
-  const following = Array.isArray(meta.postBalances) ? Number(meta.postBalances[index]) : NaN;
-  if (index < 0 || !Number.isFinite(following) || following < 0) return null;
-  return {
-    signature,
-    time: typeof record.blockTime === "number" ? record.blockTime : fallbackTime,
-    beforeLamports: Number.isFinite(previous) && previous >= 0 ? previous : null,
-    afterLamports: following,
-    deltaLamports: Number.isFinite(previous) && previous >= 0 ? following - previous : null,
-  };
-}
-
-Deno.serve(async (request: Request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (request.method !== "POST") return send({ error: "Method not allowed" }, 405);
-  try {
-    const token = request.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-    if (!token) return send({ error: "Sign in to VHouse first." }, 401);
-    const url = Deno.env.get("SUPABASE_URL");
-    const anon = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!url || !anon) throw Error("VHouse account service unavailable");
-    const client = createClient(url, anon, {
-      global: { headers: { Authorization: "Bearer " + token } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data: authData, error: authError } = await client.auth.getUser(token);
-    if (authError || !authData.user?.id) return send({ error: "VHouse sign-in expired." }, 401);
-    const playerId = authData.user.id;
-
-    const body = await request.json().catch(() => ({}));
-    const cardId = obj(body).cardId;
-    if (typeof cardId !== "string" || cardId.length > 150 || !cardId)
-      return send({ error: "Active VCard ID required." }, 400);
-
-    const { data: account, error: accountError } = await client
-      .from("vhouse_accounts").select("active_vcard_id")
-      .eq("id", playerId).maybeSingle();
-    if (accountError) throw accountError;
-    if (!account?.active_vcard_id) return send({ status: "no_active" });
-    if (cardId !== account.active_vcard_id)
-      return send({ error: "Active VCard changed. Refresh the player data." }, 409);
-
-    const [inventoryResult, cardResult] = await Promise.all([
-      client.from("vhouse_player_inventory").select("thing")
-        .eq("player_id", playerId).eq("thing", cardId).eq("type", "VCard")
-        .gt("quantity", 0).maybeSingle(),
-      client.from("vcard_list")
-        .select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt,created_at")
-        .eq("card_id", cardId).maybeSingle(),
-    ]);
-    if (inventoryResult.error) throw inventoryResult.error;
-    if (cardResult.error) throw cardResult.error;
-    if (!inventoryResult.data || !cardResult.data)
-      return send({ error: "Active VCard is not in this player's VHouse inventory." }, 403);
-    const card = cardResult.data;
-    const mint = card.mint_address;
-
-    // Accumulated VHouse data, read under the user's existing RLS policies.
-    const [checksResult, chainResult] = await Promise.all([
-      client.from("vcard_verification_chain")
-        .select("event_id,card_id,state,ex,own,use,quantity,source,checked_at")
-        .eq("player_id", playerId).eq("card_id", cardId)
-        .order("checked_at", { ascending: true }).limit(200),
-      client.from("vhouse_chain")
-        .select("event_id,item,state,ex,own,use,quantity,source,checked_at")
-        .eq("player_id", playerId)
-        .in("item", [...new Set([cardId, typeof mint === "string" ? mint : cardId])])
-        .order("checked_at", { ascending: true }).limit(200),
-    ]);
-    if (checksResult.error) throw checksResult.error;
-    if (chainResult.error) throw chainResult.error;
-    const vhouse = {
-      card,
-      verification: checksResult.data || [],
-      events: chainResult.data || [],
-    };
-    if (!isMint(mint)) return send({ status: "no_mint", vhouse });
-
-    const apiKey = Deno.env.get("HELIUS_API_KEY");
-    if (!apiKey) return send({ status: "helius_unconfigured", vhouse });
-
-    // Load's source of truth: the mint extensions + its current IPFS metadata.
-    // Helius DAS adds indexed asset data without replacing those fields.
-    const receipt = obj(card.mint_receipt);
-    const [mintResponse, assetResponse, signaturesResponse] = await Promise.allSettled([
-      readMintInfo(apiKey,mint,receipt),
-      heliusRpc(apiKey,"getAsset",{id:mint}),
-      heliusRpc(apiKey,"getSignaturesForAddress",[mint,{limit:20}]),
-    ]);
-    const failures: string[] = [];
-    const loaded = mintResponse.status === "fulfilled" ? mintResponse.value : null;
-    if (mintResponse.status === "rejected")
-      failures.push("Mint account: " + String(mintResponse.reason));
-    const asset = assetResponse.status === "fulfilled" ? assetResponse.value : null;
-    if (assetResponse.status === "rejected")
-      failures.push("DAS: " + String(assetResponse.reason));
-    const signatures = signaturesResponse.status === "fulfilled" &&
-      Array.isArray(signaturesResponse.value) ? signaturesResponse.value : [];
-    if (signaturesResponse.status === "rejected")
-      failures.push("Transaction history: " + String(signaturesResponse.reason));
-    // Load verifies ownership using Token-2022 accounts. Read the linked wallet
-    // from the already-verified mint receipt rather than asking for a new wallet.
-    const recordedOwner = stringValue(receipt.owner_wallet);
-    let currentOwner: string | null = null;
-    if (recordedOwner && isMint(recordedOwner) && loaded?.supply === "1") {
-      try {
-        const accounts = obj(await heliusRpc(apiKey,"getTokenAccountsByOwner",[
-          recordedOwner,{mint},{encoding:"jsonParsed",commitment:"confirmed"}
-        ]));
-        const matches = Array.isArray(accounts.value) ? accounts.value : [];
-        if (matches.some((row: unknown) => {
-          const info = obj(obj(obj(obj(row).account).data).parsed);
-          const token = obj(info.info);
-          return token.mint === mint && token.owner === recordedOwner &&
-            obj(token.tokenAmount).amount === "1";
-        })) currentOwner = recordedOwner;
-      } catch (error) {
-        failures.push("Token owner lookup: " + String(error));
-      }
-    }
-    // Transaction signature is already stored on the original mint receipt.
-    // Read its initial mint-account SOL once for actual before/after growth.
-    let initialMintLamports: number | null = null;
-    let mintedAt: number | null = null;
-    if (isSignature(receipt.transaction_signature)) {
-      try {
-        const original = await heliusRpc(apiKey,"getTransaction",[
-          receipt.transaction_signature,{encoding:"jsonParsed",
-            maxSupportedTransactionVersion:0,commitment:"confirmed"}
-        ]);
-        const originalEvent = mintAccountEvent(original,mint,
-          String(receipt.transaction_signature),null);
-        initialMintLamports = originalEvent?.afterLamports ?? null;
-        mintedAt = obj(original).blockTime as number | null;
-      } catch (error) {
-        failures.push("Mint receipt transaction: " + String(error));
-      }
-    }
-
-    // Limit work per viewing; do not claim this is complete history when truncated.
-    const recent = signatures.slice(0, 12);
-    const transactions: Array<ReturnType<typeof mintAccountEvent>> = [];
-    for (let i = 0; i < recent.length; i += 4) {
-      const batch = await Promise.allSettled(recent.slice(i, i + 4).map(async (row: unknown) => {
-        const event = obj(row);
-        if (!isSignature(event.signature) || event.err) return null;
-        const tx = await heliusRpc(apiKey, "getTransaction",
-          [event.signature, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0,
-            commitment: "confirmed" }]);
-        return mintAccountEvent(tx, mint, event.signature, typeof event.blockTime === "number"
-          ? event.blockTime : null);
-      }));
-      for (const record of batch) {
-        if (record.status === "fulfilled" && record.value) transactions.push(record.value);
-      }
-    }
-    transactions.sort((a, b) => (a?.time ?? 0) - (b?.time ?? 0));
-    const historyComplete = signatures.length <= 12 &&
-      transactions.length === signatures.filter((row: unknown) => !obj(row).err).length;
-    return send({
-      status: loaded || asset ? "ok" : "chain_partial",
-      vhouse,
-      chain: {
-        loaded,
-        currentOwner: currentOwner || stringValue(obj(asset?.ownership).owner),
-        initialMintLamports,
-        mintedAt,
-        asset: asset ? {
-          id: asset.id, interface: asset.interface, content: asset.content,
-          ownership: asset.ownership, authorities: asset.authorities,
-          mint_extensions: asset.mint_extensions, token_info: asset.token_info,
-          burnt: asset.burnt, system: asset.system,
-        } : null,
-        balanceLamports: loaded?.mintAccountLamports ?? null,
-        history: transactions,
-        historyComplete,
-        signatures: signatures
-          .filter((row: unknown) => isSignature(obj(row).signature))
-          .map((row: unknown) => ({
-            signature: obj(row).signature,
-            time: obj(row).blockTime ?? null,
-            failed: Boolean(obj(row).err),
-          })),
-      },
-      warnings: failures,
-    });
-  } catch (error) {
-    console.error("[vcard-market-data]", error instanceof Error ? error.message : error);
-    return send({ error: "Unable to retrieve VCard market data." }, 500);
+  const [infoResult,originResult]=await Promise.allSettled([
+   mintDetails(mint,receipt),mintOrigin(mint,receipt)
+  ]);
+  const loaded=infoResult.status==="fulfilled"?infoResult.value:null;
+  if(infoResult.status==="rejected")warnings.push("Solana NFT metadata: "+String(infoResult.reason));
+  const origin=originResult.status==="fulfilled"?originResult.value:{mintedAt:null,initialMintLamports:null};
+  let currentOwner:null|string=null;
+  if(address(receipt.owner_wallet) && loaded?.supply==="1"){
+   try{
+    const accounts=obj(await rpc("getTokenAccountsByOwner",[
+     receipt.owner_wallet,{mint},{encoding:"jsonParsed",commitment:"confirmed"}
+    ]));
+    const values=Array.isArray(accounts.value)?accounts.value:[];
+    if(values.some((row:unknown)=>{
+     const info=obj(obj(obj(obj(row).account).data).parsed).info;
+     const t=obj(info);
+     return t.owner===receipt.owner_wallet && t.mint===mint && obj(t.tokenAmount).amount==="1";
+    }))currentOwner=String(receipt.owner_wallet);
+   }catch{ /* Ownership is unknown, not assumed. */ }
   }
+  const latest=history[history.length-1];
+  const start=origin.initialMintLamports??(history.length?history[0].lamports:null);
+  const current=balanceLamports;
+  const deposits=start!==null && current!==null ? Math.max(0,current-start) : null;
+  return send({
+   status:!key?"solscan_unconfigured":warnings.length?"partial":"ok",
+   vhouse,
+   chain:{
+    loaded,currentOwner,initialMintLamports:origin.initialMintLamports,
+    mintedAt:origin.mintedAt,balanceLamports:current,
+    initialObservedLamports:history.length?history[0].lamports:null,
+    history:history.map(x=>({time:x.time,afterLamports:x.lamports})),
+    historyComplete:true,
+    snapshots:history,source:"Solscan",sampled,depositedLamports:deposits
+   },
+   warnings,
+  });
+ }catch(error){
+  console.error("[vcard-market-data]",error instanceof Error?error.message:error);
+  return send({error:"Unable to retrieve VCard market data"},500);
+ }
 });
