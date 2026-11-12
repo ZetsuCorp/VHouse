@@ -109,15 +109,18 @@
     if (!card) return;
     const chain = result.chain || {};
     const asset = chain.asset || {};
+    const loaded = chain.loaded || {};
     const metadata = asset.content?.metadata || {};
-    const traits = metadata.attributes || asset.content?.attributes || [];
+    const traits = loaded.attributes?.length ? loaded.attributes :
+      metadata.attributes || asset.content?.attributes || [];
     const extensions = asset.mint_extensions || {};
     const owner = asset.ownership || {};
     const authority = Array.isArray(asset.authorities) ? asset.authorities[0] : null;
     const vchecks = result.vhouse?.verification || [];
     const game = result.vhouse?.events || [];
     const tx = chain.history || [];
-    const image = cleanImage(asset.content?.links?.image) ||
+    const image = cleanImage(loaded.imageUri) ||
+      cleanImage(asset.content?.links?.image) ||
       cleanImage(asset.content?.files?.[0]?.uri) || cleanImage(card.image);
     const host = root.querySelector("#vcardImage");
     if (host) {
@@ -131,41 +134,55 @@
       }
     }
     field(root,"vcardId",card.card_id);
-    field(root,"nftName",text(metadata.name) || card.name);
-    field(root,"nftSymbol",text(metadata.symbol));
+    field(root,"nftName",text(loaded.nftName) || text(metadata.name) || card.name);
+    field(root,"nftSymbol",text(loaded.symbol) || text(metadata.symbol));
     field(root,"mintAddress",card.mint_address);
-    field(root,"ownerWallet",owner.owner);
-    field(root,"mintDate",when(card.created_at));
-    field(root,"tokenStandard",asset.interface);
+    field(root,"ownerWallet",chain.currentOwner || owner.owner || card.mint_receipt?.owner_wallet);
+    field(root,"mintDate",when(chain.mintedAt) || when(card.created_at));
+    field(root,"tokenStandard",loaded.tokenStandard || asset.interface);
     const noTransfer = extensions.nonTransferable || extensions.non_transferable;
-    field(root,"soulbound",asset.id ? (noTransfer ? "YES" : "NOT VERIFIED") : null);
-    field(root,"updateAuthority",authority?.address);
+    field(root,"soulbound",loaded.tokenStandard ? (loaded.soulbound ? "YES" : "NO") :
+      asset.id ? (noTransfer ? "YES" : "NOT VERIFIED") : null);
+    field(root,"updateAuthority",loaded.updateAuthority || authority?.address);
     const close = extensions.mintCloseAuthority || extensions.mint_close_authority;
-    field(root,"closeAuthority",typeof close === "string" ? close : close?.closeAuthority || close?.authority);
-    field(root,"metadataUri",asset.content?.json_uri);
-    field(root,"ipfsImage",asset.content?.links?.image || card.image);
-    field(root,"nftDescription",text(metadata.description) || card.description);
-    field(root,"team",card.designation ?? traitValue(traits,"Team"));
-    field(root,"level",card.level);
-    field(root,"atk",card.atk);
-    field(root,"def",card.def);
+    const closeAuthority=loaded.closeAuthority ||
+      (typeof close === "string" ? close : close?.closeAuthority || close?.authority);
+    field(root,"closeAuthority",closeAuthority);
+    field(root,"metadataUri",loaded.metadataUri || asset.content?.json_uri ||
+      card.mint_receipt?.metadata_uri);
+    field(root,"ipfsImage",loaded.imageUri || asset.content?.links?.image || card.image);
+    field(root,"nftDescription",text(loaded.description) || text(metadata.description) || card.description);
+    field(root,"team",traitValue(traits,"Team") || card.designation);
+    field(root,"level",traitValue(traits,"Level") ?? card.level);
+    field(root,"atk",traitValue(traits,"ATK") ?? card.atk);
+    field(root,"def",traitValue(traits,"DEF") ?? card.def);
     field(root,"effect",traitValue(traits,"Effect"));
-    field(root,"mintPrice",traitValue(traits,"Mint Price"));
+    const mintPrice=traitValue(traits,"Mint Price (SOL)") ?? traitValue(traits,"Mint Price");
+    field(root,"mintPrice",mintPrice == null ? null :
+      String(mintPrice).toUpperCase().includes("SOL") ? mintPrice : mintPrice+" SOL");
 
-    // Mint fees paid elsewhere are not recoverable mint-account SOL.
-    // Display amounts only when supported by mint account records.
-    field(root,"initialMint",null);
-    field(root,"recoverableSol",close ? fmtSol(chain.balanceLamports) : null);
+    // The existing mint receipt is the anchor for initial mint-account balance.
+    // Only count later deposits after the original mint, not the initial rent.
+    const start=typeof chain.initialMintLamports === "number" ? chain.initialMintLamports : null;
+    const current=typeof chain.balanceLamports === "number" ? chain.balanceLamports : null;
+    field(root,"initialMint",fmtSol(start));
+    field(root,"recoverableSol",closeAuthority ? fmtSol(current) : null);
     const balances = tx.filter(t => typeof t?.afterLamports === "number");
-    const initial = balances.find(t => typeof t.beforeLamports === "number" && t.beforeLamports === 0);
-    const deposits = initial
-      ? balances.filter(t => t.time > initial.time && t.deltaLamports > 0)
-        .reduce((sum,t) => sum + t.deltaLamports,0)
-      : null;
-    field(root,"depositedSol",chain.historyComplete ? fmtSol(deposits) : null);
-    field(root,"updates",null);
-    field(root,"customizations",null);
-    field(root,"growthPercent",null);
+    const mintTimestamp=typeof chain.mintedAt === "number" ? chain.mintedAt : null;
+    const deposits=start == null || !chain.historyComplete ? null :
+      balances.filter(t => t.deltaLamports > 0 &&
+        (mintTimestamp == null || t.time > mintTimestamp))
+        .reduce((sum,t) => sum + t.deltaLamports,0);
+    field(root,"depositedSol",fmtSol(deposits));
+    // One chain transaction does not identify UPDATE versus CUSTOMIZE by name.
+    // Do not manufacture counts; use recorded game events when those exist.
+    const editEvents=[...vchecks,...game];
+    const countEvents=type => editEvents.filter(e =>
+      String(e.state || "").toUpperCase() === type.toUpperCase()).length;
+    field(root,"updates",countEvents("UPDATE") || null);
+    field(root,"customizations",countEvents("CUSTOMIZE") || null);
+    field(root,"growthPercent",start && current !== null
+      ? ((current-start)/start*100).toFixed(2)+"%" : null);
 
     const events = [
       ...vchecks.map(e => ({date:when(e.checked_at),ts:Date.parse(e.checked_at),
