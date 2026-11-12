@@ -2825,7 +2825,23 @@ async function verifyEditTransaction(owner,update) {
   return true;
 }
 
-function finishEdit(update) {
+async function finishEdit(update) {
+  // Reuse the confirmed Solana transaction. Never charge again to save VHouse stats.
+  const client = await vhouseClient();
+  const {data:record,error:recordError} = await client.functions.invoke("vcard-market-data",{
+    body:{
+      action:"record_edit",
+      mintAddress:job.mint.publicKey.toBase58(),
+      ownerWallet:job.owner,
+      mode:update.mode,
+      signature:update.signature
+    }
+  });
+  if(recordError || record?.error)throw Error(
+    "VCard payment confirmed, but VHouse tracking is pending: " +
+    (record?.error || recordError?.message || "Unknown error") +
+    ". Press CHECK again; no new charge."
+  );
   job.data = update.data;
   job.chainName = nftMetadataName(update.data.name);
   job.uri = update.uri;
@@ -2857,7 +2873,7 @@ $("applyButton").onclick = async () => {
     showConnectedWallet(owner);
     if (owner.toBase58() !== job.owner) throw Error("Connect the wallet that owns this VCard.");
     if (pendingOperation) {
-      if (await verifyEditTransaction(owner,pendingOperation)) finishEdit(pendingOperation);
+      if (await verifyEditTransaction(owner,pendingOperation)) await finishEdit(pendingOperation);
       else message(pendingOperation.confirmed
         ? "Transaction confirmed; waiting for readable receipt/metadata to verify. CHECK again; do not pay twice."
         : "Transaction not yet confirmed. CHECK again; no new charge.");
@@ -2896,7 +2912,7 @@ $("applyButton").onclick = async () => {
     $("applyButton").textContent = "CHECK " + editMode.toUpperCase();
     for (let i=0;i<15;i++) {
       if (await verifyEditTransaction(owner,update)) {
-        finishEdit(update);
+        await finishEdit(update);
         return;
       }
       await sleep(1200);
