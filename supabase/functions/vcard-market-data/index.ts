@@ -87,6 +87,7 @@ async function mintDetails(mint:string,receipt:O){
   description:str(metadata.description),
   attributes:Array.isArray(metadata.attributes)?metadata.attributes:onchainTraits,
   supply:str(info.supply), decimals:num(info.decimals),
+  mintAccountLamports:num(value.lamports),
  };
 }
 async function solscan(path:string,params:Record<string,string>,key:string){
@@ -159,43 +160,56 @@ Deno.serve(async(request:Request)=>{
    time:x.checked_at,lamports:Number(x.lamports)
   }));
   const warnings:string[]=[];
-  const newest=history[history.length-1];
-  let balanceLamports:number|null=null;
-  let sampled=false;
-  const key=Deno.env.get("SOLSCAN_API_KEY");
-  if(newest && Date.now()-Date.parse(newest.time)<60000){
-   balanceLamports=newest.lamports;
-  } else if(!key){
-   warnings.push("SOLSCAN_API_KEY not configured");
-  }else{
-   try{
-    const detail=obj(await solscan("account/detail",{address:mint},key));
-    const amount=num(detail.lamports);
-    if(amount===null||detail.account!==mint)throw Error("Solscan balance data invalid");
-    balanceLamports=amount;
-    const now=new Date(),minute=new Date(Math.floor(now.getTime()/60000)*60000).toISOString();
-    const {error:writeError}=await admin.from("vcard_balance_history").upsert({
-     player_id:playerId,card_id:cardId,mint_address:mint,lamports:amount,
-     sample_minute:minute,checked_at:now.toISOString()
-    },{onConflict:"player_id,card_id,sample_minute"});
-    if(writeError)throw writeError;
-    sampled=true;
-    // Only store real reads; each minute creates one observation.
-    if(history.length && history[history.length-1].time.slice(0,16)===now.toISOString().slice(0,16))
-     history[history.length-1]={time:now.toISOString(),lamports:amount};
-    else history.push({time:now.toISOString(),lamports:amount});
-    if(history.length>RECENT)history.shift();
-   }catch(e){
-    warnings.push("Solscan balance: "+(e instanceof Error?e.message:String(e)));
-    // Old observation is not presented as a live balance.
-   }
-  }
+  // The account already read by Load/Burn contains its actual SOL balance.
+  // An unavailable Solscan subscription must not erase verified on-chain value.
   const [infoResult,originResult]=await Promise.allSettled([
-   mintDetails(mint,receipt),mintOrigin(mint,receipt)
+    mintDetails(mint,receipt),mintOrigin(mint,receipt)
   ]);
   const loaded=infoResult.status==="fulfilled"?infoResult.value:null;
-  if(infoResult.status==="rejected")warnings.push("Solana NFT metadata: "+String(infoResult.reason));
-  const origin=originResult.status==="fulfilled"?originResult.value:{mintedAt:null,initialMintLamports:null};
+  if(infoResult.status==="rejected"){
+    warnings.push("Solana NFT metadata: "+String(infoResult.reason));
+    console.warn("[vcard-market-data] Solana RPC mint:",String(infoResult.reason));
+  }
+  const origin=originResult.status==="fulfilled"?originResult.value:
+    {mintedAt:null,initialMintLamports:null};
+  const newest=history[history.length-1];
+  const key=Deno.env.get("SOLSCAN_API_KEY");
+  let balanceLamports:number|null=null;
+  let source="Solana RPC",sampled=false;
+  if(newest && Date.now()-Date.parse(newest.time)<60000){
+    balanceLamports=newest.lamports;
+    source="Recorded balance";
+  }else{
+    let fromSolscan:number|null=null;
+    if(key){
+      try{
+        const detail=obj(await solscan("account/detail",{address:mint},key));
+        const amount=num(detail.lamports);
+        if(amount===null||detail.account!==mint)throw Error("Invalid account balance data");
+        fromSolscan=amount;
+        source="Solscan";
+      }catch(e){
+        const reason=e instanceof Error?e.message:String(e);
+        warnings.push("Solscan account detail: "+reason);
+        console.warn("[vcard-market-data] Solscan account detail:",reason);
+      }
+    }
+    const amount=fromSolscan??loaded?.mintAccountLamports??null;
+    if(amount!==null){
+      balanceLamports=amount;
+      const now=new Date(),minute=new Date(Math.floor(now.getTime()/60000)*60000).toISOString();
+      const {error:writeError}=await admin.from("vcard_balance_history").upsert({
+        player_id:playerId,card_id:cardId,mint_address:mint,lamports:amount,
+        sample_minute:minute,checked_at:now.toISOString()
+      },{onConflict:"player_id,card_id,sample_minute"});
+      if(writeError)throw writeError;
+      sampled=true;
+      if(history.length && history[history.length-1].time.slice(0,16)===now.toISOString().slice(0,16))
+        history[history.length-1]={time:now.toISOString(),lamports:amount};
+      else history.push({time:now.toISOString(),lamports:amount});
+      if(history.length>RECENT)history.shift();
+    }
+  }
   let currentOwner:null|string=null;
   if(address(receipt.owner_wallet) && loaded?.supply==="1"){
    try{
@@ -215,7 +229,7 @@ Deno.serve(async(request:Request)=>{
   const current=balanceLamports;
   const deposits=start!==null && current!==null ? Math.max(0,current-start) : null;
   return send({
-   status:!key?"solscan_unconfigured":warnings.length?"partial":"ok",
+   status:balanceLamports===null?"partial":"ok",
    vhouse,
    chain:{
     loaded,currentOwner,initialMintLamports:origin.initialMintLamports,
@@ -223,7 +237,7 @@ Deno.serve(async(request:Request)=>{
     initialObservedLamports:history.length?history[0].lamports:null,
     history:history.map(x=>({time:x.time,afterLamports:x.lamports})),
     historyComplete:true,
-    snapshots:history,source:"Solscan",sampled,depositedLamports:deposits
+    snapshots:history,source,sampled,depositedLamports:deposits
    },
    warnings,
   });
