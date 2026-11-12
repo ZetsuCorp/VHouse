@@ -2443,30 +2443,41 @@ async function finishMintAttributes(phantom,owner) {
   return false;
 }
 
-/* Register a verified NFT in the existing VHouse card/inventory system.
-   The current Supabase RPC cannot write mint_address; do not modify the DB. */
+/* Save the verified mint receipt on the SAME VHouse Closet VCard record.
+   Keep the saved card ID on retries so another card cannot be created. */
 async function saveMintedCardToVHouse(){
-  if(!job || job.loaded || !job.mint?.publicKey) return;
-  if(job.vhouseCardId) return job.vhouseCardId;
+  if(!job || job.loaded || !job.mint?.publicKey || !job.signature) return;
   await requireVHousePlayer();
   const store=window.VHouseCardStore;
-  if(!store?.saveCard) throw Error("VHouse VCard storage is unavailable.");
-  const data=job.data;
-  const image=job.sourceImageURI ? assetURL(job.sourceImageURI) : data.image;
-  const saved=await store.saveCard({name:data.name,image,description:data.description,team:data.team});
-  if(!saved?.id) throw Error("VHouse did not return a saved VCard.");
-  job.vhouseCardId=saved.id;
-  return saved.id;
+  if(!store?.saveCard || !store?.saveMintReceipt)
+    throw Error("VHouse VCard receipt storage is unavailable.");
+  if(!job.vhouseCardId){
+    const data=job.data;
+    const image=job.sourceImageURI ? assetURL(job.sourceImageURI) : data.image;
+    const saved=await store.saveCard({name:data.name,image,description:data.description,team:data.team});
+    if(!saved?.id) throw Error("VHouse did not return a saved VCard.");
+    job.vhouseCardId=saved.id;
+  }
+  if(!job.vhouseReceiptSaved){
+    await store.saveMintReceipt(job.vhouseCardId,{
+      mintAddress:job.mint.publicKey.toBase58(),
+      transactionSignature:job.signature,
+      metadataUri:job.uri,
+      imageUri:job.imageURI
+    });
+    job.vhouseReceiptSaved=true;
+  }
+  return job.vhouseCardId;
 }
 async function attemptClosetSync(){
   try{
     await saveMintedCardToVHouse();
     $("retryClosetButton").hidden=true;
-    message("Successfully minted VCard and saved to your VHouse Closet. Receipt is on the back.");
+    message("VCard minted; receipt and mint address saved to your VHouse Closet.");
   }catch(error){
     console.error("[VHouse Closet sync]",error);
     $("retryClosetButton").hidden=false;
-    message("NFT minted and verified. VHouse Closet save failed: " + shortError(error) + ". Use RETRY CLOSET SAVE.");
+    message("NFT minted, but the VHouse receipt has not been saved: " + shortError(error) + ". Use RETRY CLOSET SAVE.");
   }
 }
 $("retryClosetButton").onclick=async()=>{
