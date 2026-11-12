@@ -72,10 +72,24 @@
       await auth.ready;
       const playerId=currentUserId();
       if(!playerId)throw Error("Sign in before creating a VCard.");
-      const {data,error}=await auth.getClient().rpc("vhouse_create_vcard",{
+      const receipt=card.mintReceipt;
+      const params={
         p_name:card.name,p_image:card.image,
         p_description:card.description,p_designation:card.team
-      });
+      };
+      if(receipt){
+        params.p_mint_address=receipt.mintAddress;
+        params.p_mint_receipt={
+          mint_address:receipt.mintAddress,
+          transaction_signature:receipt.transactionSignature,
+          owner_wallet:receipt.ownerWallet,
+          metadata_uri:receipt.metadataUri,
+          image_uri:receipt.imageUri
+        };
+      }
+      const {data,error}=await auth.getClient().rpc(
+        receipt?"vhouse_create_minted_vcard":"vhouse_create_vcard",params
+      );
       if(error)throw error;
       if(!data?.card_id)throw Error("Supabase did not return a VCard.");
       if(currentUserId()!==playerId)throw Error("Account changed during creation.");
@@ -84,34 +98,6 @@
         description:data.description,team:data.designation,
         level:data.level,atk:data.atk,def:data.def,
         luck:data.luck,speed:data.speed,mint_address:data.mint_address};
-    },
-    async saveMintReceipt(cardId,receipt){
-      const auth=window.VHouseAuth;
-      if(!auth)throw Error("Sign in before saving the mint receipt.");
-      await auth.ready;
-      const playerId=currentUserId();
-      if(!playerId)throw Error("Sign in before saving the mint receipt.");
-      const {data,error}=await auth.getClient().functions.invoke("vcard-mint-receipt",{
-        body:{
-          cardId,
-          mintAddress:receipt.mintAddress,
-          transactionSignature:receipt.transactionSignature,
-          metadataUri:receipt.metadataUri,
-          imageUri:receipt.imageUri
-        }
-      });
-      if(currentUserId()!==playerId)throw Error("Account changed during receipt save.");
-      if(error){
-        let detail=error.message;
-        if(error.context?.json){
-          try{detail=(await error.context.json()).error||detail;}catch{}
-        }
-        throw Error(detail||"Receipt verification failed.");
-      }
-      if(!data?.ok||data?.mintAddress!==receipt.mintAddress)
-        throw Error(data?.error||"Mint receipt was not saved.");
-      await refresh();
-      return data.receipt;
     },
     async setActive(){
       throw Error("Active VCard saving is not connected to Supabase yet.");
