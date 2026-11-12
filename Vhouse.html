@@ -363,6 +363,24 @@ let billboardLoading = false;
 function showBillboardLoading(loading) {
   billboardLoadingIndicator.hidden = !loading;
   billboardMenuContent.setAttribute("aria-busy", String(loading));
+  if (loading) billboardLoadingIndicator.querySelector("span").textContent = "LOADING VCARD DATA";
+}
+// The blockchain response can finish before the NFT PNG arrives from IPFS.
+// Keep the loading screen up until that actual image loads or fails.
+async function waitForBillboardImage(root) {
+  const img = root.querySelector("#vcardImage img");
+  if (!img || img.complete) return;
+  billboardLoadingIndicator.querySelector("span").textContent = "LOADING VCARD IMAGE";
+  await new Promise(resolve => {
+    const settled = () => {
+      img.removeEventListener("load", settled);
+      img.removeEventListener("error", settled);
+      resolve();
+    };
+    img.addEventListener("load", settled);
+    img.addEventListener("error", settled);
+    if (img.complete) settled();
+  });
 }
 
 // Measure against Overview only so changing tabs never changes the frame size.
@@ -410,6 +428,7 @@ async function loadBillboard() {
     if (billboardMenuContent.shadowRoot?.querySelector("#billboard")) {
       requestAnimationFrame(fitBillboard);
       await window.VHouseBillboardData?.mount(billboardMenuContent.shadowRoot);
+      await waitForBillboardImage(billboardMenuContent.shadowRoot);
       return;
     }
     const response = await fetch("./billboard.html", { cache: "no-store" });
@@ -469,6 +488,7 @@ async function loadBillboard() {
     shadow.replaceChildren(sheet, menu);
     requestAnimationFrame(fitBillboard);
     await window.VHouseBillboardData?.mount(shadow);
+    await waitForBillboardImage(shadow);
   } catch(error) {
     console.error("VHouse Billboard:", error);
     const shadow = billboardMenuContent.shadowRoot ||
