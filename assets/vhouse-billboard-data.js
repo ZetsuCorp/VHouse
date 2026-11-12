@@ -190,6 +190,19 @@
         : "DAS DATA PARTIALLY UNAVAILABLE";
     }
   }
+  function clear(root) {
+    const names = [
+      "vcardId","nftName","nftSymbol","mintAddress","ownerWallet","mintDate",
+      "tokenStandard","soulbound","updateAuthority","closeAuthority","metadataUri",
+      "initialMint","depositedSol","recoverableSol","updates","customizations",
+      "growthPercent","team","level","atk","def","effect","mintPrice",
+      "ipfsImage","nftDescription",
+    ];
+    names.forEach(id => field(root,id,null));
+    root.querySelector("#vcardImage")?.replaceChildren();
+    root.querySelectorAll(".vhouse-growth-series").forEach(path => path.remove());
+    setActivity(root,[]);
+  }
   async function mount(root) {
     if (!root) return;
     const previous = state.get(root);
@@ -204,6 +217,7 @@
     }
     const load = async () => {
       const ticket = ++sequence;
+      clear(root);
       try {
         await api.ready;
         await store.ready();
