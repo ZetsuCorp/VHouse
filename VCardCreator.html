@@ -14,7 +14,6 @@ html,body{margin:0;color:#eaf9ff}
 .vhouse-creator-back{position:absolute;left:5.56%;top:50%;transform:translate(-50%,-50%);z-index:45}
 .map-container .crop-overlay{position:absolute;inset:0}
 .map-container .crop-panel{max-height:calc(100% - 28px)}
-.map-container .mint-success-overlay{position:absolute}
 .game{width:min(900px,100%);padding:16px;border:2px solid #bc9357;border-radius:10px;background:linear-gradient(140deg,#142132,#080d16)}
 .workspace{display:grid;grid-template-columns:minmax(0,438fr) minmax(0,336fr);gap:16px;align-items:start}
 /* Keep the VCard's original height while widening the complete game unit. */
@@ -91,10 +90,6 @@ button:disabled{opacity:.5;cursor:default}
 .receipt-pending{font-size:11px;color:#819baa}
 .receipt-tip{margin-top:auto;text-align:center;font-size:10px;color:#8faab9}
 .flip-hint{font-size:10px;font-weight:900;color:#61e9ff;letter-spacing:.3px;text-align:center;margin:0 0 9px}
-.mint-success-overlay{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:60;width:min(390px,calc(100% - 32px));padding:15px 16px;border:2px solid #d5b276;border-radius:10px;background:#102e36;box-shadow:0 10px 35px #000a;text-align:center;color:#f1fffd}
-.mint-success-overlay strong{display:block;font-size:15px;color:#e4c58f;letter-spacing:1px}
-.mint-success-overlay p{font-size:12px;line-height:1.5;margin:8px 0 12px}
-.mint-success-overlay button{padding:7px 18px;background:#0b1b2a;color:white;border:1px solid #bc9357;border-radius:5px}
 .wallet-check{margin:6px 0;font-size:11px;color:#fff;overflow-wrap:anywhere}
 /* Game-level wallet controls: overlay the stage, never resize the Creation Unit. */
 .wallet-game-controls{position:absolute;top:1.2%;right:7.5%;z-index:46;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:45%;pointer-events:none}
@@ -488,12 +483,6 @@ button:disabled{opacity:.5;cursor:default}
       </div>
     </section>
   </div>
-  <div class="mint-success-overlay" id="mintSuccessOverlay" role="status" aria-live="polite" hidden>
-    <strong>SUCCESSFULLY MINTED VCARD</strong>
-    <p>Your VCard is minted and verified. The receipt is on the back and the PNG download has started.</p>
-    <button id="retryClosetButton" type="button" hidden>RETRY CLOSET SAVE</button>
-    <button id="dismissMintSuccess" type="button">CLOSE</button>
-  </div>
 </div></div>
 <button class="vhouse-btn back-button" id="workspaceBackButton" type="button" hidden>V CARD MENU</button>
 <a class="vhouse-btn back-button vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
@@ -504,7 +493,7 @@ button:disabled{opacity:.5;cursor:default}
 (() => {
   const map=document.querySelector(".map-container");
   const unit=document.getElementById("creationUnit");
-  for(const id of ["cropOverlay","mintSuccessOverlay"]){
+  for(const id of ["cropOverlay"]){
     const overlay=document.getElementById(id);
     if(overlay) map.appendChild(overlay);
   }
@@ -847,7 +836,6 @@ function resetForMint() {
   cardFlip.setAttribute("aria-pressed","false");
   cardFlip.setAttribute("aria-label","Flip VCard to view receipt");
   $("flipHint").hidden = true;
-  $("mintSuccessOverlay").hidden = true;
   message("Mint creation fee: 0.001 SOL paid to VHouse. Solana network fees and rent are separate.");
   lock(false);
   refresh();
@@ -863,7 +851,6 @@ $("chooseMintButton").onclick = () => {
   showScreen("workspace");
 };
 $("chooseLoadButton").onclick = () => {
-  $("mintSuccessOverlay").hidden = true;
   $("connectedWalletInfo").hidden = true;
   showScreen("load");
 };
@@ -893,10 +880,6 @@ function paintMoney(element,text,feeByDefault = false) {
 function message(text) {
   paintMoney($("status"),text);
 }
-
-$("dismissMintSuccess").onclick = () => {
-  $("mintSuccessOverlay").hidden = true;
-};
 
 function lock(value) {
   busy = value;
@@ -2443,48 +2426,26 @@ async function finishMintAttributes(phantom,owner) {
   return false;
 }
 
-/* Save the verified mint receipt on the SAME VHouse Closet VCard record.
-   Keep the saved card ID on retries so another card cannot be created. */
+/* The existing mint process has already verified the NFT.
+   Save its receipt with the VCard in the same Supabase operation. */
 async function saveMintedCardToVHouse(){
   if(!job || job.loaded || !job.mint?.publicKey || !job.signature) return;
-  await requireVHousePlayer();
-  const store=window.VHouseCardStore;
-  if(!store?.saveCard || !store?.saveMintReceipt)
-    throw Error("VHouse VCard receipt storage is unavailable.");
-  if(!job.vhouseCardId){
-    const data=job.data;
-    const image=job.sourceImageURI ? assetURL(job.sourceImageURI) : data.image;
-    const saved=await store.saveCard({name:data.name,image,description:data.description,team:data.team});
-    if(!saved?.id) throw Error("VHouse did not return a saved VCard.");
-    job.vhouseCardId=saved.id;
-  }
-  if(!job.vhouseReceiptSaved){
-    await store.saveMintReceipt(job.vhouseCardId,{
+  const data=job.data;
+  const image=job.sourceImageURI ? assetURL(job.sourceImageURI) : data.image;
+  await window.VHouseCardStore.saveCard({
+    name:data.name,
+    image,
+    description:data.description,
+    team:data.team,
+    mintReceipt:{
       mintAddress:job.mint.publicKey.toBase58(),
       transactionSignature:job.signature,
+      ownerWallet:job.owner,
       metadataUri:job.uri,
       imageUri:job.imageURI
-    });
-    job.vhouseReceiptSaved=true;
-  }
-  return job.vhouseCardId;
+    }
+  });
 }
-async function attemptClosetSync(){
-  try{
-    await saveMintedCardToVHouse();
-    $("retryClosetButton").hidden=true;
-    message("VCard minted; receipt and mint address saved to your VHouse Closet.");
-  }catch(error){
-    console.error("[VHouse Closet sync]",error);
-    $("retryClosetButton").hidden=false;
-    message("NFT minted, but the VHouse receipt has not been saved: " + shortError(error) + ". Use RETRY CLOSET SAVE.");
-  }
-}
-$("retryClosetButton").onclick=async()=>{
-  if(busy) return;
-  lock(true);
-  try{await attemptClosetSync();}finally{lock(false);}
-};
 async function displayMinted() {
   minted = true;
   $("mintButton").textContent = "MINTED ✓";
@@ -2497,9 +2458,7 @@ async function displayMinted() {
   cardFlip.setAttribute("aria-label","Flip receipt back to VCard");
   // Download the exact PNG already uploaded to IPFS, not a second rendering.
   if (job.png) saveVCardPNG(job.png,job.data);
-  $("mintSuccessOverlay").hidden = false;
-  message("Successfully minted VCard. Receipt is on the back of the card.");
-  await attemptClosetSync();
+  await saveMintedCardToVHouse();
 }
 
 /* MINT button */
