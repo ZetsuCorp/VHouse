@@ -238,7 +238,10 @@
     const change=baseline!==null && current!==null
       ? (baseline===0 ? (current===0 ? "0.00%" : null) :
         ((current-baseline)/baseline*100).toFixed(2)+"%") : null;
-    field(root,"growthPercent",change);
+    field(root,"growthPercent",change === null ? null :
+      Number.parseFloat(change) > 0 ? change + " - more than when minted." :
+      Number.parseFloat(change) < 0 ? change + " - less than when minted." :
+      change + " - same as when minted.");
 
     const events = [
       ...vchecks.map(e => ({date:when(e.checked_at),ts:Date.parse(e.checked_at),
