@@ -231,19 +231,20 @@ button:disabled{opacity:.5;cursor:default}
 /* VCard menu navigation sits directly above the VHouse BACK control. */
 .map-container #workspaceBackButton{
   position:absolute;
-  left:5.56%;
-  top:calc(50% - 5.5cqw);
+  left:4%;
+  top:calc(50% - 4.2cqw);
   transform:translate(-50%,-50%);
   z-index:46;
   display:flex;
   align-items:center;
   justify-content:center;
   width:max-content;
-  max-width:16%;
+  min-width:0;
+  max-width:14%;
   margin:0;
-  padding:.25cqw .35cqw;
-  font-size:clamp(7px,.55cqw,9px);
-  letter-spacing:0;
+  padding:.4cqw .55cqw;
+  font-size:clamp(10px,.85cqw,13px);
+  letter-spacing:.02em;
   white-space:nowrap;
 }
 .map-container #workspaceBackButton[hidden]{display:none}
@@ -494,7 +495,7 @@ button:disabled{opacity:.5;cursor:default}
     <button id="dismissMintSuccess" type="button">CLOSE</button>
   </div>
 </div></div>
-<button class="nav-back" id="workspaceBackButton" type="button" hidden>V CARD MENU</button>
+<button class="vhouse-btn back-button" id="workspaceBackButton" type="button" hidden>V CARD MENU</button>
 <a class="vhouse-btn back-button vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
 </div></main>
 <script>
