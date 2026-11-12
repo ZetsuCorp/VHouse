@@ -229,11 +229,9 @@
     const increases=observed.length < 2 ? 0 :
       observed.slice(1).reduce((sum,e,i)=>sum+Math.max(0,e.lamports-observed[i].lamports),0);
     field(root,"depositedSol",fmtSol(increases));
-    const editEvents=[...vchecks,...game];
-    const countEvents=type=>editEvents.filter(e=>
-      String(e.state || "").toUpperCase()===type).length;
-    field(root,"updates",countEvents("UPDATE"));
-    field(root,"customizations",countEvents("CUSTOMIZE"));
+    // VCard List owns paid-edit counters; verification checks are not purchases.
+    field(root,"updates",Number.isInteger(card.updates) ? card.updates : 0);
+    field(root,"customizations",Number.isInteger(card.customizations) ? card.customizations : 0);
     const baseline=initial ?? (observed.length ? observed[0].lamports : null);
     const change=baseline!==null && current!==null
       ? (baseline===0 ? (current===0 ? "0.00%" : null) :
