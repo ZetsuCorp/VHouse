@@ -131,7 +131,9 @@ async function recordEdit(client:ReturnType<typeof createClient>,admin:ReturnTyp
  ]);
  for(const result of [cardResult,accountResult,inventoryResult])if(result.error)throw result.error;
  const card=cardResult.data,storedOwner=str(obj(card?.mint_receipt).owner_wallet);
- if(!card||storedOwner!==owner||accountResult.data?.wallet_address!==owner||
+ // Outside NFTs remain editable; only VHouse-owned VCards have Supabase counters.
+ if(!card)return send({status:"not_registered",counted:false});
+ if(storedOwner!==owner||accountResult.data?.wallet_address!==owner||
     !(inventoryResult.data||[]).some((row:O)=>row.thing===card.card_id))
    return send({error:"VCard is not owned by this VHouse player"},403);
  const tx=obj(await rpc("getTransaction",[sign,{
