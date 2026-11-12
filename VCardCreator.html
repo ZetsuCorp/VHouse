@@ -228,8 +228,24 @@ button:disabled{opacity:.5;cursor:default}
   .preview-wrap{grid-row:1}
   .card-stand{max-width:355px;margin:auto}
 }
-#creationUnit #workspaceBackButton{display:block;width:max-content}
-#creationUnit #workspaceBackButton[hidden]{display:none}
+/* VCard menu navigation sits directly above the VHouse BACK control. */
+.map-container #workspaceBackButton{
+  position:absolute;
+  left:5.56%;
+  top:calc(50% - 5.5cqw);
+  transform:translate(-50%,-50%);
+  z-index:46;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:max-content;
+  max-width:16%;
+  margin:0;
+  padding:.6cqw .75cqw;
+  font-size:clamp(9px,.9cqw,14px);
+  white-space:nowrap;
+}
+.map-container #workspaceBackButton[hidden]{display:none}
 
 </style>
 
@@ -302,7 +318,6 @@ button:disabled{opacity:.5;cursor:default}
     <button class="nav-back" id="burnBackButton" type="button">BACK</button>
   </section>
 
-  <button class="nav-back" id="workspaceBackButton" type="button" hidden>BACK</button>
   <div class="workspace" id="workspace" hidden>
     <section class="editor" id="editor">
       <div class="editor-head">
@@ -478,6 +493,7 @@ button:disabled{opacity:.5;cursor:default}
     <button id="dismissMintSuccess" type="button">CLOSE</button>
   </div>
 </div></div>
+<button class="nav-back" id="workspaceBackButton" type="button" hidden>V CARD MENU</button>
 <a class="vhouse-btn back-button vhouse-creator-back" href="./Vhouse.html" aria-label="Return to VHouse">← BACK</a>
 </div></main>
 <script>
