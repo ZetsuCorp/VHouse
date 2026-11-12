@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
       rpc(heliusKey, "getAsset", { id:mint }),
     ]);
     const mintInfo = mintResult.status === "fulfilled" ? asObject(asObject(mintResult.value).value) : {};
-    const token = asObject(asObject(asObject(mintInfo.data).parsed).info);
+    const mintTokenInfo = asObject(asObject(asObject(mintInfo.data).parsed).info);
     const holdings = holdingResult.status === "fulfilled" ?
       asArray(asObject(holdingResult.value).value) : [];
     const asset = assetResult.status === "fulfilled" ? asObject(assetResult.value) : {};
@@ -128,9 +128,9 @@ Deno.serve(async (req: Request) => {
       const amount = asObject(info.tokenAmount);
       return info.mint === mint && amount.amount === "1" && Number(amount.decimals) === 0;
     });
-    if (!mintInfo.owner || !token.supply || !holdings.length || !owningToken)
+    if (!mintInfo.owner || !mintTokenInfo.supply || !holdings.length || !owningToken)
       return json({ error:"Mint account or wallet ownership is still being indexed. Retry receipt save.", retryable:true },409);
-    if (String(token.supply)!=="1" || Number(token.decimals)!==0)
+    if (String(mintTokenInfo.supply)!=="1" || Number(mintTokenInfo.decimals)!==0)
       return json({ error:"NFT supply or decimals did not pass verification." },422);
     if (asset.id && asset.id !== mint)
       return json({ error:"DAS asset identity mismatch." },422);
