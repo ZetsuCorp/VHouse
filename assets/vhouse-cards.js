@@ -85,6 +85,34 @@
         level:data.level,atk:data.atk,def:data.def,
         luck:data.luck,speed:data.speed,mint_address:data.mint_address};
     },
+    async saveMintReceipt(cardId,receipt){
+      const auth=window.VHouseAuth;
+      if(!auth)throw Error("Sign in before saving the mint receipt.");
+      await auth.ready;
+      const playerId=currentUserId();
+      if(!playerId)throw Error("Sign in before saving the mint receipt.");
+      const {data,error}=await auth.getClient().functions.invoke("vcard-mint-receipt",{
+        body:{
+          cardId,
+          mintAddress:receipt.mintAddress,
+          transactionSignature:receipt.transactionSignature,
+          metadataUri:receipt.metadataUri,
+          imageUri:receipt.imageUri
+        }
+      });
+      if(currentUserId()!==playerId)throw Error("Account changed during receipt save.");
+      if(error){
+        let detail=error.message;
+        if(error.context?.json){
+          try{detail=(await error.context.json()).error||detail;}catch{}
+        }
+        throw Error(detail||"Receipt verification failed.");
+      }
+      if(!data?.ok||data?.mintAddress!==receipt.mintAddress)
+        throw Error(data?.error||"Mint receipt was not saved.");
+      await refresh();
+      return data.receipt;
+    },
     async setActive(){
       throw Error("Active VCard saving is not connected to Supabase yet.");
     }
