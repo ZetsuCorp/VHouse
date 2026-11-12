@@ -45,103 +45,137 @@
       tbody.append(tr);
     }
   };
-  // Render actual timestamped balances and VHouse events; never synthesize value changes.
+  // Monetary chart: actual SOL account balances, timestamped changes, no simulated prices.
   const plotState = new WeakMap();
   const chart = (root, balances, gameEvents, healthy) => {
-    const host = root.querySelector("#growthChart");
-    const svg = host?.querySelector("svg");
-    if (!svg) return;
-    const ns = "http://www.w3.org/2000/svg";
-    const status = host.querySelector("#chartStatus");
-    const series = [];
-    const datedBalances = balances.map(e => ({
-      t:Date.parse(e.time),v:typeof e.lamports === "number" ? e.lamports / 1e9 : NaN
-    })).filter(e=>Number.isFinite(e.t)&&Number.isFinite(e.v))
+    const host=root.querySelector("#growthChart"),svg=host?.querySelector("svg");
+    if(!svg)return;
+    const status=host.querySelector("#chartStatus"),ns="http://www.w3.org/2000/svg";
+    const prior=plotState.get(root);
+    if(prior?.frame)cancelAnimationFrame(prior.frame);
+    svg.replaceChildren();
+    const sol=balances.map(b=>({t:Date.parse(b.time),lamports:b.lamports}))
+      .filter(b=>Number.isFinite(b.t)&&Number.isSafeInteger(b.lamports)&&b.lamports>=0)
       .sort((a,b)=>a.t-b.t);
-    if(datedBalances.length)series.push({name:"SOL",values:datedBalances,color:"#4bea9b"});
-    const events = gameEvents.filter(e => Number.isFinite(Date.parse(e.checked_at)))
-      .sort((a,b)=>Date.parse(a.checked_at)-Date.parse(b.checked_at));
-    if (events.length) series.push({
-      name:"VHouse events",color:"#f5c97c",
-      values:events.map((e,i)=>({t:Date.parse(e.checked_at),v:i+1}))
-    });
-    if (!series.length) {
-      if(status)status.textContent=healthy?"AWAITING FIRST VERIFIED BALANCE":"BALANCE DATA UNAVAILABLE";
+    const game=gameEvents.filter(e=>Number.isFinite(Date.parse(e.checked_at)))
+      .map((e,i)=>({t:Date.parse(e.checked_at),value:i+1}))
+      .sort((a,b)=>a.t-b.t);
+    if(!sol.length&&!game.length){
+      if(status)status.textContent=healthy?"AWAITING FIRST RECORDED BALANCE":"BALANCE DATA UNAVAILABLE";
       return;
     }
-    const all=series.flatMap(x=>x.values),minT=Math.min(...all.map(x=>x.t)),maxT=Math.max(...all.map(x=>x.t));
-    const timeRange=Math.max(1,maxT-minT);
-    const x=t=>25+(t-minT)/timeRange*318;
-    const current = plotState.get(root);
-    if(current?.frame)cancelAnimationFrame(current.frame);
-    const old=current?.series||{};
-    svg.querySelectorAll(".vhouse-growth-series,.vhouse-growth-point").forEach(el=>el.remove());
-    const motion=[];
-    for(const item of series){
-      const vals=item.values.map(e=>e.v),low=Math.min(...vals),high=Math.max(...vals);
-      // A constant balance is flat, not a fabricated spike.
-      const y=v=>high===low?41:68-(v-low)/(high-low)*54;
-      const points=item.values.map(e=>({x:x(e.t),y:y(e.v)}));
-      const key=item.name;
-      const previous=old[key];
-      const path=document.createElementNS(ns,"path");
-      path.classList.add("vhouse-growth-series");
-      path.setAttribute("fill","none");
-      path.setAttribute("stroke",item.color);
-      path.setAttribute("stroke-width","2.6");
-      path.setAttribute("stroke-linejoin","round");
-      path.setAttribute("stroke-linecap","round");
-      svg.append(path);
-      const circles=points.length===1?[document.createElementNS(ns,"circle")]:[];
-      for(const circle of circles){
-        circle.classList.add("vhouse-growth-point");
-        circle.setAttribute("r","3");
-        circle.setAttribute("fill",item.color);
-        svg.append(circle);
-      }
-      motion.push({points,previous,path,circles,key});
+    const allTimes=[...sol.map(b=>b.t),...game.map(e=>e.t)];
+    const minT=Math.min(...allTimes),maxT=Math.max(...allTimes);
+    const left=65,right=343,top=17,bottom=65;
+    const x=t=>maxT===minT?(left+right)/2:left+(t-minT)/(maxT-minT)*(right-left);
+    const make=(tag,attrs={},value=null,parent=svg)=>{
+      const el=document.createElementNS(ns,tag);
+      for(const [key,v] of Object.entries(attrs))el.setAttribute(key,String(v));
+      if(value!==null)el.textContent=value;
+      parent.append(el);
+      return el;
+    };
+    const amount=lamports=>(lamports/1e9).toLocaleString("en-US",{maximumFractionDigits:9});
+    const time=t=>new Date(t).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+    const low=sol.length?Math.min(...sol.map(b=>b.lamports)):0;
+    const high=sol.length?Math.max(...sol.map(b=>b.lamports)):0;
+    const ySol=v=>high===low?(top+bottom)/2:bottom-(v-low)/(high-low)*(bottom-top);
+    const label=(xPos,yPos,value,color,anchor="middle")=>
+      make("text",{x:xPos,y:yPos,fill:color,"font-size":7.5,
+        "font-family":"monospace","text-anchor":anchor,"paint-order":"stroke",
+        stroke:"#171321","stroke-width":2.3,"stroke-linejoin":"round"},value);
+    make("text",{x:2,y:9,fill:"#e5c38a","font-size":8,"font-family":"monospace"},"SOL");
+    const gridValues=sol.length
+      ? high===low?[[ySol(low),low]]:[[top,high],[(top+bottom)/2,(high+low)/2],[bottom,low]]
+      : [[top,0],[(top+bottom)/2,0],[bottom,0]];
+    for(const [y,value] of gridValues){
+      make("line",{x1:left,y1:y,x2:right,y2:y,stroke:"#39414a","stroke-width":0.8});
+      if(sol.length)label(left-5,y+2.5,amount(value),"#d1d7db","end");
     }
-    const draw=(progress)=>{
-      for(const m of motion){
-        let points=m.points;
-        // Animate only genuinely new samples, from the previous end value.
-        if(m.previous && m.points.length>m.previous.length && progress<1){
-          const prevEnd=m.previous[m.previous.length-1];
-          const nextEnd=m.points[m.points.length-1];
-          points=m.points.map((p,i)=>i===m.points.length-1
-            ? {x:prevEnd.x+(nextEnd.x-prevEnd.x)*progress,
-               y:prevEnd.y+(nextEnd.y-prevEnd.y)*progress}:p);
+    const times=maxT===minT?[[x(minT),minT,"middle"]]:
+      [[left,minT,"start"],[(left+right)/2,(minT+maxT)/2,"middle"],[right,maxT,"end"]];
+    for(const [pos,t,anchor] of times)label(pos,84,time(t),"#a9b9c4",anchor);
+    const solPoints=sol.map(b=>({x:x(b.t),y:ySol(b.lamports)}));
+    const gameValues=game.map((e,i)=>({x:x(e.t),y:game.length===1?41:
+      bottom-i/(game.length-1)*(bottom-top)}));
+    const series=[
+      {key:"SOL",points:solPoints,color:"#4bea9b"},
+      {key:"VHouse",points:gameValues,color:"#f5c97c"}
+    ].filter(s=>s.points.length);
+    const paths=series.map(s=>({
+      ...s,path:make("path",{fill:"none",stroke:s.color,"stroke-width":2.2,
+        "stroke-linecap":"round","stroke-linejoin":"round"}),
+      previous:prior?.series?.[s.key]
+    }));
+    const draw=progress=>{
+      for(const s of paths){
+        const points=s.points.map(p=>({...p}));
+        if(s.previous && points.length>s.previous.length&&progress<1){
+          const oldEnd=s.previous[s.previous.length-1],end=points[points.length-1];
+          points[points.length-1]={
+            x:oldEnd.x+(end.x-oldEnd.x)*progress,
+            y:oldEnd.y+(end.y-oldEnd.y)*progress
+          };
         }
-        m.path.setAttribute("d",points.map((p,i)=>
+        s.path.setAttribute("d",points.map((p,i)=>
           (i?"L":"M")+p.x.toFixed(2)+","+p.y.toFixed(2)).join(" "));
-        if(m.circles.length){
-          m.circles[0].setAttribute("cx",points[0].x);
-          m.circles[0].setAttribute("cy",points[0].y);
-        }
       }
     };
-    const newState={series:Object.fromEntries(motion.map(m=>[m.key,m.points])),frame:0};
-    plotState.set(root,newState);
-    const animate=motion.some(m=>m.previous && m.points.length>m.previous.length);
-    if(animate){
+    // Mark the beginning, every actual balance change, and the latest reading.
+    const changes=sol.map((b,i)=>i?b.lamports-sol[i-1].lamports:0);
+    const marked=sol.map((b,i)=>i).filter(i=>i===0||i===sol.length-1||changes[i]!==0);
+    for(const i of marked){
+      const b=sol[i],point=solPoints[i],delta=changes[i];
+      const color=delta>0?"#4bea9b":delta<0?"#ff7575":"#e5c38a";
+      const circle=make("circle",{class:"vhouse-growth-point",
+        cx:point.x,cy:point.y,r:i===sol.length-1?3.3:2.6,
+        fill:color,stroke:"#101921","stroke-width":1.1});
+      make("title",{},amount(b.lamports)+" SOL"+
+        (i?" | "+(delta>0?"+":"")+amount(delta)+" SOL":" | START")+
+        " | "+new Date(b.t).toLocaleString(),circle);
+    }
+    // Keep the newest value visible; annotate recent changes only when labels fit.
+    const last=sol.length-1;
+    if(last>=0){
+      const p=solPoints[last],b=sol[last];
+      const anchor=p.x>right-77?"end":p.x<left+77?"start":"middle";
+      const labelX=anchor==="end"?p.x-5:anchor==="start"?p.x+5:p.x;
+      label(labelX,p.y<32?p.y+12:p.y-9,amount(b.lamports)+" SOL","#e8fff1",anchor);
+      const used=[p.x];
+      const changesToLabel=marked.filter(i=>i>0&&changes[i]!==0).reverse();
+      for(const i of changesToLabel){
+        const at=solPoints[i],delta=changes[i];
+        if(i!==last && (used.some(xx=>Math.abs(xx-at.x)<72)||used.length>=4))continue;
+        used.push(at.x);
+        const y=at.y>48?at.y-9:at.y+13;
+        const deltaText=(delta>0?"+":"−")+amount(Math.abs(delta))+" SOL";
+        const place=at.x>right-72?"end":at.x<left+72?"start":"middle";
+        label(place==="end"?at.x-5:place==="start"?at.x+5:at.x,
+          y,deltaText,delta>0?"#4bea9b":"#ff7575",place);
+      }
+    }
+    for(const p of gameValues){
+      make("circle",{class:"vhouse-growth-point",cx:p.x,cy:p.y,r:2.1,
+        fill:"#f5c97c",stroke:"#171321","stroke-width":0.7});
+    }
+    const next={series:Object.fromEntries(series.map(s=>[s.key,s.points])),frame:0};
+    plotState.set(root,next);
+    if(paths.some(s=>s.previous&&s.points.length>s.previous.length)){
       const begun=performance.now();
       const tick=now=>{
-        const progress=Math.min(1,(now-begun)/850);
-        draw(1-Math.pow(1-progress,3));
-        if(progress<1)newState.frame=requestAnimationFrame(tick);
-        else newState.frame=0;
+        const t=Math.min(1,(now-begun)/550);
+        draw(1-(1-t)**3);
+        if(t<1)next.frame=requestAnimationFrame(tick);
+        else next.frame=0;
       };
-      newState.frame=requestAnimationFrame(tick);
+      next.frame=requestAnimationFrame(tick);
     }else draw(1);
-    const timeLabels=svg.querySelectorAll("g text");
-    const displayTime=t=>new Date(t).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
-    if(timeLabels.length>=4){
-      timeLabels[1].textContent=displayTime(minT);
-      timeLabels[2].textContent=displayTime(minT+timeRange/2);
-      timeLabels[3].textContent=displayTime(maxT);
+    if(status){
+      status.textContent=series.map(s=>s.key).join(" + ")+(healthy?" · VERIFIED":" · LAST READ UNAVAILABLE");
+      status.style.inset="0px 4px auto auto";
+      status.style.display="block";
+      status.style.pointerEvents="none";
     }
-    if(status)status.textContent=series.map(s=>s.name).join(" + ") +
-      (healthy?" · VERIFIED DATA":" · LATEST READ UNAVAILABLE");
   };
   function render(root, result) {
     const card = result?.vhouse?.card;
