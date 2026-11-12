@@ -9,7 +9,7 @@
   };
   const cleanImage = url => typeof url === "string" &&
     /^(https:\/\/|ipfs:\/\/)/i.test(url)
-      ? (url.startsWith("ipfs://") ? "https://ipfs.io/ipfs/" + url.slice(7) : url) : null;
+      ? (/^ipfs:\/\//i.test(url) ? "https://gateway.pinata.cloud/ipfs/" + url.slice(7) : url) : null;
   const text = value => typeof value === "string" && value.trim() ? value.trim() : null;
   const fmtSol = lamports => typeof lamports === "number" && Number.isFinite(lamports)
     ? (lamports / 1e9).toLocaleString("en-US", { maximumFractionDigits: 9 }) + " SOL" : null;
