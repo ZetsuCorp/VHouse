@@ -343,11 +343,17 @@ function fitBillboard() {
   menu.style.height = "auto";
   menu.style.setProperty("--billboard-scale", "1");
   const naturalWidth = menu.scrollWidth;
-  const naturalHeight = menu.scrollHeight;
+  // Include the metadata rows that grow after the blockchain response.
+  const columns = [...overview.querySelectorAll(".left,.right")];
+  const contentBottom = Math.max(
+    menu.scrollHeight,
+    ...columns.map(col => col.offsetTop + col.scrollHeight + 16)
+  );
+  const naturalHeight = Math.ceil(contentBottom);
   menu.style.height = naturalHeight + "px";
   menu.style.setProperty("--billboard-scale", String(Math.min(1,
-    (availableWidth - 2) / Math.max(1, naturalWidth),
-    (availableHeight - 2) / Math.max(1, naturalHeight)
+    (availableWidth - 12) / Math.max(1, naturalWidth),
+    (availableHeight - 12) / Math.max(1, naturalHeight)
   )));
 
   overview.style.display = overviewDisplay;
@@ -397,6 +403,13 @@ async function loadBillboard() {
       }
     `;
     const menu = document.importNode(template, true);
+    // The NFT metadata loads asynchronously. Recalculate the fit when either
+    // column changes height so its last rows remain inside the gold frame.
+    const detailsObserver = new ResizeObserver(() => {
+      if (!billboardOverlay.hidden) requestAnimationFrame(fitBillboard);
+    });
+    detailsObserver.observe(menu.querySelector(".right"));
+    detailsObserver.observe(menu.querySelector(".left"));
     menu.querySelectorAll("[data-view]").forEach(tab => {
       tab.addEventListener("click", () => {
         const overview = tab.dataset.view === "overview";
