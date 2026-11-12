@@ -92,11 +92,15 @@ button:disabled{opacity:.5;cursor:default}
 .mint-success-overlay p{font-size:12px;line-height:1.5;margin:8px 0 12px}
 .mint-success-overlay button{padding:7px 18px;background:#0b1b2a;color:white;border:1px solid #bc9357;border-radius:5px}
 .wallet-check{margin:6px 0;font-size:11px;color:#fff;overflow-wrap:anywhere}
-/* Separate player wallet connection; no change to mint controls. */
-.wallet-connect-control{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:0 auto 12px}
-.wallet-connect-control button{border:3px solid #f5d685;border-radius:9px;padding:12px 28px;background:linear-gradient(120deg,#5727a5,#8642dc);color:#fff;font-size:15px;font-weight:900;letter-spacing:1px;box-shadow:0 0 18px #a767ff88;white-space:nowrap}
+/* Game-level wallet controls: overlay the stage, never resize the Creation Unit. */
+.wallet-game-controls{position:absolute;top:1.2%;right:7.5%;z-index:46;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:45%;pointer-events:none}
+.wallet-game-controls>*{pointer-events:auto}
+.wallet-connect-control{display:flex;align-items:center;justify-content:flex-end;gap:9px;max-width:100%}
+.wallet-connect-control button{border:3px solid #f5d685;border-radius:9px;padding:9px 17px;background:linear-gradient(120deg,#5727a5,#8642dc);color:#fff;font-size:clamp(10px,.93cqw,15px);font-weight:900;letter-spacing:.5px;box-shadow:0 0 18px #a767ff88;white-space:nowrap}
 .wallet-connect-control button:hover:not(:disabled),.wallet-connect-control button:focus-visible{background:linear-gradient(120deg,#6d35cb,#a361ff);border-color:#fff0bb;box-shadow:0 0 24px #ac70ffbb}
-.wallet-connect-control .wallet-link-status{max-width:270px;font-size:12px;color:#d9c9ff;font-weight:900;overflow-wrap:anywhere;text-align:center}
+.wallet-connect-control .wallet-link-status{font-size:clamp(9px,.75cqw,12px);color:#d9c9ff;font-weight:900;overflow-wrap:anywhere;text-align:right}
+.wallet-game-controls .wallet-heading{margin:0;padding:4px 7px;max-width:100%;min-width:0;flex-wrap:nowrap;font-size:10px}
+.wallet-game-controls .wallet-heading .tag-address{display:block;min-width:0;max-width:36ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .choice-bubble:disabled,.choice-bubble:disabled:hover,.choice-bubble:disabled:focus-visible{opacity:.38;cursor:not-allowed;filter:grayscale(1);border-color:#56616b;box-shadow:none;outline:none}
 /* Creation Unit information colors */
 .tag-nft{color:#e4c58f!important}
@@ -240,16 +244,18 @@ button:disabled{opacity:.5;cursor:default}
 <div class="rotate-screen"><div class="rotate-icon">↻</div><h2>Rotate Your Phone</h2><p>Please turn your device sideways to play.</p></div>
 <main class="game-container"><div class="map-container">
   <img class="creator-background" src="assets/Vcontainer.png" alt="VHouse Creation Unit background" draggable="false">
+  <div class="wallet-game-controls">
+    <div class="wallet-connect-control">
+      <button id="connectWalletButton" type="button">CONNECT WALLET</button>
+      <span id="walletLinkStatus" class="wallet-link-status" role="status" aria-live="polite"></span>
+    </div>
+    <div id="walletHeader" class="wallet-heading" hidden>
+      <span class="tag-owner">WALLET OWNER:</span>
+      <span id="walletHeaderAddress" class="tag-address"></span>
+    </div>
+  </div>
   <div class="creator-region" id="creatorRegion"><div class="game" id="creationUnit">
   <h1>VHOUSE — VCARD CREATION</h1>
-  <div class="wallet-connect-control">
-    <button id="connectWalletButton" type="button">CONNECT WALLET</button>
-    <span id="walletLinkStatus" class="wallet-link-status" role="status" aria-live="polite"></span>
-  </div>
-  <div id="walletHeader" class="wallet-heading" hidden>
-    <span class="tag-owner">WALLET OWNER:</span>
-    <span id="walletHeaderAddress" class="tag-address"></span>
-  </div>
 
   <section class="entry-choice" id="entryMenu">
     <button class="choice-bubble" id="chooseMintButton" type="button" disabled>
