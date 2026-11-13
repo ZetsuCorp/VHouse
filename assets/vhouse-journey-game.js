@@ -647,6 +647,74 @@ function renderStageInfo(){
 
   if(!possible.size)host.textContent="NO REWARDS CONFIGURED";
 
+  // Read-only reward odds, derived from the selected VCard and stage.
+  // No controls or encounter letters are shown.
+  let gauge=$("journeyRewardGauge");
+  if(!gauge){
+    gauge=document.createElement("div");
+    gauge.id="journeyRewardGauge";
+    host.after(gauge);
+  }
+  const chanceCard=pending?mission.card:activeCard();
+  const chanceLuck=Math.min(5,pending
+    ?wholeQuantity(mission.luck?.quantity):luckStat());
+  let noBagChance=1;
+  let maxPossibleBags=0;
+  for(const encounter of encounterPlan(stage)){
+    const raw=encounter.reward??stage?.rewardsByType?.[encounter.type];
+    const bags=Array.isArray(raw)?raw:[raw];
+    const bagCount=bags.reduce((sum,bag)=>{
+      if(!bag)return sum;
+      const item=typeof bag==="string"?bag:(bag.item||bag.asset||bag.type);
+      const count=typeof bag==="string"?1:Number(bag.batches??1);
+      return item&&Number.isInteger(count)&&count>0?sum+count:sum;
+    },0);
+    if(!bagCount)continue;
+    maxPossibleBags+=bagCount;
+    // Matching letters skip the initial flip; each LUCK adds a retry.
+    const attempts=chanceLuck+(chanceCard?.team===encounter.letter?0:1);
+    noBagChance*=Math.pow(0.5,attempts);
+  }
+
+  gauge.hidden=!maxPossibleBags;
+  if(maxPossibleBags){
+    const chance=Math.max(0,Math.min(100,100*(1-noBagChance)));
+    gauge.style.cssText="margin-top:7px;padding:7px 10px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547,#1b102a);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;";
+    gauge.replaceChildren();
+
+    const header=document.createElement("div");
+    header.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:10px;font-weight:800;";
+    const maximum=document.createElement("span");
+    maximum.textContent="UP TO +"+maxPossibleBags+" "+(maxPossibleBags===1?"BAG":"BAGS");
+    const luckNote=document.createElement("span");
+    luckNote.style.cssText="color:#cfb2ee;font-size:9px;";
+    luckNote.textContent="LUCK "+chanceLuck+"/5";
+    header.append(maximum,luckNote);
+
+    const odds=document.createElement("div");
+    odds.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:4px 0;font-size:10px;";
+    const chanceLabel=document.createElement("span");
+    chanceLabel.style.cssText="color:#e4d1ed;";
+    chanceLabel.textContent="CHANCE OF AT LEAST 1 BAG";
+    const percent=document.createElement("strong");
+    percent.style.cssText="color:#f9d16e;font-size:16px;font-variant-numeric:tabular-nums;";
+    percent.textContent=chance.toFixed(1)+"%";
+    odds.append(chanceLabel,percent);
+
+    const track=document.createElement("div");
+    track.style.cssText="height:8px;border:1px solid #9061b7;border-radius:99px;overflow:hidden;background:#170d28;";
+    track.setAttribute("role","progressbar");
+    track.setAttribute("aria-label","Chance of earning at least one reward bag");
+    track.setAttribute("aria-valuenow",chance.toFixed(1));
+    track.setAttribute("aria-valuemin","0");
+    track.setAttribute("aria-valuemax","100");
+    const fill=document.createElement("div");
+    fill.style.cssText="height:100%;border-radius:99px;background:linear-gradient(90deg,#9b5ccc,#f7c668);";
+    fill.style.width=chance.toFixed(2)+"%";
+    track.append(fill);
+    gauge.append(header,odds,track);
+  }
+
   $("setupDescription").textContent=
     validStage(stage)?String(stage.description||""):"";
 
