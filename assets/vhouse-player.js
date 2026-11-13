@@ -24,6 +24,19 @@ function mount(host){
   const cashAmount=document.createElement("span");
   cashAmount.textContent="— IGM";
   cashBox.append(cashTitle,cashAmount);
+  const accountHud=document.createElement("div");
+  accountHud.className="vhouse-player-account";accountHud.hidden=true;
+  const accountBox=document.createElement("div");
+  accountBox.className="vhouse-player-account-box";
+  accountBox.append(loginLabel,cashBox);
+  const rewardsBox=document.createElement("div");
+  rewardsBox.className="vhouse-player-rewards-box";
+  const rewardsTitle=document.createElement("strong");
+  rewardsTitle.textContent="TOTAL REWARDS";
+  const rewardsAmount=document.createElement("span");
+  rewardsAmount.textContent="—";
+  rewardsBox.append(rewardsTitle,rewardsAmount);
+  accountHud.append(accountBox,rewardsBox);
   const status=document.createElement("span");
   status.className="vhouse-placeholder-status";status.hidden=true;
   const trigger=document.createElement("button");
@@ -60,33 +73,85 @@ function mount(host){
   header.append(close);
   actions.append(closet,creator,goJourney);
   panel.append(header,selected,details,journey,actions);
-  host.replaceChildren(holder,art,loginLabel,...(showCash?[cashBox]:[]),status,trigger,panel);
+  host.replaceChildren(holder,art,...(showCash?[accountHud]:[loginLabel]),status,trigger,panel);
   const store=window.VHouseCardStore;
   let cashRequest=0;
+  let balancePlayerId=null;
+  let lastCash=null;
+  let lastRewards=null;
+  const numberText=value=>value.toLocaleString(undefined,{maximumFractionDigits:2});
+
+  // Each confirmed reward bag counts once, regardless of the number of IGM
+  // or other assets inside it. Records are already tied to the signed-in player.
+  async function totalRewardBags(client,playerId){
+    const pageSize=500;
+    let total=0;
+    for(let start=0;;start+=pageSize){
+      const {data,error}=await client.from("vhouse_journey_records")
+        .select("snapshot")
+        .eq("player_id",playerId)
+        .in("status",["RESULTS_READY","CONFIRMED"])
+        .order("id",{ascending:true})
+        .range(start,start+pageSize-1);
+      if(error)throw error;
+      for(const record of data||[]){
+        const batches=record.snapshot?.rewardBatches;
+        if(!batches||typeof batches!=="object"||Array.isArray(batches))continue;
+        for(const amount of Object.values(batches)){
+          const count=Number(amount);
+          if(Number.isFinite(count)&&count>0)total+=Math.floor(count);
+        }
+      }
+      if(!data||data.length<pageSize)break;
+    }
+    return total;
+  }
+  function showGain(box,value,unit){
+    if(value<=0)return;
+    const pop=document.createElement("span");
+    pop.className="vhouse-player-gain";
+    pop.textContent="+"+numberText(value)+(unit?" "+unit:"");
+    box.querySelectorAll(".vhouse-player-gain").forEach(node=>node.remove());
+    box.append(pop);
+    pop.addEventListener("animationend",()=>pop.remove(),{once:true});
+    box.classList.remove("vhouse-gaining");
+    void box.offsetWidth;
+    box.classList.add("vhouse-gaining");
+  }
   async function refreshCash(){
     if(!showCash)return;
     const auth=window.VHouseAuth;
     const user=auth?.getUser?.();
     const ticket=++cashRequest;
-    cashBox.hidden=!user;
-    if(!user)return;
-    cashAmount.textContent="— IGM";
+    accountHud.hidden=!user;
+    if(!user){
+      balancePlayerId=null;lastCash=null;lastRewards=null;
+      cashAmount.textContent="— IGM";rewardsAmount.textContent="—";
+      return;
+    }
+    if(balancePlayerId!==user.id){
+      balancePlayerId=user.id;lastCash=null;lastRewards=null;
+      cashAmount.textContent="— IGM";rewardsAmount.textContent="—";
+    }
     try{
-      const {data,error}=await auth.getClient()
-        .from("vhouse_accounts")
-        .select("igm_balance")
-        .eq("id",user.id)
-        .maybeSingle();
-      if(error)throw error;
+      const client=auth.getClient();
+      const [account,earned]=await Promise.all([
+        client.from("vhouse_accounts").select("igm_balance")
+          .eq("id",user.id).maybeSingle(),
+        totalRewardBags(client,user.id)
+      ]);
+      if(account.error)throw account.error;
       if(ticket!==cashRequest||auth.getUser()?.id!==user.id)return;
-      const balance=Number(data?.igm_balance??0);
-      cashAmount.textContent=(Number.isFinite(balance)
-        ?balance.toLocaleString(undefined,{maximumFractionDigits:2})
-        :"—")+" IGM";
+      const cash=Number(account.data?.igm_balance??0);
+      if(!Number.isFinite(cash))throw Error("Invalid VCard Cash balance.");
+      cashAmount.textContent=numberText(cash)+" IGM";
+      rewardsAmount.textContent=numberText(earned);
+      if(lastCash!==null&&cash>lastCash)showGain(accountBox,cash-lastCash,"IGM");
+      if(lastRewards!==null&&earned>lastRewards)showGain(rewardsBox,earned-lastRewards,"");
+      lastCash=cash;lastRewards=earned;
     }catch(error){
       if(ticket!==cashRequest||auth?.getUser?.()?.id!==user.id)return;
-      cashAmount.textContent="— IGM";
-      console.error("VHouse VCard Cash balance:",error);
+      console.error("VHouse player rewards:",error);
     }
   }
   function updateLogin(){
