@@ -304,13 +304,6 @@ function setScreen(screen){
     $(name+"Screen").hidden=name!==screen;
   }
 
-  $("phase").textContent={
-    setup:"READY",
-    travel:"ON JOURNEY",
-    complete:"RESULTS",
-    away:"AWAY"
-  }[screen]||"READY";
-
   $("gameContent").scrollTop=0;
 }
 
@@ -1171,9 +1164,6 @@ function renderComplete(){
 
   $("newJourneyButton").hidden=!confirmed;
 
-  $("phase").textContent=
-    confirmed?"CONFIRMED":"RESULTS";
-
   /* ORIGINAL AUTOMATIC VCARD FLIP */
 
   $("cardFlip").classList.remove("flipped");
@@ -1239,7 +1229,6 @@ function confirmReceipt(){
   $("resultState").textContent=
     "RECEIPT CONFIRMED · VCARD AVAILABLE";
 
-  $("phase").textContent="CONFIRMED";
 }
 
 /* NEW JOURNEY */
