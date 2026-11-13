@@ -617,9 +617,18 @@ function renderStageInfo(){
     possible.set(item,entry);
   }
 
+  const rewardCategories={
+    IGM:"VCARD CASH",
+    SCRAP:"LP TOKENS",
+    CRYPTO:"CRYPTO"
+  };
   for(const [item,{max,noneChance}] of possible){
     const chip=document.createElement("span");
     chip.className="reward-chip";
+
+    const category=document.createElement("small");
+    category.className="reward-category";
+    category.textContent=rewardCategories[item]||String(item);
 
     const amount=document.createElement("strong");
     const label=rewardLabel(item);
@@ -631,7 +640,7 @@ function renderStageInfo(){
     odds.textContent=Number(((1-noneChance)*100).toFixed(1))+
       "% CHANCE OF 1+";
 
-    chip.append(amount,odds);
+    chip.append(category,amount,odds);
     host.append(chip);
   }
 
