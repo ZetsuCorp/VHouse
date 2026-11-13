@@ -292,9 +292,8 @@ const journeyWindow = journeyOverlay.querySelector(".journey-window");
 
 journeyButton.addEventListener("click", () => {
   journeyOverlay.hidden = false;
-  if (!document.querySelector("#journeyContent [data-vhouse-journey-root]")) {
-    VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
-  }
+  // Keep one Journey instance alive when the menu is closed and reopened.
+  void VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
 });
 
 journeyOverlay.addEventListener("click", (event) => {
@@ -309,6 +308,8 @@ document.addEventListener("keydown", (event) => {
   }
 });
 </script>
+<script src="assets/vhouse-vcard.js"></script>
+<script src="assets/vhouse-journey-game.js"></script>
 <script src="assets/vhouse-journey.js"></script>
 <script src="assets/vhouse-public-config.js"></script>
 <script src="assets/vhouse-auth.js"></script>
