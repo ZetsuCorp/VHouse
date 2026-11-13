@@ -653,8 +653,9 @@ function renderStageInfo(){
   if(!gauge){
     gauge=document.createElement("div");
     gauge.id="journeyRewardGauge";
-    host.after(gauge);
   }
+  // Put the gauge in the unused space above the VCard, not the setup panel.
+  if(gauge.parentElement!==$("setupWorld"))$("setupWorld").append(gauge);
   const chanceCard=pending?mission.card:activeCard();
   const chanceLuck=Math.min(5,pending
     ?wholeQuantity(mission.luck?.quantity):luckStat());
@@ -679,7 +680,7 @@ function renderStageInfo(){
   gauge.hidden=!maxPossibleBags;
   if(maxPossibleBags){
     const chance=Math.max(0,Math.min(100,100*(1-noBagChance)));
-    gauge.style.cssText="margin-top:7px;padding:7px 10px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547,#1b102a);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;";
+    gauge.style.cssText="position:absolute;top:8px;left:8px;right:8px;z-index:3;padding:5px 9px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547e8,#1b102ae8);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;pointer-events:none;";
     gauge.replaceChildren();
 
     const header=document.createElement("div");
@@ -692,7 +693,7 @@ function renderStageInfo(){
     header.append(maximum,luckNote);
 
     const odds=document.createElement("div");
-    odds.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:4px 0;font-size:10px;";
+    odds.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:2px 0;font-size:10px;";
     const chanceLabel=document.createElement("span");
     chanceLabel.style.cssText="color:#e4d1ed;";
     chanceLabel.textContent="CHANCE OF AT LEAST 1 BAG";
@@ -702,7 +703,7 @@ function renderStageInfo(){
     odds.append(chanceLabel,percent);
 
     const track=document.createElement("div");
-    track.style.cssText="height:8px;border:1px solid #9061b7;border-radius:99px;overflow:hidden;background:#170d28;";
+    track.style.cssText="height:6px;border:1px solid #9061b7;border-radius:99px;overflow:hidden;background:#170d28;";
     track.setAttribute("role","progressbar");
     track.setAttribute("aria-label","Chance of earning at least one reward bag");
     track.setAttribute("aria-valuenow",chance.toFixed(1));
