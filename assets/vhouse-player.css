@@ -39,6 +39,29 @@
   pointer-events: none;
 }
 .vhouse-player-login[hidden] { display: none; }
+
+/* Compact, read-only account balance under the Index username. */
+.town-player-hud .vhouse-player-cash{
+  position:absolute;
+  top:55%;
+  left:105%;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:5px 9px;
+  border:1px solid #d7ad61;
+  border-radius:6px;
+  background:linear-gradient(135deg,#311547ed,#1b102aed);
+  box-shadow:0 0 8px #0009,inset 0 0 10px #9b5ccc18;
+  white-space:nowrap;
+  pointer-events:none;
+  font:800 clamp(9px,1.1cqw,14px) Arial,sans-serif;
+  text-shadow:0 1px 4px #000;
+}
+.town-player-hud .vhouse-player-cash strong{color:#f4d79f}
+.town-player-hud .vhouse-player-cash span{color:#86efac;font-variant-numeric:tabular-nums}
+.town-player-hud .vhouse-player-cash[hidden]{display:none}
 .vhouse-player::after {
   content: "";
   position: absolute;

@@ -15,6 +15,15 @@ function mount(host){
   art.className="vhouse-player-portrait";art.alt="";art.draggable=false;
   const loginLabel=document.createElement("span");
   loginLabel.className="vhouse-player-login";loginLabel.hidden=true;
+  // Player-wide VCard Cash is shown only beside the Index Player Placeholder.
+  const showCash=!!host.closest(".town-player-hud");
+  const cashBox=document.createElement("div");
+  cashBox.className="vhouse-player-cash";cashBox.hidden=true;
+  const cashTitle=document.createElement("strong");
+  cashTitle.textContent="VCARD CASH";
+  const cashAmount=document.createElement("span");
+  cashAmount.textContent="— IGM";
+  cashBox.append(cashTitle,cashAmount);
   const status=document.createElement("span");
   status.className="vhouse-placeholder-status";status.hidden=true;
   const trigger=document.createElement("button");
@@ -51,12 +60,40 @@ function mount(host){
   header.append(close);
   actions.append(closet,creator,goJourney);
   panel.append(header,selected,details,journey,actions);
-  host.replaceChildren(holder,art,loginLabel,status,trigger,panel);
+  host.replaceChildren(holder,art,loginLabel,...(showCash?[cashBox]:[]),status,trigger,panel);
   const store=window.VHouseCardStore;
+  let cashRequest=0;
+  async function refreshCash(){
+    if(!showCash)return;
+    const auth=window.VHouseAuth;
+    const user=auth?.getUser?.();
+    const ticket=++cashRequest;
+    cashBox.hidden=!user;
+    if(!user)return;
+    cashAmount.textContent="— IGM";
+    try{
+      const {data,error}=await auth.getClient()
+        .from("vhouse_player_balances")
+        .select("igm_balance")
+        .eq("player_id",user.id)
+        .maybeSingle();
+      if(error)throw error;
+      if(ticket!==cashRequest||auth.getUser()?.id!==user.id)return;
+      const balance=Number(data?.igm_balance??0);
+      cashAmount.textContent=(Number.isFinite(balance)
+        ?balance.toLocaleString(undefined,{maximumFractionDigits:2})
+        :"—")+" IGM";
+    }catch(error){
+      if(ticket!==cashRequest||auth?.getUser?.()?.id!==user.id)return;
+      cashAmount.textContent="— IGM";
+      console.error("VHouse VCard Cash balance:",error);
+    }
+  }
   function updateLogin(){
     const identity=window.VHouseAuth?.getLoginIdentity?.()||"";
     loginLabel.textContent=identity?'Logged in as "'+identity+'"':"";
     loginLabel.hidden=!identity;
+    void refreshCash();
   }
   function update(){
     const card=store?.getActive?.()||null;
@@ -111,6 +148,10 @@ function mount(host){
   });
   store?.subscribe(update);
   window.VHouseAuth?.subscribe(updateLogin);
+  if(showCash){
+    window.addEventListener("vhouse:cash-updated",()=>{void refreshCash();});
+    window.addEventListener("pageshow",()=>{void refreshCash();});
+  }
   window.VHouseAuth?.ready.then(updateLogin).catch(e=>console.warn("Placeholder login unavailable:",e));
   updateLogin();update();
 }
