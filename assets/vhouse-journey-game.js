@@ -210,9 +210,11 @@ function cardPicker(){
     const option=document.createElement("option");
     option.value=String(card.id);
     const mission=state.missions[String(card.id)];
-    option.textContent=(card.name||"VCARD")+
-      (mission?.status==="running"?" · ON JOURNEY":
+    const onJourney=mission?.status==="running";
+    option.textContent=(onJourney?"● ":"")+(card.name||"VCARD")+
+      (onJourney?" · ON JOURNEY":
        mission?.status==="ready"?" · RESULTS READY":"");
+    if(onJourney)option.style.color="#f0c465";
     picker.append(option);
   }
   if(!findCard(state.selectedCardId))chooseCard(availableCards()[0]?.id);
@@ -492,11 +494,28 @@ function renderCard(host,card){
 
 /* STAGE SELECTION */
 
+function renderJourneyAwayDots(){
+  const active=Object.values(state.missions)
+    .filter(mission=>mission?.status==="running").length;
+  const host=$("journeyAwayDots");
+  host.replaceChildren();
+  for(let i=0;i<10;i++){
+    const dot=document.createElement("span");
+    dot.className="journey-away-dot"+(i<active?" is-active":"");
+    host.append(dot);
+  }
+  $("journeyAwayCount").textContent=active+" / 10+";
+  $("journeyAwayIndicator").setAttribute(
+    "aria-label",active+" VCards currently on Journeys"
+  );
+}
+
 function renderSetup(){
 
   setScreen("setup");
 
   cardPicker();
+  renderJourneyAwayDots();
   const card=activeCard();
 
   renderCard($("setupVCard"),card);

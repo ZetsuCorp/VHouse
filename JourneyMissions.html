@@ -320,6 +320,36 @@ button:disabled{
 
 /* SCREEN 1 — PREPARE */
 
+.journey-away-indicator{
+  position:absolute;
+  left:50%;
+  bottom:9px;
+  transform:translateX(-50%);
+  z-index:2;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:5px 9px;
+  border:1px solid #a17a3b;
+  border-radius:18px;
+  background:#091522c9;
+  white-space:nowrap;
+}
+.journey-away-dots{display:flex;align-items:center;gap:5px}
+.journey-away-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#423a31;
+  border:1px solid #76634a;
+}
+.journey-away-dot.is-active{
+  background:#f0c465;
+  border-color:#ffe1a0;
+  box-shadow:0 0 7px #f0c465;
+}
+.journey-away-count{font-size:10px;color:#f4d79f;font-weight:800}
+
 .setup-layout{
   display:grid;
   grid-template-columns:1.05fr .95fr;
@@ -785,6 +815,10 @@ td{
         <div class="setup-card">
           <div id="setupVCard"></div>
         </div>
+      </div>
+      <div class="journey-away-indicator" id="journeyAwayIndicator" role="status">
+        <div class="journey-away-dots" id="journeyAwayDots" aria-hidden="true"></div>
+        <span class="journey-away-count" id="journeyAwayCount">0 / 10+</span>
       </div>
     </div>
 
