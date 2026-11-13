@@ -1,14 +1,724 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VHouse — Journey Receipt Game</title>
+
 <link rel="stylesheet" href="assets/vhouse-vcard.css">
+
 <style>
- :root{--gold:#bc9357;--gold-light:#f4d79f;--cyan:#54c9ef;--green:#70e5b2;--red:#f58b8b;--muted:#9fb6c4;} *{box-sizing:border-box} [hidden]{display:none!important} body{margin:0;height:100dvh;padding:12px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle,#253d52,#050b13 78%);color:#e8f4f8;font:13px Arial,sans-serif;} .game{width:min(1000px,100%);height:min(700px,calc(100dvh - 24px));min-height:0;display:flex;flex-direction:column;border:2px solid var(--gold);border-radius:12px;background:linear-gradient(145deg,#142638,#07111e 85%);overflow:hidden;box-shadow:0 20px 60px #0009;} header{flex:0 0 auto;padding:17px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #795b36;} header small{font-size:10px;color:#c8a978;letter-spacing:2px;} h1{color:var(--gold-light);font:700 24px Georgia,serif;margin:4px 0 0;} h2{color:var(--gold-light);font-size:20px;margin:0 0 10px;} h3{color:var(--gold-light);font-size:14px;margin:0 0 10px;} main{flex:1 1 0;min-height:0;width:100%;padding:18px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain;} #setupScreen, #travelScreen, #completeScreen, #awayScreen{min-height:100%;width:100%;} .muted{color:var(--muted)} .phase{padding:7px 12px;border:1px solid #8b714a;color:var(--gold-light);border-radius:20px;white-space:nowrap;font-size:10px;font-weight:900;} button,select{font:inherit} button{cursor:pointer;padding:11px 18px;border:1px solid var(--gold);border-radius:7px;background:#162c3d;color:#f6ddb0;font-weight:900;} button:hover:not(:disabled){background:#29475b;border-color:#ffe3ae;} button:disabled{opacity:.4;cursor:default;} .primary{background:var(--gold);color:#07121c;} .primary:hover:not(:disabled){background:#f2ce91;} .panel{border:1px solid #38566b;border-radius:10px;background:#0c1928;padding:16px;} .actions{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:15px;} .message{margin-top:12px;min-height:18px;text-align:center;color:var(--muted);} .world{position:relative;overflow:hidden;border:1px solid #6c835f;border-radius:10px;background:radial-gradient(ellipse at 75% 15%,#b5a87770,transparent 29%), linear-gradient(#2b4c65,#233e52 52%,#112a29 53%,#091b22);} .world::before{content:"";position:absolute;inset:-12%;background-image:var(--scene-image,none);background-size:cover;background-position:center;opacity:.6;animation:pan 17s linear infinite alternate;} .world::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient( 90deg, #071321aa, transparent 25%, transparent 75%, #071321bb );} @keyframes pan{from{transform:translateX(-3%) scale(1.1)} to{transform:translateX(3%) scale(1.16)}} .world-content{position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;} .vhouse-vcard-host{width:100%;container-type:inline-size;} .vhouse-vcard-host .vcard{--accent:#2d7bdc;width:100%;background:#080808;border:2.4cqw solid #020305;border-radius:3.6cqw;color:#e0fefe;overflow:hidden;box-shadow:0 0 6cqw #2d7bdc55;} .vhouse-vcard-host .vcard-inner{border:1.2cqw solid var(--accent);border-radius:1.8cqw;overflow:hidden;background:radial-gradient(circle at top,#1c2832,#090d13 65%);} .vhouse-vcard-host .card-header{background:#03070c;padding:3cqw 2cqw;border-bottom:.6cqw solid var(--accent);text-align:center;} .vhouse-vcard-host .card-name{margin:0;font-size:6.5cqw;font-weight:900;text-transform:uppercase;color:white;} .vhouse-vcard-host .card-art{margin:2.1cqw;aspect-ratio:4/3;border:.9cqw solid var(--accent);border-radius:1.8cqw;background:radial-gradient(circle,#35567b,#0b1620);overflow:hidden;position:relative;} .vhouse-vcard-host .card-art::before{content:"◆";position:absolute;inset:0;display:grid;place-items:center;color:#79abed;font-size:35cqw;} .vhouse-vcard-host .card-art img{display:block;position:relative;width:100%;height:100%;object-fit:cover;} .vhouse-vcard-host .card-art img:not([src]){display:none;} .vhouse-vcard-host .card-info{padding:2.4cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#0b131b;font-size:3.9cqw;font-weight:900;} .vhouse-vcard-host .card-description{padding:2.7cqw 3.8cqw;min-height:17cqw;border-top:.6cqw solid var(--accent);background:#10161b;color:#b8d7d7;font-size:3.3cqw;} .vhouse-vcard-host .card-stats{display:flex;padding:3cqw 2.4cqw;border-top:.6cqw solid var(--accent);background:#020508;} .vhouse-vcard-host .stat{flex:1;text-align:center;} .vhouse-vcard-host .stat+.stat{border-left:1px solid #34414b;} .vhouse-vcard-host .stat-label{display:block;color:#9abbbe;font-size:3.3cqw;} .vhouse-vcard-host .stat-value{color:white;font-size:7.1cqw;font-weight:900;} .vhouse-vcard-host .meta-bottom{display:flex;align-items:center;justify-content:space-between;background:#111;border-top:.6cqw solid var(--accent);padding:3cqw 2cqw;} .vhouse-vcard-host .meta-footer-text{color:#ccc;font-size:1.6cqw;} .vhouse-vcard-host .rarity{padding:1cqw 2cqw;background:var(--accent);color:white;border-radius:1cqw;font-size:3.3cqw;font-weight:900;} .setup-layout{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;width:100%;align-items:stretch;} .setup-world{min-height:445px;} .setup-card{width:205px;max-width:75%;} .setup-panel{display:flex;flex-direction:column;gap:13px;} .stage-picker{width:100%;padding:12px;background:#091622;color:#f5d8a5;border:1px solid var(--gold);border-radius:6px;} .stage-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;} .metric{text-align:center;padding:12px 4px;border:1px solid #38566b;border-radius:6px;background:#142739;} .metric b{display:block;font-size:22px;color:white;} .metric small{color:var(--muted);font-size:10px;} .reward-list{display:flex;flex-wrap:wrap;gap:7px;} .reward-chip{padding:9px 12px;border:1px solid #8f7044;border-radius:5px;background:#33291e;color:#ffe0a5;font-weight:900;} .start-button{margin-top:auto;padding:15px;} .player-line{color:var(--muted);font-size:12px;line-height:1.5;} .travel-world{height:330px;width:100%;} .travel-card{width:158px;position:absolute;left:3%;top:50%;transform:translateY(-50%);animation:travel 6s ease-in-out infinite alternate;} @keyframes travel{from{left:4%;top:53%;transform:translateY(-50%) rotate(-5deg);} to{left:calc(100% - 170px);top:45%;transform:translateY(-50%) rotate(5deg);}} .sparkle{position:absolute;color:#ffe8a5;font-size:23px;text-shadow:0 0 18px #ffe48f;animation:sparkle 2.3s ease-in-out infinite;} .s1{left:18%;top:25%} .s2{left:47%;top:57%;animation-delay:.7s} .s3{left:78%;top:21%;animation-delay:1.3s} @keyframes sparkle{0%,100%{opacity:.15;transform:scale(.6)} 50%{opacity:1;transform:scale(1.3)}} .travel-bottom{margin-top:15px;display:grid;grid-template-columns:1fr 1fr;gap:15px;} .clock{margin:8px 0;font-size:35px;color:#ffe1a6;font-weight:900;} .track{height:10px;border:1px solid #856740;border-radius:10px;background:#06111c;overflow:hidden;} .fill{height:100%;width:0;background:linear-gradient(90deg,#927045,#f5d59a);} .loading-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;} .loading-item{padding:9px;border:1px solid #3e5568;border-radius:5px;background:#102233;text-align:center;color:#a9c1ce;font-size:10px;} .loading-item strong{display:block;margin-top:5px;color:#d8bb85;} .complete-top{text-align:center;margin-bottom:12px;} .loot-card-wrap{display:grid;place-items:center;padding:8px 0 14px;} .flip{width:250px;max-width:100%;perspective:1200px;} .flip-inner{position:relative;width:100%;aspect-ratio:250/350;transform-style:preserve-3d;transition:transform .85s ease-in-out;} .flip.flipped .flip-inner{transform:rotateY(180deg);} .flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:9px;overflow:hidden;} .flip-front{background:#080808} .flip-back{transform:rotateY(180deg);border:3px solid #020305;background:linear-gradient(150deg,#1a3340,#090f18);} .flip-front .vhouse-vcard-host, .flip-front .vcard{height:100%;} .loot-receipt{height:100%;border:3px solid var(--gold);border-radius:5px;padding:11px 9px;display:flex;flex-direction:column;text-align:center;} .loot-receipt small{font-size:9px;color:#a5bfca;letter-spacing:1px;} .loot-receipt h3{margin:7px 0;padding-bottom:10px;border-bottom:1px solid #7f633e;font-size:17px;} .loot-stage{margin:9px 0;font-size:16px;font-weight:900;color:white;} .loot-count{padding:8px 0;border-top:1px solid #354c58;font-size:12px;color:#c3d5df;} .loot-count b{font-size:20px;color:#ffe0a5;} .loot-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:9px;} .loot-value{padding:8px 3px;border:1px solid #8b6e46;border-radius:5px;background:#30291f;} .loot-value span{display:block;font-size:9px;color:#d6bd90;} .loot-value strong{display:block;margin-top:4px;font-size:21px;color:#ffe3aa;} .claim-footer{margin-top:auto;} .confirm{display:block;width:100%;min-height:45px;border:2px solid #fff0c7;background:#edc681;color:#10151a;font-size:17px;letter-spacing:1px;box-shadow:0 0 17px #edc68155;} .confirm:hover:not(:disabled){background:#ffe4ae;} .confirmed{padding:10px 4px;border:2px solid var(--green);border-radius:5px;background:#12362d;color:var(--green);font-weight:900;} .receipt-id{margin-top:7px;font-size:8px;color:#8ea5b1;overflow-wrap:anywhere;} .result-panel{width:min(780px,100%);margin:5px auto 0;padding:12px;} .result-table-wrap{max-width:100%;overflow-x:auto;} table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;} th,td{padding:9px 5px;border:1px solid #365063;text-align:center;overflow-wrap:anywhere;} th{color:#f1d29c;background:#1e3547;} td{background:#102132;} .win{color:var(--green);font-weight:900;} .loss{color:var(--red);font-weight:900;} .earned{color:#ffe2a6;font-weight:900;} .result-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:10px;color:#a9c0ca;font-size:11px;} .away{min-height:100%;display:grid;place-items:center;padding:30px;text-align:center;} .away p{color:var(--muted);line-height:1.6;} @media(max-width:740px){.setup-layout{grid-template-columns:1fr;} .setup-world{min-height:250px;} .setup-card{width:140px;} .travel-bottom{grid-template-columns:1fr;} .travel-world{height:270px;} .travel-card{width:125px;animation-name:travelMobile;} @keyframes travelMobile{from{left:2%;transform:translateY(-50%) rotate(-5deg);} to{left:calc(100% - 135px);transform:translateY(-50%) rotate(5deg);}} header{padding:13px;} header h1{font-size:18px;} main{padding:11px;} th,td{padding:8px 3px;font-size:10px;}} @media(prefers-reduced-motion:reduce){.travel-card, .sparkle, .world::before{animation:none!important;}}  .result-table-wrap table{min-width:660px}
+:root{
+  --gold:#bc9357;
+  --gold-light:#f4d79f;
+  --cyan:#54c9ef;
+  --green:#70e5b2;
+  --red:#f58b8b;
+  --muted:#9fb6c4;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+
+body{
+  margin:0;
+  height:100dvh;
+  padding:12px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:radial-gradient(circle,#253d52,#050b13 78%);
+  color:#e8f4f8;
+  font:13px Arial,sans-serif;
+}
+
+.game{
+  width:min(1000px,100%);
+  height:min(700px,calc(100dvh - 24px));
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  border:2px solid var(--gold);
+  border-radius:12px;
+  background:linear-gradient(145deg,#142638,#07111e 85%);
+  overflow:hidden;
+  box-shadow:0 20px 60px #0009;
+}
+
+header{
+  flex:0 0 auto;
+  padding:17px 22px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  border-bottom:1px solid #795b36;
+}
+header small{
+  font-size:10px;
+  color:#c8a978;
+  letter-spacing:2px;
+}
+h1{
+  color:var(--gold-light);
+  font:700 24px Georgia,serif;
+  margin:4px 0 0;
+}
+h2{
+  color:var(--gold-light);
+  font-size:20px;
+  margin:0 0 10px;
+}
+h3{
+  color:var(--gold-light);
+  font-size:14px;
+  margin:0 0 10px;
+}
+
+main{
+  flex:1 1 0;
+  min-height:0;
+  width:100%;
+  padding:18px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-gutter:stable;
+  overscroll-behavior:contain;
+}
+
+#setupScreen,
+#travelScreen,
+#completeScreen,
+#awayScreen{
+  min-height:100%;
+  width:100%;
+}
+
+.muted{color:var(--muted)}
+
+.phase{
+  padding:7px 12px;
+  border:1px solid #8b714a;
+  color:var(--gold-light);
+  border-radius:20px;
+  white-space:nowrap;
+  font-size:10px;
+  font-weight:900;
+}
+
+button,select{font:inherit}
+
+button{
+  cursor:pointer;
+  padding:11px 18px;
+  border:1px solid var(--gold);
+  border-radius:7px;
+  background:#162c3d;
+  color:#f6ddb0;
+  font-weight:900;
+}
+button:hover:not(:disabled){
+  background:#29475b;
+  border-color:#ffe3ae;
+}
+button:disabled{
+  opacity:.4;
+  cursor:default;
+}
+.primary{
+  background:var(--gold);
+  color:#07121c;
+}
+.primary:hover:not(:disabled){
+  background:#f2ce91;
+}
+.panel{
+  border:1px solid #38566b;
+  border-radius:10px;
+  background:#0c1928;
+  padding:16px;
+}
+.actions{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:15px;
+}
+.message{
+  margin-top:12px;
+  min-height:18px;
+  text-align:center;
+  color:var(--muted);
+}
+
+/* WORLD BACKGROUND */
+
+.world{
+  position:relative;
+  overflow:hidden;
+  border:1px solid #6c835f;
+  border-radius:10px;
+  background:
+    radial-gradient(ellipse at 75% 15%,#b5a87770,transparent 29%),
+    linear-gradient(#2b4c65,#233e52 52%,#112a29 53%,#091b22);
+}
+.world::before{
+  content:"";
+  position:absolute;
+  inset:-12%;
+  background-image:var(--scene-image,none);
+  background-size:cover;
+  background-position:center;
+  opacity:.6;
+  animation:pan 17s linear infinite alternate;
+}
+.world::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(
+    90deg,
+    #071321aa,
+    transparent 25%,
+    transparent 75%,
+    #071321bb
+  );
+}
+@keyframes pan{
+  from{transform:translateX(-3%) scale(1.1)}
+  to{transform:translateX(3%) scale(1.16)}
+}
+.world-content{
+  position:relative;
+  z-index:1;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* SHARED VCARD FRONT */
+
+.vhouse-vcard-host{
+  width:100%;
+  container-type:inline-size;
+}
+.vhouse-vcard-host .vcard{
+  --accent:#2d7bdc;
+  width:100%;
+  background:#080808;
+  border:2.4cqw solid #020305;
+  border-radius:3.6cqw;
+  color:#e0fefe;
+  overflow:hidden;
+  box-shadow:0 0 6cqw #2d7bdc55;
+}
+.vhouse-vcard-host .vcard-inner{
+  border:1.2cqw solid var(--accent);
+  border-radius:1.8cqw;
+  overflow:hidden;
+  background:radial-gradient(circle at top,#1c2832,#090d13 65%);
+}
+.vhouse-vcard-host .card-header{
+  background:#03070c;
+  padding:3cqw 2cqw;
+  border-bottom:.6cqw solid var(--accent);
+  text-align:center;
+}
+.vhouse-vcard-host .card-name{
+  margin:0;
+  font-size:6.5cqw;
+  font-weight:900;
+  text-transform:uppercase;
+  color:white;
+}
+.vhouse-vcard-host .card-art{
+  margin:2.1cqw;
+  aspect-ratio:4/3;
+  border:.9cqw solid var(--accent);
+  border-radius:1.8cqw;
+  background:radial-gradient(circle,#35567b,#0b1620);
+  overflow:hidden;
+  position:relative;
+}
+.vhouse-vcard-host .card-art::before{
+  content:"◆";
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:#79abed;
+  font-size:35cqw;
+}
+.vhouse-vcard-host .card-art img{
+  display:block;
+  position:relative;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.vhouse-vcard-host .card-art img:not([src]){
+  display:none;
+}
+.vhouse-vcard-host .card-info{
+  padding:2.4cqw 3.8cqw;
+  border-top:.6cqw solid var(--accent);
+  background:#0b131b;
+  font-size:3.9cqw;
+  font-weight:900;
+}
+.vhouse-vcard-host .card-description{
+  padding:2.7cqw 3.8cqw;
+  min-height:17cqw;
+  border-top:.6cqw solid var(--accent);
+  background:#10161b;
+  color:#b8d7d7;
+  font-size:3.3cqw;
+}
+.vhouse-vcard-host .card-stats{
+  display:flex;
+  padding:3cqw 2.4cqw;
+  border-top:.6cqw solid var(--accent);
+  background:#020508;
+}
+.vhouse-vcard-host .stat{
+  flex:1;
+  text-align:center;
+}
+.vhouse-vcard-host .stat+.stat{
+  border-left:1px solid #34414b;
+}
+.vhouse-vcard-host .stat-label{
+  display:block;
+  color:#9abbbe;
+  font-size:3.3cqw;
+}
+.vhouse-vcard-host .stat-value{
+  color:white;
+  font-size:7.1cqw;
+  font-weight:900;
+}
+.vhouse-vcard-host .meta-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#111;
+  border-top:.6cqw solid var(--accent);
+  padding:3cqw 2cqw;
+}
+.vhouse-vcard-host .meta-footer-text{
+  color:#ccc;
+  font-size:1.6cqw;
+}
+.vhouse-vcard-host .rarity{
+  padding:1cqw 2cqw;
+  background:var(--accent);
+  color:white;
+  border-radius:1cqw;
+  font-size:3.3cqw;
+  font-weight:900;
+}
+
+/* SCREEN 1 — PREPARE */
+
+.setup-layout{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:16px;
+  width:100%;
+  align-items:stretch;
+}
+.setup-world{
+  min-height:445px;
+}
+.setup-card{
+  width:205px;
+  max-width:75%;
+}
+.setup-panel{
+  display:flex;
+  flex-direction:column;
+  gap:13px;
+}
+.stage-picker{
+  width:100%;
+  padding:12px;
+  background:#091622;
+  color:#f5d8a5;
+  border:1px solid var(--gold);
+  border-radius:6px;
+}
+.stage-summary{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+.metric{
+  text-align:center;
+  padding:12px 4px;
+  border:1px solid #38566b;
+  border-radius:6px;
+  background:#142739;
+}
+.metric b{
+  display:block;
+  font-size:22px;
+  color:white;
+}
+.metric small{
+  color:var(--muted);
+  font-size:10px;
+}
+.reward-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.reward-chip{
+  padding:9px 12px;
+  border:1px solid #8f7044;
+  border-radius:5px;
+  background:#33291e;
+  color:#ffe0a5;
+  font-weight:900;
+}
+.start-button{
+  margin-top:auto;
+  padding:15px;
+}
+.player-line{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+/* SCREEN 2 — JOURNEY */
+
+.travel-world{
+  height:330px;
+  width:100%;
+}
+.travel-card{
+  width:158px;
+  position:absolute;
+  left:3%;
+  top:50%;
+  transform:translateY(-50%);
+  animation:travel 6s ease-in-out infinite alternate;
+}
+@keyframes travel{
+  from{
+    left:4%;
+    top:53%;
+    transform:translateY(-50%) rotate(-5deg);
+  }
+  to{
+    left:calc(100% - 170px);
+    top:45%;
+    transform:translateY(-50%) rotate(5deg);
+  }
+}
+.sparkle{
+  position:absolute;
+  color:#ffe8a5;
+  font-size:23px;
+  text-shadow:0 0 18px #ffe48f;
+  animation:sparkle 2.3s ease-in-out infinite;
+}
+.s1{left:18%;top:25%}
+.s2{left:47%;top:57%;animation-delay:.7s}
+.s3{left:78%;top:21%;animation-delay:1.3s}
+@keyframes sparkle{
+  0%,100%{opacity:.15;transform:scale(.6)}
+  50%{opacity:1;transform:scale(1.3)}
+}
+.travel-bottom{
+  margin-top:15px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
+.clock{
+  margin:8px 0;
+  font-size:35px;
+  color:#ffe1a6;
+  font-weight:900;
+}
+.track{
+  height:10px;
+  border:1px solid #856740;
+  border-radius:10px;
+  background:#06111c;
+  overflow:hidden;
+}
+.fill{
+  height:100%;
+  width:0;
+  background:linear-gradient(90deg,#927045,#f5d59a);
+}
+.loading-list{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+.loading-item{
+  padding:9px;
+  border:1px solid #3e5568;
+  border-radius:5px;
+  background:#102233;
+  text-align:center;
+  color:#a9c1ce;
+  font-size:10px;
+}
+.loading-item strong{
+  display:block;
+  margin-top:5px;
+  color:#d8bb85;
+}
+
+/* SCREEN 3 — RECEIPT */
+
+.complete-top{
+  text-align:center;
+  margin-bottom:12px;
+}
+.loot-card-wrap{
+  display:grid;
+  place-items:center;
+  padding:8px 0 14px;
+}
+.flip{
+  width:250px;
+  max-width:100%;
+  perspective:1200px;
+}
+.flip-inner{
+  position:relative;
+  width:100%;
+  aspect-ratio:250/350;
+  transform-style:preserve-3d;
+  transition:transform .85s ease-in-out;
+}
+.flip.flipped .flip-inner{
+  transform:rotateY(180deg);
+}
+.flip-face{
+  position:absolute;
+  inset:0;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  border-radius:9px;
+  overflow:hidden;
+}
+.flip-front{background:#080808}
+.flip-back{
+  transform:rotateY(180deg);
+  border:3px solid #020305;
+  background:linear-gradient(150deg,#1a3340,#090f18);
+}
+.flip-front .vhouse-vcard-host,
+.flip-front .vcard{
+  height:100%;
+}
+
+/* RECEIPT ON CARD BACK */
+
+.loot-receipt{
+  height:100%;
+  border:3px solid var(--gold);
+  border-radius:5px;
+  padding:11px 9px;
+  display:flex;
+  flex-direction:column;
+  text-align:center;
+}
+.loot-receipt small{
+  font-size:9px;
+  color:#a5bfca;
+  letter-spacing:1px;
+}
+.loot-receipt h3{
+  margin:7px 0;
+  padding-bottom:10px;
+  border-bottom:1px solid #7f633e;
+  font-size:17px;
+}
+.loot-stage{
+  margin:9px 0;
+  font-size:16px;
+  font-weight:900;
+  color:white;
+}
+.loot-count{
+  padding:8px 0;
+  border-top:1px solid #354c58;
+  font-size:12px;
+  color:#c3d5df;
+}
+.loot-count b{
+  font-size:20px;
+  color:#ffe0a5;
+}
+.loot-values{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+  margin-top:9px;
+}
+.loot-value{
+  padding:8px 3px;
+  border:1px solid #8b6e46;
+  border-radius:5px;
+  background:#30291f;
+}
+.loot-value span{
+  display:block;
+  font-size:9px;
+  color:#d6bd90;
+}
+.loot-value strong{
+  display:block;
+  margin-top:4px;
+  font-size:21px;
+  color:#ffe3aa;
+}
+.claim-footer{
+  margin-top:auto;
+}
+.confirm{
+  display:block;
+  width:100%;
+  min-height:45px;
+  border:2px solid #fff0c7;
+  background:#edc681;
+  color:#10151a;
+  font-size:17px;
+  letter-spacing:1px;
+  box-shadow:0 0 17px #edc68155;
+}
+.confirm:hover:not(:disabled){
+  background:#ffe4ae;
+}
+.confirmed{
+  padding:10px 4px;
+  border:2px solid var(--green);
+  border-radius:5px;
+  background:#12362d;
+  color:var(--green);
+  font-weight:900;
+}
+.receipt-id{
+  margin-top:7px;
+  font-size:8px;
+  color:#8ea5b1;
+  overflow-wrap:anywhere;
+}
+
+/* RESULTS CHART */
+
+.result-panel{
+  width:min(780px,100%);
+  margin:5px auto 0;
+  padding:12px;
+}
+.result-table-wrap{
+  max-width:100%;
+  overflow-x:auto;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-size:11px;
+}
+th,td{
+  padding:9px 5px;
+  border:1px solid #365063;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
+th{
+  color:#f1d29c;
+  background:#1e3547;
+}
+td{
+  background:#102132;
+}
+.win{
+  color:var(--green);
+  font-weight:900;
+}
+.loss{
+  color:var(--red);
+  font-weight:900;
+}
+.earned{
+  color:#ffe2a6;
+  font-weight:900;
+}
+.result-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:10px;
+  color:#a9c0ca;
+  font-size:11px;
+}
+.away{
+  min-height:100%;
+  display:grid;
+  place-items:center;
+  padding:30px;
+  text-align:center;
+}
+.away p{
+  color:var(--muted);
+  line-height:1.6;
+}
+
+@media(max-width:740px){
+  .setup-layout{grid-template-columns:1fr;}
+  .setup-world{min-height:250px;}
+  .setup-card{width:140px;}
+  .travel-bottom{grid-template-columns:1fr;}
+  .travel-world{height:270px;}
+  .travel-card{
+    width:125px;
+    animation-name:travelMobile;
+  }
+  @keyframes travelMobile{
+    from{
+      left:2%;
+      transform:translateY(-50%) rotate(-5deg);
+    }
+    to{
+      left:calc(100% - 135px);
+      transform:translateY(-50%) rotate(5deg);
+    }
+  }
+  header{padding:13px;}
+  header h1{font-size:18px;}
+  main{padding:11px;}
+  th,td{
+    padding:8px 3px;
+    font-size:10px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .travel-card,
+  .sparkle,
+  .world::before{
+    animation:none!important;
+  }
+}
 </style>
 </head>
+
 <body>
 <div class="game" id="game">
 
@@ -17,7 +727,6 @@
     <small>THE ZETSUMETSU CORPORATION · VHOUSE</small>
     <h1>JOURNEY RECEIPT GAME</h1>
   </div>
-
   <span class="phase" id="phase">READY</span>
 </header>
 
@@ -26,7 +735,6 @@
 <!-- SCREEN 1: PREPARE JOURNEY -->
 
 <section id="setupScreen">
-
   <div class="setup-layout">
 
     <div class="world setup-world" id="setupWorld">
@@ -38,7 +746,6 @@
     </div>
 
     <div class="panel setup-panel">
-
       <div>
         <h2>START JOURNEY</h2>
         <div class="player-line" id="playerInfo"></div>
@@ -50,22 +757,18 @@
       </div>
 
       <div class="stage-summary">
-
         <div class="metric">
           <b id="setupHunts">—</b>
           <small>HUNTS</small>
         </div>
-
         <div class="metric">
           <b id="setupFights">—</b>
           <small>FIGHTS</small>
         </div>
-
         <div class="metric">
           <b id="setupTime">—</b>
           <small>SECONDS</small>
         </div>
-
       </div>
 
       <div>
@@ -74,21 +777,17 @@
       </div>
 
       <p class="muted" id="setupDescription"></p>
-
       <button class="primary start-button" id="startButton">
         START JOURNEY
       </button>
-
     </div>
 
   </div>
-
 </section>
 
 <!-- SCREEN 2: JOURNEY RUNNING -->
 
 <section id="travelScreen" hidden>
-
   <div class="world travel-world" id="travelWorld">
 
     <span class="sparkle s1">✦</span>
@@ -98,87 +797,59 @@
     <div class="travel-card">
       <div id="travelVCard"></div>
     </div>
-
   </div>
 
   <div class="travel-bottom">
-
     <div class="panel">
-
       <h2 id="travelTitle">JOURNEY IN PROGRESS</h2>
-
       <div class="muted" id="travelDescription"></div>
-
       <div class="clock" id="timer">00:00</div>
-
       <div class="track">
         <div class="fill" id="progress"></div>
       </div>
-
       <p class="muted">
         VCard usage locked until receipt confirmation.
       </p>
-
     </div>
 
     <div class="panel">
-
       <h3>JOURNEY ACTIVITY</h3>
-
       <div class="loading-list" id="loadingEncounters"></div>
-
       <p class="muted">
         Results will be calculated when the timer expires.
       </p>
-
     </div>
-
   </div>
 
   <div class="actions">
     <button id="leaveButton">LEAVE JOURNEY</button>
   </div>
-
 </section>
 
 <!-- SCREEN 3: JOURNEY RESULTS -->
 
 <section id="completeScreen" hidden>
-
   <div class="complete-top">
-
     <h2>JOURNEY COMPLETE</h2>
-
     <div class="muted">
       Your VCard has returned with its rewards.
     </div>
-
   </div>
 
   <div class="loot-card-wrap">
-
     <div class="flip" id="cardFlip">
-
       <div class="flip-inner">
-
-        <!-- VCARD FRONT -->
 
         <div class="flip-face flip-front">
           <div id="completeVCard"></div>
         </div>
 
-        <!-- VCARD BACK / RESULTS RECEIPT -->
-
         <div class="flip-face flip-back">
-
           <div class="loot-receipt">
-
             <small>VHOUSE · JOURNEY</small>
-
             <h3>RESULTS RECEIPT</h3>
 
             <div class="loot-stage" id="receiptStage"></div>
-
             <small id="receiptEncounters"></small>
 
             <div class="loot-count">
@@ -189,7 +860,6 @@
             <div class="loot-values" id="receiptRewards"></div>
 
             <div class="claim-footer">
-
               <button
                 type="button"
                 class="confirm"
@@ -198,98 +868,69 @@
               </button>
 
               <div class="confirmed" id="confirmedStamp" hidden>
-
                 ✓ CONFIRMED
-
                 <div style="margin-top:5px;font-size:10px">
                   REWARDS RECORDED · VCARD UNLOCKED
                 </div>
-
               </div>
 
               <div class="receipt-id" id="receiptId"></div>
-
             </div>
-
           </div>
-
         </div>
 
       </div>
-
     </div>
-
   </div>
 
-  <!-- RESULTS CHART BELOW THE CARD -->
+  <!-- RESULTS CHART -->
 
   <div class="panel result-panel">
-
     <h3>HOW YOUR VCARD EARNED THESE REWARDS</h3>
 
     <div class="result-table-wrap">
-
       <table>
-
         <thead>
           <tr>
             <th>#</th>
             <th>ENCOUNTER</th>
             <th>LETTERS</th>
-            <th>FIRST ROUND</th>
-            <th>LUCK</th>
             <th>RESULT</th>
             <th>ACQUIRED</th>
           </tr>
         </thead>
-
         <tbody id="resultRows"></tbody>
-
       </table>
-
     </div>
 
     <div class="result-footer">
-
       <span id="resultSummary"></span>
-
       <span id="resultState">
         CONFIRMATION REQUIRED
       </span>
-
     </div>
-
   </div>
 
   <div class="actions">
-
     <button class="primary" id="newJourneyButton" hidden>
       NEW JOURNEY
     </button>
-
   </div>
-
 </section>
 
 <!-- PLAYER LEFT THE JOURNEY -->
 
 <section id="awayScreen" class="away" hidden>
-
   <div>
-
     <h2>YOUR VCARD IS ON A JOURNEY</h2>
-
     <p>
       Your mission continues while you're away.
       Return when you're ready to view the results.
     </p>
-
     <button class="primary" id="returnButton">
       RETURN TO JOURNEY
     </button>
-
   </div>
-
 </section>
 
 <div class="message" id="message"></div>
@@ -298,484 +939,1407 @@
 </div>
 
 <script src="assets/vhouse-vcard.js"></script>
+
 <script>
 "use strict";
 
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 
-// The game supplies stages, encounter letters, the active VCard and the
-// inventory-derived LUCK stat. Missing data is not replaced with fake rolls.
-const config = window.VHouseJourneyData || {};
-const stages = Array.isArray(config.stages)
-  ? config.stages.filter(s => s && s.enabled !== false).sort((a, b) => a.id - b.id)
-  : [];
-const stageById = id => stages.find(s => String(s.id) === String(id));
-const activeCard = () => window.VHouseCardStore?.getActive?.() || null;
-const validLetter = value => /^[RPS]$/.test(String(value ?? "").toUpperCase());
-const letter = value => String(value ?? "").trim().toUpperCase();
-const nonnegativeNumber = value => {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.max(0, n) : 0;
+/*
+  STANDALONE JOURNEY DESIGN FRAMEWORK
+
+  Optional VHouse integration:
+    VHouseJourneyData
+    VHouseCardStore
+    VHouseJourneyInventory
+    VHouseJourneyStore
+    VHouseJourneyRewardForEncounter
+
+  No localStorage.
+*/
+
+const DEFAULT_CONFIG={
+  stageCount:10,
+  demoTimeScale:5,
+  sceneImage:"assets/VCrad Town.png",
+
+  // Demo inventory generates the LUCK stat.
+  demoInventory:{LUCK:1},
+
+  stages:[
+    {
+      id:1,
+      durationSeconds:30,
+      hunts:3,
+      fights:0,
+      rewardTypes:["IG"],
+
+      encounters:[
+        {
+          type:"HUNT",
+          letter:"R",
+          reward:{item:"IG",quantity:1}
+        },
+        {
+          type:"HUNT",
+          letter:"P",
+          reward:{item:"IG",quantity:1}
+        },
+        {
+          type:"HUNT",
+          letter:"S",
+          reward:{item:"IG",quantity:1}
+        }
+      ]
+    },
+
+    {
+      id:2,
+      durationSeconds:60,
+      hunts:4,
+      fights:2,
+      rewardTypes:["IG","SCRAPS"],
+
+      encounters:[
+        {
+          type:"HUNT",
+          letter:"R",
+          reward:{item:"IG",quantity:1}
+        },
+        {
+          type:"HUNT",
+          letter:"P",
+          reward:{item:"IG",quantity:1}
+        },
+        {
+          type:"HUNT",
+          letter:"S",
+          reward:{item:"IG",quantity:1}
+        },
+        {
+          type:"HUNT",
+          letter:"R",
+          reward:{item:"IG",quantity:1}
+        },
+        {
+          type:"FIGHT",
+          letter:"P",
+          reward:{item:"SCRAPS",quantity:1}
+        },
+        {
+          type:"FIGHT",
+          letter:"S",
+          reward:{item:"SCRAPS",quantity:1}
+        }
+      ]
+    }
+  ]
 };
-const wholeNumber = value => Math.floor(nonnegativeNumber(value));
 
-function getLuckStat(card) {
-  // Inventory increases the VCard's LUCK stat. Read the game's actual stat;
-  // the optional adapter can pull it from inventory if needed.
-  const supplied = window.VHouseJourneyGetLuck?.(card);
-  return wholeNumber(supplied ?? card?.stats?.LUCK ?? card?.stats?.luck ?? card?.luck);
+const config=window.VHouseJourneyData||DEFAULT_CONFIG;
+
+const stages=[...(config.stages||[])]
+  .filter(stage=>stage.enabled!==false)
+  .sort((a,b)=>a.id-b.id);
+
+const stageById=id=>
+  stages.find(stage=>stage.id===Number(id));
+
+const LETTERS=["R","P","S"];
+
+/* DEMO VCARD */
+
+const DEMO_CARD={
+  id:"demo-vcard",
+  name:"DEMO VCARD",
+  team:"R",
+  level:1,
+  atk:100,
+  def:100,
+  speed:1,
+  image:"",
+  description:"Journey Adventurer"
+};
+
+function activeCard(){
+  return window.VHouseCardStore?.getActive?.()||DEMO_CARD;
 }
 
-function stageEncounters(stage) {
-  if (!stage) return [];
-  let entries = window.VHouseJourneyGetEncounters?.(stage) ?? stage.encounters;
-  // Encounter letters may also be supplied as a data array alongside
-  // the stage's HUNT and FIGHT counts. No letters are generated here.
-  if (!Array.isArray(entries) && Array.isArray(stage.encounterLetters)) {
-    const types = [
-      ...Array.from({ length: wholeNumber(stage.hunts) }, () => "HUNT"),
-      ...Array.from({ length: wholeNumber(stage.fights) }, () => "FIGHT")
-    ];
-    entries = stage.encounterLetters.map((value, i) => ({
-      type: types[i], letter: value
-    }));
-  }
-  if (!Array.isArray(entries)) return [];
-  return entries.map((entry, i) => ({
-    ...entry,
-    number: i + 1,
-    type: String(entry?.type ?? "").toUpperCase(),
-    letter: letter(entry?.letter ?? entry?.opponent)
-  }));
+/* QUANTITY CALCULATION */
+
+function wholeQuantity(value){
+  const number=Number(value);
+
+  return Number.isFinite(number)
+    ?Math.max(0,Math.floor(number))
+    :0;
 }
 
-function stageProblem(stage) {
-  if (!stage) return "Stage not configured.";
-  const encounters = stageEncounters(stage);
-  if (!encounters.length) return "Stage encounter data has not been supplied.";
-  if (!encounters.every(e => e.type && validLetter(e.letter)))
-    return "Each encounter needs a type and an R, P or S letter.";
-  if (stage.hunts != null &&
-      encounters.filter(e => e.type === "HUNT").length !== wholeNumber(stage.hunts))
-    return "HUNT count does not match encounter data.";
-  if (stage.fights != null &&
-      encounters.filter(e => e.type === "FIGHT").length !== wholeNumber(stage.fights))
-    return "FIGHT count does not match encounter data.";
-  if (!(nonnegativeNumber(stage.durationSeconds) > 0))
-    return "Stage duration is not configured.";
-  return "";
-}
+/* STATE */
 
-const initialState = () => ({ mission: null, balance: {}, receipts: [], events: [] });
-const store = window.VHouseJourneyStore;
-let state = store?.load?.() || initialState();
-state.balance ||= {};
-state.receipts ||= [];
-state.events ||= [];
-let selectedStage = stages[0]?.id ?? null;
-let currentScreen = "setup";
-
-function save() { store?.save?.(structuredClone(state)); }
-function emit(name, detail) {
-  window.dispatchEvent(new CustomEvent("vhouse:" + name, { detail }));
-}
-function setScreen(screen) {
-  currentScreen = screen;
-  for (const name of ["setup", "travel", "complete", "away"])
-    $(name + "Screen").hidden = name !== screen;
-  $("phase").textContent = {
-    setup: "READY", travel: "ON JOURNEY", complete: "RESULTS", away: "AWAY"
-  }[screen];
-  $("gameContent").scrollTop = 0;
-}
-function background() {
-  const url = config.sceneImage;
-  if (typeof url !== "string" || !/^(assets\/|https?:\/\/)/i.test(url)) return;
-  const safe = url.replace(/["\\]/g, "");
-  for (const id of ["setupWorld", "travelWorld"])
-    $(id).style.setProperty("--scene-image", 'url("' + safe + '")');
-}
-
-function renderCard(host, card) {
-  if (window.VHouseVCard?.render) {
-    window.VHouseVCard.render(host, card || {});
-    return;
-  }
-  card ||= {};
-  host.classList.add("vhouse-vcard-host");
-  if (!host.querySelector(".vcard")) host.innerHTML = `
-    <div class="vcard"><div class="vcard-inner">
-      <div class="card-header"><div class="card-name"></div></div>
-      <div class="card-art"><img alt="VCard artwork"></div>
-      <div class="card-info"></div><div class="card-description"></div>
-      <div class="card-stats">
-        <div class="stat"><span class="stat-label">ATK</span><span class="stat-value" data-stat="atk"></span></div>
-        <div class="stat"><span class="stat-label">DEF</span><span class="stat-value" data-stat="def"></span></div>
-      </div>
-      <div class="meta-bottom"><div class="meta-footer-text">VHOUSE</div><div class="rarity"></div></div>
-    </div></div>`;
-  const root = host.querySelector(".vcard");
-  const colors = { R: "#2d7bdc", P: "#1abf96", S: "#b16df4" };
-  root.style.setProperty("--accent", colors[letter(card.team)] || colors.R);
-  root.querySelector(".card-name").textContent = card.name || "NO ACTIVE VCARD";
-  root.querySelector(".card-info").textContent = card.level == null ? "" : "LEVEL " + card.level;
-  root.querySelector(".card-description").textContent = card.description || "";
-  for (const stat of ["atk", "def"])
-    root.querySelector(`[data-stat="${stat}"]`).textContent = card[stat] ?? "—";
-  root.querySelector(".rarity").textContent = card.team || "—";
-  const img = root.querySelector(".card-art img");
-  if (typeof card.image === "string" && /^(https?:\/\/|data:image\/|blob:)/i.test(card.image))
-    img.src = card.image;
-  else img.removeAttribute("src");
-}
-
-function summaryOf(stage) {
-  const plan = stageEncounters(stage);
+function initialState(){
   return {
-    hunts: plan.length ? plan.filter(e => e.type === "HUNT").length : stage?.hunts ?? 0,
-    fights: plan.length ? plan.filter(e => e.type === "FIGHT").length : stage?.fights ?? 0
+    mission:null,
+    balance:{},
+    receipts:[],
+    events:[],
+    demoInventory:{
+      ...(config.demoInventory||{LUCK:0})
+    }
   };
 }
-function renderSetup() {
+
+const restored=window.VHouseJourneyStore?.load?.();
+
+const state=restored&&typeof restored==="object"
+  ?{...initialState(),...restored}
+  :initialState();
+
+state.balance||={};
+state.receipts||=[];
+state.events||=[];
+state.demoInventory||={
+  ...(config.demoInventory||{LUCK:0})
+};
+
+let selectedStage=stages[0]?.id??null;
+let currentScreen="setup";
+
+function save(){
+  // VHouse may supply its own storage connection.
+  // No localStorage is used in this framework.
+  window.VHouseJourneyStore?.save?.(
+    structuredClone(state)
+  );
+}
+
+function emit(name,detail){
+  window.dispatchEvent(
+    new CustomEvent("vhouse:"+name,{detail})
+  );
+}
+
+/*
+  INVENTORY -> LUCK STAT
+
+  LUCK is one item type.
+
+  Quantity held produces the LUCK stat.
+  Each point supplies one additional coin flip
+  after a lost first round or failed retry.
+*/
+
+function luckStat(){
+  const inventory=window.VHouseJourneyInventory;
+
+  let quantity;
+
+  if(typeof inventory?.getQuantity==="function"){
+
+    quantity=inventory.getQuantity("LUCK");
+
+  }else if(Array.isArray(inventory?.items)){
+
+    quantity=inventory.items
+      .filter(item=>
+        String(item.item||item.name)
+          .toUpperCase()==="LUCK"
+      )
+      .reduce(
+        (sum,item)=>
+          sum+wholeQuantity(item.quantity),
+        0
+      );
+
+  }else if(
+    inventory?.items&&
+    typeof inventory.items==="object"
+  ){
+
+    quantity=
+      inventory.items.LUCK?.quantity??
+      inventory.items.LUCK;
+
+  }else if(
+    inventory&&
+    Object.hasOwn(inventory,"LUCK")
+  ){
+
+    quantity=inventory.LUCK;
+
+  }else{
+
+    quantity=state.demoInventory.LUCK;
+
+  }
+
+  return wholeQuantity(quantity);
+}
+
+/*
+  STAGE ENCOUNTER DATA
+
+  Every encounter must have its own defined
+  R, P, or S letter.
+
+  No random letter assignment.
+*/
+
+function encounterPlan(stage){
+  return Array.isArray(stage?.encounters)
+    ?stage.encounters
+    :[];
+}
+
+function validStage(stage){
+
+  if(!stage||
+     !(Number(stage.durationSeconds)>0)){
+    return false;
+  }
+
+  const encounters=encounterPlan(stage);
+
+  if(!encounters.length)return false;
+
+  if(encounters.some(entry=>
+    !["HUNT","FIGHT"].includes(entry.type)||
+    !LETTERS.includes(entry.letter)
+  )){
+    return false;
+  }
+
+  const hunts=encounters
+    .filter(entry=>entry.type==="HUNT")
+    .length;
+
+  const fights=encounters
+    .filter(entry=>entry.type==="FIGHT")
+    .length;
+
+  return (
+    hunts===Number(stage.hunts||0)&&
+    fights===Number(stage.fights||0)
+  );
+}
+
+/* SCREEN CONTROL */
+
+function setScreen(screen){
+
+  currentScreen=screen;
+
+  for(const name of [
+    "setup","travel","complete","away"
+  ]){
+    $(name+"Screen").hidden=name!==screen;
+  }
+
+  $("phase").textContent={
+    setup:"READY",
+    travel:"ON JOURNEY",
+    complete:"RESULTS",
+    away:"AWAY"
+  }[screen]||"READY";
+
+  $("gameContent").scrollTop=0;
+}
+
+/* BACKGROUND */
+
+function background(){
+
+  const url=config.sceneImage;
+
+  if(typeof url!=="string"||
+     !/^(assets\/|https?:\/\/)/i.test(url)){
+    return;
+  }
+
+  const safe=url.replace(/["\\]/g,"");
+
+  for(const id of [
+    "setupWorld",
+    "travelWorld"
+  ]){
+    $(id).style.setProperty(
+      "--scene-image",
+      'url("'+safe+'")'
+    );
+  }
+}
+
+/* VCARD DISPLAY */
+
+function renderCard(host,card){
+
+  if(window.VHouseVCard?.render){
+    window.VHouseVCard.render(host,card);
+    return;
+  }
+
+  host.classList.add("vhouse-vcard-host");
+
+  if(!host.querySelector(".vcard")){
+
+    host.innerHTML=`
+      <div class="vcard">
+        <div class="vcard-inner">
+
+          <header class="card-header">
+            <h2 class="card-name"></h2>
+          </header>
+
+          <div class="card-art">
+            <img alt="VCard artwork">
+          </div>
+
+          <div class="card-info"></div>
+          <div class="card-description"></div>
+
+          <div class="card-stats">
+
+            <div class="stat">
+              <span class="stat-label">ATK</span>
+              <span class="stat-value"
+                    data-stat="atk"></span>
+            </div>
+
+            <div class="stat">
+              <span class="stat-label">DEF</span>
+              <span class="stat-value"
+                    data-stat="def"></span>
+            </div>
+
+          </div>
+
+          <div class="meta-bottom">
+            <div class="meta-footer-text"></div>
+            <div class="rarity"></div>
+          </div>
+
+        </div>
+      </div>`;
+  }
+
+  const root=host.querySelector(".vcard");
+
+  const colors={
+    R:"#2d7bdc",
+    P:"#1abf96",
+    S:"#b16df4"
+  };
+
+  root.style.setProperty(
+    "--accent",
+    colors[card.team]||colors.R
+  );
+
+  root.querySelector(".card-name").textContent=
+    card.name||"VCARD";
+
+  root.querySelector(".card-info").textContent=
+    "LEVEL "+(card.level??1);
+
+  root.querySelector(".card-description").textContent=
+    card.description||"";
+
+  root.querySelector('[data-stat="atk"]').textContent=
+    card.atk??100;
+
+  root.querySelector('[data-stat="def"]').textContent=
+    card.def??100;
+
+  root.querySelector(".meta-footer-text").textContent=
+    "VHOUSE";
+
+  root.querySelector(".rarity").textContent=
+    card.team||"R";
+
+  const img=root.querySelector(".card-art img");
+
+  if(
+    typeof card.image==="string"&&
+    /^(https?:\/\/|data:image\/|blob:)/i.test(card.image)
+  ){
+
+    img.src=card.image;
+
+  }else{
+
+    img.removeAttribute("src");
+
+  }
+}
+
+/* STAGE SELECTION */
+
+function renderSetup(){
+
   setScreen("setup");
-  const card = activeCard();
-  renderCard($("setupVCard"), card);
-  $("playerInfo").textContent = card
-    ? `${card.name || "VCARD"} · LEVEL ${card.level ?? "—"} · ${({R:"STONE",P:"WIND",S:"BLADE"})[letter(card.team)] || card.team || "—"} · LUCK ${getLuckStat(card)}`
-    : "NO ACTIVE VCARD";
-  const select = $("stageSelect");
+
+  const card=activeCard();
+
+  renderCard($("setupVCard"),card);
+
+  $("playerInfo").textContent=
+    (card.name||"VCARD")+
+    " · LEVEL "+(card.level??1)+
+    " · "+(
+      {
+        R:"STONE",
+        P:"WIND",
+        S:"BLADE"
+      }[card.team]||card.team
+    );
+
+  const select=$("stageSelect");
+
   select.replaceChildren();
-  const count = Math.max(wholeNumber(config.stageCount), ...stages.map(s => wholeNumber(s.id)), 0);
-  for (let id = 1; id <= count; id++) {
-    const stage = stageById(id);
-    const option = document.createElement("option");
-    option.value = id;
-    option.textContent = "STAGE " + id + (stage ? "" : " — NOT CONFIGURED");
-    option.disabled = !stage;
+
+  for(
+    let id=1;
+    id<=(config.stageCount||10);
+    id++
+  ){
+
+    const stage=stageById(id);
+
+    const option=document.createElement("option");
+
+    option.value=id;
+
+    option.textContent=
+      "STAGE "+id+
+      (validStage(stage)
+        ?""
+        :" — NOT CONFIGURED");
+
+    option.disabled=!validStage(stage);
+
     select.append(option);
   }
-  if (!stageById(selectedStage)) selectedStage = stages[0]?.id ?? null;
-  if (selectedStage != null) select.value = selectedStage;
+
+  if(!validStage(stageById(selectedStage))){
+
+    selectedStage=
+      stages.find(validStage)?.id??null;
+
+  }
+
+  if(selectedStage!==null){
+    select.value=selectedStage;
+  }
+
   renderStageInfo();
 }
-function renderStageInfo() {
-  const stage = stageById(selectedStage);
-  const counts = summaryOf(stage);
-  $("setupHunts").textContent = stage ? counts.hunts : "—";
-  $("setupFights").textContent = stage ? counts.fights : "—";
-  $("setupTime").textContent = stage?.durationSeconds ?? "—";
-  const rewards = $("possibleRewards");
-  rewards.replaceChildren();
-  for (const asset of stage?.rewardTypes || []) {
-    const chip = document.createElement("span");
-    chip.className = "reward-chip";
-    chip.textContent = asset === "AWT" ? "$AWT" : asset;
-    rewards.append(chip);
+
+function renderStageInfo(){
+
+  const stage=stageById(selectedStage);
+
+  $("setupHunts").textContent=
+    stage?.hunts??"—";
+
+  $("setupFights").textContent=
+    stage?.fights??"—";
+
+  $("setupTime").textContent=
+    stage?.durationSeconds??"—";
+
+  const host=$("possibleRewards");
+
+  host.replaceChildren();
+
+  for(const reward of stage?.rewardTypes||[]){
+
+    const chip=document.createElement("span");
+
+    chip.className="reward-chip";
+
+    chip.textContent=
+      reward==="AWT"?"$AWT":reward;
+
+    host.append(chip);
   }
-  const problem = stageProblem(stage);
-  $("setupDescription").textContent = problem ||
-    "Matching letters give the Stage the first round. Otherwise the first round uses a coin flip. Inventory LUCK supplies retries after a loss.";
-  $("startButton").disabled = Boolean(problem) || !activeCard() || !validLetter(activeCard().team);
-  if (!activeCard() && !problem) $("setupDescription").textContent = "Select an active VCard to begin.";
+
+  $("setupDescription").textContent=
+    validStage(stage)
+      ?"Matching letters give the Stage the first round. "+
+       "Otherwise, coin flip. LUCK item quantity grants "+
+       "retries after losses."
+      :"Stage encounters need configured letters.";
+
+  $("startButton").disabled=!validStage(stage);
 }
-$("stageSelect").addEventListener("change", () => {
-  selectedStage = $("stageSelect").value;
+
+$("stageSelect").addEventListener("change",()=>{
+
+  selectedStage=Number(
+    $("stageSelect").value
+  );
+
   renderStageInfo();
 });
 
-function coinFlip() { return Math.random() < 0.5; }
-function resolveEncounter(card, encounter, index, availableLuck) {
-  const matched = letter(card.team) === encounter.letter;
-  let won = false;
-  let flips = 0;
-  let retriesUsed = 0;
-  let firstRound = "STAGE WIN";
-  // Matching cancels only the first coin flip, not LUCK retries.
-  if (!matched) {
+/*
+  COIN FLIP
+
+  This is the only random win/loss mechanic.
+*/
+
+function coinFlip(){
+  return Math.random()<0.5;
+}
+
+/*
+  ENCOUNTER RESOLUTION
+
+  1. Compare VCard and encounter letters.
+  2. MATCH: Stage wins first round.
+     Initial coin flip is canceled.
+  3. NO MATCH: initial coin flip.
+  4. If VCard loses, use available LUCK retries.
+  5. Stop on VCard win or exhausted retries.
+  6. Record the final result.
+
+  The Stage's automatic win does not cancel LUCK.
+*/
+
+function resolveEncounter(
+  card,
+  encounter,
+  index,
+  luck
+){
+
+  const matched=
+    card.team===encounter.letter;
+
+  let won=false;
+  let firstRound;
+  let flips=0;
+  let retriesUsed=0;
+
+  if(matched){
+
+    // Stage wins first round automatically.
+    // No initial coin flip.
+    firstRound="STAGE WIN";
+
+  }else{
+
+    // Letters do not match.
+    // First round uses a coin flip.
     flips++;
-    won = coinFlip();
-    firstRound = won ? "COIN WIN" : "COIN LOSS";
+
+    won=coinFlip();
+
+    firstRound=won
+      ?"COIN WIN"
+      :"COIN LOSS";
   }
-  while (!won && retriesUsed < availableLuck) {
+
+  /*
+    The number of LUCK held produces
+    the number of retries available.
+  */
+
+  while(
+    !won&&
+    retriesUsed<wholeQuantity(luck)
+  ){
+
     retriesUsed++;
     flips++;
-    won = coinFlip();
+
+    won=coinFlip();
   }
+
+  const method=
+    firstRound+
+    (retriesUsed
+      ?" · LUCK "+retriesUsed
+      :"")+
+    " → "+
+    (won?"WIN":"LOSS");
+
   return {
-    number: index + 1,
-    type: encounter.type,
-    letter: encounter.letter,
+    number:index+1,
+    type:encounter.type,
+    letter:encounter.letter,
     matched,
     firstRound,
     flips,
-    retriesAvailable: availableLuck,
     retriesUsed,
     won,
-    method: won ? (retriesUsed ? "LUCK WIN" : "COIN WIN") : "LOSS",
-    acquired: []
+    method,
+    reward:null
   };
 }
 
-// Rewards come from the Stage's configured win/loss rules or the existing
-// game's reward calculator. Nothing is assigned from a rotating reward list.
-function validAwards(raw) {
-  if (!raw) return [];
-  const entries = Array.isArray(raw) ? raw :
-    typeof raw === "object" ? Object.entries(raw).map(([asset, amount]) => ({ asset, amount })) : [];
-  return entries.filter(a => a && typeof a.asset === "string" && a.asset &&
-    Number.isFinite(Number(a.amount)) && Number(a.amount) > 0)
-    .map(a => ({ asset: a.asset, amount: Number(a.amount) }));
-}
-function calculateRewards(mission, results) {
-  const totals = {};
-  const byEncounter = results.map(() => []);
-  const add = (awards, index = null) => {
-    for (const award of validAwards(awards)) {
-      totals[award.asset] = (totals[award.asset] || 0) + award.amount;
-      if (index != null) byEncounter[index].push(award);
-    }
-  };
-  const calc = window.VHouseJourneyCalculateRewards;
-  if (typeof calc === "function") {
-    const value = calc({
-      stage: mission.stage,
-      encounters: mission.encounters,
-      card: mission.card,
-      results: structuredClone(results),
-      missionId: mission.id
-    }) || {};
-    if (value.totals || value.byEncounter) {
-      add(value.totals);
-      if (Array.isArray(value.byEncounter)) {
-        for (let i = 0; i < results.length; i++) {
-          byEncounter[i] = validAwards(value.byEncounter[i]);
-        }
-        // If only encounter awards were returned, derive totals from them.
-        if (!value.totals) for (const awards of byEncounter)
-          for (const award of awards) totals[award.asset] =
-            (totals[award.asset] || 0) + award.amount;
-      }
-    } else add(value);
-  } else {
-    results.forEach((result, index) => {
-      const encounter = mission.encounters[index];
-      const branch = result.won ? "win" : "loss";
-      const explicit = encounter.rewards?.[branch];
-      if (explicit != null) add(explicit, index);
-      else if (result.won && typeof window.VHouseJourneyRewardForEncounter === "function") {
-        // Backward-compatible hook: the old hook runs on successful encounters.
-        const oldReward = window.VHouseJourneyRewardForEncounter(mission.stage, result, index);
-        if (typeof oldReward === "string") add([{ asset: oldReward, amount: 1 }], index);
-        else add(oldReward, index);
-      }
-    });
+/*
+  REWARD CALCULATION
+
+  Rewards are provided by encounter/Stage data,
+  not assigned by alternating reward types.
+
+  The optional VHouse reward function can replace
+  the framework's configured reward amounts.
+*/
+
+function rewardForEncounter(
+  stage,
+  encounter,
+  result,
+  index
+){
+
+  const hook=
+    window.VHouseJourneyRewardForEncounter;
+
+  const raw=
+    typeof hook==="function"
+      ?hook(stage,encounter,result,index)
+      :(
+        encounter.reward??
+        stage.rewardsByType?.[encounter.type]??
+        null
+      );
+
+  if(!raw)return null;
+
+  if(typeof raw==="string"){
+
+    return {
+      item:raw,
+      quantity:1
+    };
   }
-  results.forEach((result, i) => { result.acquired = byEncounter[i]; });
-  return totals;
+
+  const item=
+    raw.item||
+    raw.asset||
+    raw.type;
+
+  const quantity=wholeQuantity(
+    raw.quantity??
+    raw.amount??
+    1
+  );
+
+  if(
+    typeof item!=="string"||
+    !item||
+    quantity<=0
+  ){
+    return null;
+  }
+
+  return {
+    item,
+    quantity
+  };
 }
 
-function startJourney() {
-  const stage = stageById(selectedStage);
-  const sourceCard = activeCard();
-  if (!stage || stageProblem(stage) || !sourceCard || !validLetter(sourceCard.team)) return;
-  if (state.mission && state.mission.status !== "confirmed") return;
-  const card = { ...sourceCard };
-  const now = Date.now();
-  const timeScale = Math.max(1, nonnegativeNumber(config.demoTimeScale) || 1);
-  state.mission = {
-    id: "JR-" + now.toString(36).toUpperCase(),
-    stageId: stage.id,
-    stage: structuredClone(stage),
-    encounters: structuredClone(stageEncounters(stage)),
-    card,
-    luck: getLuckStat(card),
-    startedAt: now,
-    endsAt: now + nonnegativeNumber(stage.durationSeconds) * 1000 / timeScale,
-    status: "running", results: null, rewards: null
+/* START JOURNEY */
+
+function startJourney(){
+
+  const stage=stageById(selectedStage);
+
+  if(!validStage(stage))return;
+
+  if(
+    state.mission&&
+    state.mission.status!=="confirmed"
+  ){
+    return;
+  }
+
+  const now=Date.now();
+
+  const card={
+    ...activeCard()
   };
+
+  /*
+    Generate the VCard's LUCK stat
+    from the inventory item.
+  */
+
+  const luck=luckStat();
+
+  card.luck=luck;
+
+  const timeScale=Math.max(
+    1,
+    Number(config.demoTimeScale)||1
+  );
+
+  state.mission={
+    id:"JR-"+now.toString(36).toUpperCase(),
+    stageId:stage.id,
+    stage:structuredClone(stage),
+    card,
+
+    luck:{
+      item:"LUCK",
+      quantity:luck
+    },
+
+    startedAt:now,
+    endsAt:
+      now+
+      stage.durationSeconds*1000/timeScale,
+
+    status:"running",
+    results:null,
+    rewards:null,
+    totals:null
+  };
+
   save();
-  emit("journey-started", {
-    missionId: state.mission.id, cardId: card.id, stageId: stage.id
+
+  emit("journey-started",{
+    missionId:state.mission.id,
+    cardId:card.id,
+    stageId:stage.id,
+    luck
   });
+
   renderTravel();
 }
-function renderTravel() {
-  const mission = state.mission;
-  if (!mission) return;
+
+/* JOURNEY RUNNING */
+
+function renderTravel(){
+
+  const mission=state.mission;
+
+  if(!mission)return;
+
   setScreen("travel");
-  renderCard($("travelVCard"), mission.card);
-  $("travelTitle").textContent = `STAGE ${mission.stageId} · IN PROGRESS`;
-  const counts = summaryOf({ encounters: mission.encounters });
-  $("travelDescription").textContent = `${counts.hunts} HUNTS · ${counts.fights} FIGHTS · LUCK ${mission.luck}`;
+
+  renderCard(
+    $("travelVCard"),
+    mission.card
+  );
+
+  $("travelTitle").textContent=
+    "STAGE "+mission.stageId+
+    " · IN PROGRESS";
+
+  $("travelDescription").textContent=
+    (mission.stage.hunts||0)+" HUNTS · "+
+    (mission.stage.fights||0)+" FIGHTS";
+
   $("loadingEncounters").replaceChildren();
-  for (const encounter of mission.encounters) {
-    const item = document.createElement("div");
-    item.className = "loading-item";
-    const heading = document.createElement("span");
-    heading.textContent = `${encounter.type} ${encounter.letter}`;
-    const pending = document.createElement("strong");
-    pending.textContent = "•••";
-    item.append(heading, pending);
+
+  for(
+    const encounter of
+    encounterPlan(mission.stage)
+  ){
+
+    const item=document.createElement("div");
+
+    item.className="loading-item";
+
+    const title=document.createElement("span");
+
+    title.textContent=encounter.type;
+
+    const pending=document.createElement("strong");
+
+    pending.textContent="•••";
+
+    item.append(title,pending);
+
     $("loadingEncounters").append(item);
   }
+
   updateTimer();
 }
-function updateTimer() {
-  const mission = state.mission;
-  if (!mission || mission.status !== "running") return;
-  const remaining = Math.max(0, mission.endsAt - Date.now());
-  const seconds = Math.ceil(remaining / 1000);
-  $("timer").textContent = String(Math.floor(seconds / 60)).padStart(2, "0") +
-    ":" + String(seconds % 60).padStart(2, "0");
-  const total = mission.endsAt - mission.startedAt;
-  $("progress").style.width = Math.min(100,
-    Math.max(0, (Date.now() - mission.startedAt) / total * 100)) + "%";
+
+function updateTimer(){
+
+  const mission=state.mission;
+
+  if(
+    !mission||
+    mission.status!=="running"
+  ){
+    return;
+  }
+
+  const remaining=Math.max(
+    0,
+    mission.endsAt-Date.now()
+  );
+
+  const seconds=Math.ceil(
+    remaining/1000
+  );
+
+  $("timer").textContent=
+    String(
+      Math.floor(seconds/60)
+    ).padStart(2,"0")+
+    ":"+
+    String(seconds%60).padStart(2,"0");
+
+  const total=
+    mission.endsAt-mission.startedAt;
+
+  const elapsed=
+    Date.now()-mission.startedAt;
+
+  $("progress").style.width=
+    Math.min(
+      100,
+      Math.max(
+        0,
+        elapsed/total*100
+      )
+    )+"%";
 }
-function settleJourney() {
-  const mission = state.mission;
-  if (!mission || mission.status !== "running" || Date.now() < mission.endsAt) return false;
-  const results = mission.encounters.map((encounter, index) =>
-    resolveEncounter(mission.card, encounter, index, mission.luck));
-  const rewards = calculateRewards(mission, results);
-  mission.results = results;
-  mission.rewards = rewards;
-  mission.completedAt = Date.now();
-  mission.status = "ready";
-  // Record exactly once at settlement, never again at CONFIRM.
-  for (const [asset, amount] of Object.entries(rewards))
-    state.balance[asset] = (state.balance[asset] || 0) + amount;
-  const event = {
-    type: "journey.completed", missionId: mission.id,
-    cardId: mission.card.id, stageId: mission.stageId,
-    results, rewards, at: mission.completedAt
+
+/*
+  JOURNEY RESULTS
+
+  All encounters calculate once the timer ends.
+
+  Encounter results and Stage totals are separate.
+  No additional Stage victory condition is invented.
+*/
+
+function settleJourney(){
+
+  const mission=state.mission;
+
+  if(
+    !mission||
+    mission.status!=="running"||
+    Date.now()<mission.endsAt
+  ){
+    return false;
+  }
+
+  const stage=mission.stage;
+
+  const plan=encounterPlan(stage);
+
+  /*
+    Calculate each encounter.
+  */
+
+  const results=plan.map(
+    (encounter,index)=>
+      resolveEncounter(
+        mission.card,
+        encounter,
+        index,
+        mission.luck.quantity
+      )
+  );
+
+  /*
+    Apply configured rewards.
+  */
+
+  const rewards={};
+
+  results.forEach((result,index)=>{
+
+    if(!result.won)return;
+
+    const reward=rewardForEncounter(
+      stage,
+      plan[index],
+      result,
+      index
+    );
+
+    if(!reward)return;
+
+    result.reward=reward;
+
+    rewards[reward.item]=
+      (rewards[reward.item]||0)+
+      reward.quantity;
+  });
+
+  /*
+    Record Stage totals.
+  */
+
+  const wins=results.filter(
+    result=>result.won
+  ).length;
+
+  const losses=results.length-wins;
+
+  const luckUsed=results.reduce(
+    (sum,result)=>
+      sum+result.retriesUsed,
+    0
+  );
+
+  mission.results=results;
+
+  mission.rewards=rewards;
+
+  mission.totals={
+    encounters:results.length,
+    wins,
+    losses,
+    luckAvailable:mission.luck.quantity,
+    luckUsed
   };
+
+  mission.completedAt=Date.now();
+
+  mission.status="ready";
+
+  /*
+    Internal framework balance.
+
+    This records the rewards once.
+    CONFIRM does not reward again.
+  */
+
+  for(
+    const [asset,quantity] of
+    Object.entries(rewards)
+  ){
+
+    state.balance[asset]=
+      (state.balance[asset]||0)+
+      quantity;
+  }
+
+  const event={
+    type:"journey.completed",
+    missionId:mission.id,
+    cardId:mission.card.id,
+    stageId:mission.stageId,
+    results,
+    totals:mission.totals,
+    rewards,
+    at:mission.completedAt
+  };
+
   state.events.push(event);
+
   save();
-  emit("journey-completed", event);
+
+  emit("journey-completed",event);
+
   return true;
 }
-function rewardTotal(mission) {
-  return Object.values(mission.rewards || {}).reduce((total, amount) => total + amount, 0);
+
+function rewardTotal(mission){
+
+  return Object.values(
+    mission.rewards||{}
+  ).reduce(
+    (sum,amount)=>sum+amount,
+    0
+  );
 }
-function renderComplete() {
-  const mission = state.mission;
-  if (!mission || !["ready", "confirmed"].includes(mission.status)) return;
+
+/* COMPLETED JOURNEY */
+
+function renderComplete(){
+
+  const mission=state.mission;
+
+  if(
+    !mission||
+    !["ready","confirmed"].includes(
+      mission.status
+    )
+  ){
+    return;
+  }
+
   setScreen("complete");
-  const confirmed = mission.status === "confirmed";
-  renderCard($("completeVCard"), mission.card);
-  const counts = summaryOf({ encounters: mission.encounters });
-  $("receiptStage").textContent = "STAGE " + mission.stageId;
-  $("receiptEncounters").textContent = `${counts.hunts} HUNTS · ${counts.fights} FIGHTS`;
-  const wins = mission.results.filter(r => r.won).length;
-  $("receiptWins").textContent = wins;
-  $("receiptId").textContent = mission.id;
-  const rewardHost = $("receiptRewards");
+
+  const confirmed=
+    mission.status==="confirmed";
+
+  renderCard(
+    $("completeVCard"),
+    mission.card
+  );
+
+  $("receiptStage").textContent=
+    "STAGE "+mission.stageId;
+
+  $("receiptEncounters").textContent=
+    (mission.stage.hunts||0)+" HUNTS · "+
+    (mission.stage.fights||0)+" FIGHTS";
+
+  $("receiptWins").textContent=
+    mission.totals.wins;
+
+  $("receiptId").textContent=
+    mission.id;
+
+  /* REWARDS ON CARD BACK */
+
+  const rewardHost=$("receiptRewards");
+
   rewardHost.replaceChildren();
-  const assets = new Set([...(mission.stage.rewardTypes || []), ...Object.keys(mission.rewards || {})]);
-  for (const asset of assets) {
-    const tile = document.createElement("div");
-    tile.className = "loot-value";
-    const label = document.createElement("span");
-    label.textContent = asset === "AWT" ? "$AWT" : asset;
-    const value = document.createElement("strong");
-    value.textContent = "+" + (mission.rewards[asset] || 0);
-    tile.append(label, value);
+
+  for(
+    const asset of
+    mission.stage.rewardTypes||[]
+  ){
+
+    const tile=document.createElement("div");
+
+    tile.className="loot-value";
+
+    const label=document.createElement("span");
+
+    label.textContent=
+      asset==="AWT"?"$AWT":asset;
+
+    const amount=document.createElement("strong");
+
+    amount.textContent=
+      "+"+(mission.rewards[asset]||0);
+
+    tile.append(label,amount);
+
     rewardHost.append(tile);
   }
-  const rows = $("resultRows");
+
+  /*
+    RESULTS CHART
+
+    Existing layout is preserved.
+
+    Each row shows:
+    - Encounter
+    - VCard/Stage letter comparison
+    - First-round result
+    - LUCK retries
+    - Final result
+    - Acquired reward
+  */
+
+  const rows=$("resultRows");
+
   rows.replaceChildren();
-  for (const result of mission.results) {
-    const row = document.createElement("tr");
-    const cells = [
-      result.number,
-      result.type,
-      `${mission.card.team} / ${result.letter}`,
-      result.firstRound,
-      `${result.retriesUsed} / ${result.retriesAvailable}`,
-      result.won ? "WIN" : "LOSS",
-      result.acquired.length ? result.acquired.map(a => `+${a.amount} ${a.asset}`).join(", ") : "—"
-    ];
-    cells.forEach((value, index) => {
-      const cell = document.createElement("td");
-      cell.textContent = value;
-      if (index === 5) cell.className = result.won ? "win" : "loss";
-      if (index === 6 && result.acquired.length) cell.className = "earned";
-      row.append(cell);
-    });
+
+  for(const result of mission.results){
+
+    const row=document.createElement("tr");
+
+    const number=document.createElement("td");
+
+    number.textContent=result.number;
+
+    const type=document.createElement("td");
+
+    type.textContent=result.type;
+
+    const letters=document.createElement("td");
+
+    letters.textContent=
+      mission.card.team+
+      " / "+
+      result.letter;
+
+    const outcome=document.createElement("td");
+
+    outcome.textContent=result.method;
+
+    outcome.className=
+      result.won?"win":"loss";
+
+    const acquired=document.createElement("td");
+
+    acquired.textContent=
+      result.reward
+        ?"+"+result.reward.quantity+
+         " "+result.reward.item
+        :"—";
+
+    if(result.reward){
+      acquired.className="earned";
+    }
+
+    row.append(
+      number,
+      type,
+      letters,
+      outcome,
+      acquired
+    );
+
     rows.append(row);
   }
-  $("resultSummary").textContent = `${wins} OF ${mission.results.length} ENCOUNTERS WON · ${rewardTotal(mission)} REWARDS`;
-  $("resultState").textContent = confirmed
-    ? "RECEIPT CONFIRMED · VCARD AVAILABLE"
-    : "REWARDS CALCULATED · CONFIRMATION REQUIRED";
-  $("confirmButton").hidden = confirmed;
-  $("confirmedStamp").hidden = !confirmed;
-  $("newJourneyButton").hidden = !confirmed;
-  $("phase").textContent = confirmed ? "CONFIRMED" : "RESULTS";
+
+  $("resultSummary").textContent=
+    mission.totals.wins+
+    " OF "+
+    mission.totals.encounters+
+    " ENCOUNTERS WON · "+
+    rewardTotal(mission)+
+    " REWARDS";
+
+  $("resultState").textContent=
+    confirmed
+      ?"RECEIPT CONFIRMED · VCARD AVAILABLE"
+      :"REWARDS ACQUIRED · CONFIRMATION REQUIRED";
+
+  $("confirmButton").hidden=confirmed;
+
+  $("confirmedStamp").hidden=!confirmed;
+
+  $("newJourneyButton").hidden=!confirmed;
+
+  $("phase").textContent=
+    confirmed?"CONFIRMED":"RESULTS";
+
+  /* ORIGINAL AUTOMATIC VCARD FLIP */
+
   $("cardFlip").classList.remove("flipped");
-  requestAnimationFrame(() => requestAnimationFrame(() => $("cardFlip").classList.add("flipped")));
+
+  requestAnimationFrame(()=>{
+
+    requestAnimationFrame(()=>{
+
+      $("cardFlip").classList.add("flipped");
+
+    });
+
+  });
 }
-function confirmReceipt() {
-  const mission = state.mission;
-  if (!mission || mission.status !== "ready") return;
-  mission.status = "confirmed";
-  mission.confirmedAt = Date.now();
-  state.receipts.push(structuredClone(mission));
-  const event = {
-    type: "journey.receipt.confirmed", missionId: mission.id,
-    cardId: mission.card.id, stageId: mission.stageId,
-    rewards: mission.rewards, at: mission.confirmedAt
+
+/* RECEIPT CONFIRMATION */
+
+function confirmReceipt(){
+
+  const mission=state.mission;
+
+  if(
+    !mission||
+    mission.status!=="ready"
+  ){
+    return;
+  }
+
+  mission.status="confirmed";
+
+  mission.confirmedAt=Date.now();
+
+  state.receipts.push(
+    structuredClone(mission)
+  );
+
+  const event={
+    type:"journey.receipt.confirmed",
+    missionId:mission.id,
+    cardId:mission.card.id,
+    stageId:mission.stageId,
+    rewards:mission.rewards,
+    at:mission.confirmedAt
   };
+
   state.events.push(event);
+
   save();
-  emit("journey-confirmed", event);
-  $("confirmButton").hidden = true;
-  $("confirmedStamp").hidden = false;
-  $("newJourneyButton").hidden = false;
-  $("resultState").textContent = "RECEIPT CONFIRMED · VCARD AVAILABLE";
-  $("phase").textContent = "CONFIRMED";
+
+  emit("journey-confirmed",event);
+
+  /*
+    Confirmation only acknowledges
+    the results and unlocks the VCard.
+  */
+
+  $("confirmButton").hidden=true;
+
+  $("confirmedStamp").hidden=false;
+
+  $("newJourneyButton").hidden=false;
+
+  $("resultState").textContent=
+    "RECEIPT CONFIRMED · VCARD AVAILABLE";
+
+  $("phase").textContent="CONFIRMED";
 }
-function newJourney() {
-  if (state.mission?.status !== "confirmed") return;
-  state.mission = null;
+
+/* NEW JOURNEY */
+
+function newJourney(){
+
+  if(
+    state.mission?.status!=="confirmed"
+  ){
+    return;
+  }
+
+  state.mission=null;
+
   save();
+
   renderSetup();
 }
-function leaveJourney() {
-  if (state.mission?.status !== "running") return;
+
+/* LEAVE / RETURN */
+
+function leaveJourney(){
+
+  if(
+    state.mission?.status!=="running"
+  ){
+    return;
+  }
+
   setScreen("away");
-  $("message").textContent = "Your Journey continues while you're away.";
+
+  $("message").textContent=
+    "Your Journey continues while you're away.";
 }
-function returnJourney() {
-  if (!state.mission) return renderSetup();
+
+function returnJourney(){
+
+  const mission=state.mission;
+
+  if(!mission){
+
+    renderSetup();
+
+    return;
+  }
+
   settleJourney();
-  if (state.mission.status === "running") renderTravel();
-  else renderComplete();
+
+  if(mission.status==="running"){
+
+    renderTravel();
+
+  }else{
+
+    renderComplete();
+
+  }
 }
-$("startButton").onclick = startJourney;
-$("leaveButton").onclick = leaveJourney;
-$("returnButton").onclick = returnJourney;
-$("confirmButton").onclick = confirmReceipt;
-$("newJourneyButton").onclick = newJourney;
-setInterval(() => {
-  const mission = state.mission;
-  if (!mission || mission.status !== "running") return;
-  if (Date.now() >= mission.endsAt) {
+
+/* BUTTON EVENTS */
+
+$("startButton").onclick=startJourney;
+
+$("leaveButton").onclick=leaveJourney;
+
+$("returnButton").onclick=returnJourney;
+
+$("confirmButton").onclick=confirmReceipt;
+
+$("newJourneyButton").onclick=newJourney;
+
+/* PERSISTENT IN-PAGE TIMER */
+
+setInterval(()=>{
+
+  const mission=state.mission;
+
+  if(
+    !mission||
+    mission.status!=="running"
+  ){
+    return;
+  }
+
+  if(Date.now()>=mission.endsAt){
+
     settleJourney();
-    if (currentScreen === "travel") renderComplete();
-    else if (currentScreen === "away")
-      $("message").textContent = "Journey complete. Return to view the receipt.";
-  } else if (currentScreen === "travel") updateTimer();
-}, 200);
+
+    if(currentScreen==="travel"){
+
+      renderComplete();
+
+    }else if(currentScreen==="away"){
+
+      $("message").textContent=
+        "Journey complete. Return to view the receipt.";
+
+    }
+
+    return;
+  }
+
+  if(currentScreen==="travel"){
+
+    updateTimer();
+
+  }
+
+},200);
+
+/* INITIALIZATION */
+
 background();
-if (state.mission) {
+
+if(state.mission){
+
   settleJourney();
-  if (state.mission.status === "running") renderTravel();
-  else renderComplete();
-} else renderSetup();
-window.VHouseReceiptGame = {
-  getState: () => structuredClone(state),
-  getMission: () => state.mission ? structuredClone(state.mission) : null
+
+  if(state.mission.status==="running"){
+
+    renderTravel();
+
+  }else{
+
+    renderComplete();
+
+  }
+
+}else{
+
+  renderSetup();
+
+}
+
+/*
+  FRAMEWORK ACCESS
+
+  Allows the existing VHouse game to retrieve
+  results, totals, and LUCK calculations.
+
+  setDemoLuck is for framework testing only.
+*/
+
+window.VHouseReceiptGame={
+
+  getState:()=>
+    structuredClone(state),
+
+  getMission:()=>
+    state.mission
+      ?structuredClone(state.mission)
+      :null,
+
+  getLuckStat:luckStat,
+
+  setDemoLuck:quantity=>{
+
+    if(window.VHouseJourneyInventory){
+      return false;
+    }
+
+    state.demoInventory.LUCK=
+      wholeQuantity(quantity);
+
+    save();
+
+    return true;
+  }
+
 };
 </script>
 </body>
