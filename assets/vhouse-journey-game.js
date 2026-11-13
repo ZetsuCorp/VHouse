@@ -680,11 +680,11 @@ function renderStageInfo(){
   gauge.hidden=!maxPossibleBags;
   if(maxPossibleBags){
     const chance=Math.max(0,Math.min(100,100*(1-noBagChance)));
-    gauge.style.cssText="position:absolute;top:8px;left:8px;right:8px;z-index:3;padding:5px 9px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547e8,#1b102ae8);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;pointer-events:none;";
+    gauge.style.cssText="position:absolute;top:8px;left:50%;transform:translateX(-50%);width:280px;max-width:calc(100% - 16px);z-index:3;padding:3px 7px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547e8,#1b102ae8);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;pointer-events:none;";
     gauge.replaceChildren();
 
     const header=document.createElement("div");
-    header.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:10px;font-weight:800;";
+    header.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:9px;font-weight:800;line-height:1.1;";
     const maximum=document.createElement("span");
     maximum.textContent="UP TO +"+maxPossibleBags+" "+(maxPossibleBags===1?"BAG":"BAGS");
     const luckNote=document.createElement("span");
@@ -693,17 +693,17 @@ function renderStageInfo(){
     header.append(maximum,luckNote);
 
     const odds=document.createElement("div");
-    odds.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:2px 0;font-size:10px;";
+    odds.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:1px 0;font-size:9px;line-height:1.1;";
     const chanceLabel=document.createElement("span");
     chanceLabel.style.cssText="color:#e4d1ed;";
     chanceLabel.textContent="CHANCE OF AT LEAST 1 BAG";
     const percent=document.createElement("strong");
-    percent.style.cssText="color:#f9d16e;font-size:16px;font-variant-numeric:tabular-nums;";
+    percent.style.cssText="color:#f9d16e;font-size:12px;font-variant-numeric:tabular-nums;";
     percent.textContent=chance.toFixed(1)+"%";
     odds.append(chanceLabel,percent);
 
     const track=document.createElement("div");
-    track.style.cssText="height:6px;border:1px solid #9061b7;border-radius:99px;overflow:hidden;background:#170d28;";
+    track.style.cssText="height:4px;border:1px solid #9061b7;border-radius:99px;overflow:hidden;background:#170d28;";
     track.setAttribute("role","progressbar");
     track.setAttribute("aria-label","Chance of earning at least one reward bag");
     track.setAttribute("aria-valuenow",chance.toFixed(1));
