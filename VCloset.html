@@ -242,6 +242,12 @@ html, body {
   let statsCard = null;
   let statsPanel = null;
   let statsLoadSequence = 0;
+  const HISTORY_PAGE_SIZE=10;
+  let historyPage=0;
+  let historyCount=0;
+  let historyLoading=false;
+  let statsClient=null;
+  let statsPlayerId=null;
 
   function statField(id,value){
     const el=statsPanel?.querySelector('[data-stat-field="'+id+'"]');
@@ -253,34 +259,106 @@ html, body {
     return hours?hours+"h "+String(minutes).padStart(2,"0")+"m":
       minutes+"m "+String(secs).padStart(2,"0")+"s";
   }
-  function makeMeta(host,label,value){
-    const row=document.createElement("div");row.className="meta";
-    const name=document.createElement("span");name.textContent=label;
-    const amount=document.createElement("strong");amount.textContent=value;
-    row.append(name,amount);host.append(row);
-  }
   function recordElapsed(record){
     const start=Date.parse(record.started_at);
     let end=Date.parse(record.completed_at||record.ends_at);
-    if(record.status==="ON_JOURNEY")end=Math.min(Date.now(),Number.isFinite(Date.parse(record.ends_at))?Date.parse(record.ends_at):Date.now());
+    if(record.status==="ON_JOURNEY")
+      end=Math.min(Date.now(),Number.isFinite(Date.parse(record.ends_at))?Date.parse(record.ends_at):Date.now());
     if(!Number.isFinite(start)||!Number.isFinite(end))return Number(record.duration_seconds)||0;
     return Math.max(0,Math.round((end-start)/1000));
   }
   function recordLoot(record){
-    const loot={};
-    const stored=record.rewards&&typeof record.rewards==="object"?record.rewards:{};
-    for(const [item,quantity] of Object.entries(stored)){
-      const n=Number(quantity);if(n>0)loot[item]=(loot[item]||0)+n;
-    }
-    if(!Object.keys(loot).length&&Array.isArray(record.encounter_results)){
-      for(const result of record.encounter_results){
-        if(result?.won&&result.reward?.item){
-          const n=Number(result.reward.quantity)||1;
-          loot[result.reward.item]=(loot[result.reward.item]||0)+n;
-        }
+    const batches=record.snapshot?.rewardBatches;
+    if(batches&&typeof batches==="object"&&Object.keys(batches).length)return batches;
+    const rewards=record.rewards||{};
+    return {
+      IGM:Number(rewards.IGM||0)/100,
+      SCRAP:Number(rewards.SCRAP||0),
+      CRYPTO:Number(rewards.CRYPTO||0)/.10
+    };
+  }
+  function displayCount(value){
+    return Number(value||0).toLocaleString(undefined,{maximumFractionDigits:2});
+  }
+  function showSummary(summary){
+    statField("journeys",displayCount(summary.journeys));
+    statField("completed",displayCount(summary.completed));
+    statField("wins",displayCount(summary.wins));
+    statField("losses",displayCount(summary.losses));
+    statField("time",durationText(summary.seconds));
+    const stageMap=new Map((summary.stages||[]).map(entry=>[Number(entry.stage),entry]));
+    for(let stage=1;stage<=10;stage++){
+      const item=stageMap.get(stage)||{};
+      const host=statsPanel.querySelector('[data-stage="'+stage+'"]');
+      if(host){
+        host.querySelector("strong").textContent=durationText(item.seconds||0);
+        host.querySelector("small").textContent=displayCount(item.journeys||0)+" JOURNEYS";
       }
     }
-    return loot;
+    const loot=summary.loot||{};
+    for(const item of ["IGM","SCRAP","CRYPTO"]){
+      const el=statsPanel.querySelector('[data-loot="'+item+'"]');
+      if(el)el.textContent=displayCount(loot[item]);
+    }
+  }
+  function historyMessage(message){
+    const host=statsPanel.querySelector("#journeyHistoryRows");
+    host.replaceChildren();
+    const row=document.createElement("tr"),cell=document.createElement("td");
+    cell.colSpan=5;cell.textContent=message;row.append(cell);host.append(row);
+  }
+  function updateHistoryPager(){
+    const pages=Math.max(1,Math.ceil(historyCount/HISTORY_PAGE_SIZE));
+    statsPanel.querySelector("#historyPageLabel").textContent=
+      "PAGE "+(historyPage+1)+" / "+pages+" · "+displayCount(historyCount)+" JOURNEYS";
+    statsPanel.querySelector("#historyPrev").disabled=historyLoading||historyPage===0;
+    statsPanel.querySelector("#historyNext").disabled=historyLoading||historyPage>=pages-1;
+  }
+  async function loadHistoryPage(ticket=statsLoadSequence){
+    if(!statsClient||!statsCard||ticket!==statsLoadSequence)return;
+    historyLoading=true;
+    updateHistoryPager();
+    historyMessage("LOADING JOURNEY HISTORY");
+    const cardId=String(statsCard.id);
+    try{
+      const start=historyPage*HISTORY_PAGE_SIZE;
+      const {data,error,count}=await statsClient.from("vhouse_journey_records")
+        .select("stage_id,status,started_at,ends_at,completed_at,duration_seconds,encounter_results,rewards,snapshot",{count:"exact"})
+        .eq("player_id",statsPlayerId).eq("card_id",cardId)
+        .order("started_at",{ascending:false})
+        .range(start,start+HISTORY_PAGE_SIZE-1);
+      if(error)throw error;
+      if(ticket!==statsLoadSequence)return;
+      historyCount=count||0;
+      const host=statsPanel.querySelector("#journeyHistoryRows");
+      host.replaceChildren();
+      for(const record of data||[]){
+        const results=Array.isArray(record.encounter_results)?record.encounter_results:[];
+        const wins=results.filter(result=>result?.won).length;
+        const losses=results.filter(result=>result&&result.won===false).length;
+        const loot=recordLoot(record);
+        const row=document.createElement("tr");
+        const values=[
+          record.started_at?new Date(record.started_at).toLocaleDateString():"—",
+          "STAGE "+record.stage_id,
+          durationText(recordElapsed(record)),
+          wins+" W / "+losses+" L",
+          record.status==="CONFIRMED"
+            ?Object.entries(loot).filter(([,value])=>Number(value)>0)
+              .map(([item,value])=>displayCount(value)+" "+(item==="IGM"?"IGM BAG":item)).join(" · ")||"—"
+            :"PENDING"
+        ];
+        for(const value of values){
+          const cell=document.createElement("td");cell.textContent=value;row.append(cell);
+        }
+        host.append(row);
+      }
+      if(!data?.length)historyMessage("NO JOURNEY HISTORY ON THIS PAGE");
+    }catch(error){
+      if(ticket===statsLoadSequence)historyMessage("JOURNEY HISTORY UNAVAILABLE: "+(error.message||"LOAD FAILED"));
+    }finally{
+      if(ticket===statsLoadSequence){historyLoading=false;updateHistoryPager();}
+    }
   }
   function fillCardStats(card){
     if(!statsPanel||!card)return;
@@ -304,58 +382,7 @@ html, body {
     statField("def",card.def);
     statField("speed",card.speed);
     statField("luck",card.luck);
-    statField("stage",state.stageId?("STAGE "+state.stageId):"—");
-    statField("mission",state.missionId||"—");
-  }
-  function renderJourneyRecords(records){
-    const total=records.length;
-    const stageTotals=new Map(),lootTotals={};
-    let wins=0,losses=0,totalSeconds=0,completed=0;
-    const history=statsPanel.querySelector("#journeyHistoryRows");
-    history.replaceChildren();
-    for(const record of records){
-      const seconds=recordElapsed(record);totalSeconds+=seconds;
-      const stage=Number(record.stage_id)||0;
-      const stageEntry=stageTotals.get(stage)||{count:0,seconds:0};
-      stageEntry.count++;stageEntry.seconds+=seconds;stageTotals.set(stage,stageEntry);
-      if(record.status==="CONFIRMED")completed++;
-      const results=Array.isArray(record.encounter_results)?record.encounter_results:[];
-      const won=results.filter(item=>item?.won).length;
-      const lost=results.filter(item=>item&&!item.won).length;
-      wins+=won;losses+=lost;
-      const loot=recordLoot(record);
-      for(const [item,quantity] of Object.entries(loot))lootTotals[item]=(lootTotals[item]||0)+quantity;
-      const tr=document.createElement("tr");
-      const values=[
-        record.started_at?new Date(record.started_at).toLocaleString():"—",
-        "STAGE "+stage,
-        durationText(seconds),
-        won+" W / "+lost+" L",
-        Object.entries(loot).map(([item,quantity])=>item+" ×"+quantity).join(", ")||"—"
-      ];
-      for(const value of values){const td=document.createElement("td");td.textContent=value;tr.append(td);}
-      history.append(tr);
-    }
-    if(!records.length){
-      const tr=document.createElement("tr"),td=document.createElement("td");
-      td.colSpan=5;td.textContent="NO JOURNEY HISTORY RECORDED FOR THIS VCARD";
-      tr.append(td);history.append(tr);
-    }
-    statField("journeys",total);
-    statField("completed",completed);
-    statField("wins",wins);
-    statField("losses",losses);
-    statField("time",durationText(totalSeconds));
-    const stageHost=statsPanel.querySelector("#stageTimeStats");stageHost.replaceChildren();
-    if(!stageTotals.size)makeMeta(stageHost,"STAGES","NO RECORDED TIME");
-    for(const [stage,value] of [...stageTotals.entries()].sort((a,b)=>a[0]-b[0])){
-      makeMeta(stageHost,"STAGE "+stage,value.count+" JOURNEYS · "+durationText(value.seconds));
-    }
-    const lootHost=statsPanel.querySelector("#lootStats");lootHost.replaceChildren();
-    if(!Object.keys(lootTotals).length)makeMeta(lootHost,"LOOT","NONE RECORDED");
-    for(const [item,quantity] of Object.entries(lootTotals).sort((a,b)=>a[0].localeCompare(b[0]))){
-      makeMeta(lootHost,item,"× "+quantity);
-    }
+
   }
   async function ensureStatsPanel(){
     if(statsPanel)return;
@@ -369,17 +396,38 @@ html, body {
     sheet.textContent=css+`
       :host{display:block;position:relative;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
       #billboard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transform-origin:center center;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
-      #billboard .cols,#billboard .activity{min-height:0;overflow:auto;scrollbar-width:thin}
-      #billboard .activity{display:none;flex:1 1 auto}
+      #billboard .cols{min-height:0;overflow:hidden;scrollbar-width:thin}
+      #billboard .activity{display:none;flex:1 1 auto;min-height:0;overflow:hidden}
+      #billboard .right{display:flex;flex-direction:column;gap:7px;min-height:0}
+      #billboard .left{min-height:0;overflow:auto;scrollbar-width:thin}
+      #billboard .cols{grid-template-columns:minmax(0,40fr) minmax(0,60fr);align-items:stretch}
+      #billboard .right>section{min-width:0}
+      #billboard .chartbox{margin:0}
+      #billboard .stage-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+      #billboard .stage-tile{border:1px solid #78536a;background:#211525;padding:6px 3px;text-align:center;min-width:0}
+      #billboard .stage-tile span{display:block;font-size:9px;color:#e4c58f;font-weight:900}
+      #billboard .stage-tile strong{display:block;font-size:11px;color:#fff;padding:3px 0}
+      #billboard .stage-tile small{display:block;font-size:8px;color:#c3a7bc}
+      #billboard .loot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+      #billboard .loot-tile{padding:8px 4px;border:1px solid #78536a;background:#211525;text-align:center}
+      #billboard .loot-tile small{display:block;font-size:9px;color:#c3a7bc}
+      #billboard .loot-tile strong{display:block;color:#ffe2ac;font-size:17px;padding-top:4px}
+      #billboard .history-table-wrap{flex:1 1 auto;min-height:0;overflow:auto;scrollbar-width:thin}
+      #billboard .history-pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0;flex:0 0 auto;color:#ffe2ac;font-size:10px}
+      #billboard .history-pager button{background:#371b33;color:#ffe2ac;border:1px solid #a87b4c;border-radius:4px;padding:5px 10px;font-weight:900}
+      #billboard .history-pager button:disabled{opacity:.35;cursor:default}
+      #billboard .activity table{table-layout:fixed}
+      #billboard .activity th,#billboard .activity td{overflow-wrap:anywhere}
+      #billboard .activity th:nth-child(5),#billboard .activity td:nth-child(5){width:30%}
       #billboard .right{min-width:0}
       #billboard .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
-      #billboard .chartbox{margin-bottom:7px}
+
       #billboard .record-empty{color:#c3a7bc;font-size:10px}
       #billboard .billboard-back{cursor:pointer;color:#ffe2ac;border:1px solid #a87b4c;background:#371b33;padding:3px 7px;border-radius:4px;font-weight:900;font-size:10px}
       #billboard .billboard-back:hover{background:#67243b;border-color:#f2cb83}
       #billboard .activity td{font-size:9px;padding:6px 4px;overflow-wrap:anywhere}
       #billboard .activity th{font-size:9px;padding:6px 4px}
-      @media(max-width:510px){#billboard{width:100%;height:100%;padding:5px}#billboard .cols{grid-template-columns:1fr;gap:8px}}
+      @media(max-width:510px){#billboard{width:100%;height:100%;padding:5px}#billboard .cols{grid-template-columns:1fr;gap:8px;overflow:auto}#billboard .stage-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
     `;
     const panel=document.createElement("main");panel.id="billboard";
     panel.innerHTML=`
@@ -406,8 +454,6 @@ html, body {
             <div class="detail"><span class="dk">DEF</span><span class="dv" data-stat-field="def">—</span></div>
             <div class="detail"><span class="dk">SPEED</span><span class="dv" data-stat-field="speed">—</span></div>
             <div class="detail"><span class="dk">LUCK</span><span class="dv" data-stat-field="luck">—</span></div>
-            <div class="detail"><span class="dk">CURRENT STAGE</span><span class="dv" data-stat-field="stage">—</span></div>
-            <div class="detail"><span class="dk">MISSION ID</span><span class="dv" data-stat-field="mission">—</span></div>
           </section>
         </div>
         <div class="right">
@@ -419,17 +465,26 @@ html, body {
               <div class="metric"><small>TIME ON STAGES</small><strong data-stat-field="time">0m 00s</strong></div>
               <div class="metric"><small>ENCOUNTER WINS</small><strong data-stat-field="wins">0</strong></div>
               <div class="metric"><small>ENCOUNTER LOSSES</small><strong data-stat-field="losses">0</strong></div>
-              <div class="metric"><small>STAGE</small><strong data-stat-field="stage">—</strong></div>
+              <div class="metric"><small>LOOT BATCHES</small><strong id="totalLootBatches">0</strong></div>
             </div>
           </section>
-          <section class="chartbox"><div class="sect">TIME ON EACH STAGE</div><div class="metadata" id="stageTimeStats"></div></section>
-          <section class="chartbox"><div class="sect">LOOT EARNED</div><div class="metadata" id="lootStats"></div></section>
+          <section class="chartbox"><div class="sect">TIME ON EACH STAGE</div>
+            <div class="stage-grid">${Array.from({length:10},(_,i)=>'<div class="stage-tile" data-stage="'+(i+1)+'"><span>STAGE '+(i+1)+'</span><strong>0m 00s</strong><small>0 JOURNEYS</small></div>').join("")}</div>
+          </section>
+          <section class="chartbox"><div class="sect">LOOT EARNED · CONFIRMED BATCHES</div>
+            <div class="loot-grid">
+              <div class="loot-tile"><small>IGM BAGS</small><strong data-loot="IGM">0</strong></div>
+              <div class="loot-tile"><small>SCRAPS</small><strong data-loot="SCRAP">0</strong></div>
+              <div class="loot-tile"><small>CRYPTO</small><strong data-loot="CRYPTO">0</strong></div>
+            </div>
+          </section>
         </div>
       </div>
       <section class="activity" id="activity">
         <div class="sect">VCARD JOURNEY HISTORY</div>
-        <table><thead><tr><th>DATE</th><th>STAGE</th><th>TIME</th><th>RESULT</th><th>LOOT</th></tr></thead>
-        <tbody id="journeyHistoryRows"><tr><td colspan="5">LOADING JOURNEY HISTORY</td></tr></tbody></table>
+        <div class="history-table-wrap"><table><thead><tr><th>DATE</th><th>STAGE</th><th>TIME</th><th>RESULT</th><th>LOOT</th></tr></thead>
+        <tbody id="journeyHistoryRows"><tr><td colspan="5">LOADING JOURNEY HISTORY</td></tr></tbody></table></div>
+        <div class="history-pager"><button type="button" id="historyPrev">◀ PREV</button><span id="historyPageLabel">PAGE 1 / 1</span><button type="button" id="historyNext">NEXT ▶</button></div>
       </section>
     `;
     shadow.replaceChildren(sheet,panel);
@@ -448,40 +503,50 @@ html, body {
     });
     panel.querySelector(".nav").insertBefore(journeyButton,panel.querySelector("#closeCardStats"));
     panel.querySelector("#closeCardStats").addEventListener("click",closeCardStats);
+    panel.querySelector("#historyPrev").addEventListener("click",()=>{
+      if(historyLoading||historyPage<=0)return;
+      historyPage--;void loadHistoryPage();
+    });
+    panel.querySelector("#historyNext").addEventListener("click",()=>{
+      if(historyLoading||(historyPage+1)*HISTORY_PAGE_SIZE>=historyCount)return;
+      historyPage++;void loadHistoryPage();
+    });
     statsPanel=panel;
   }
-  function closeCardStats(){statsOverlay.hidden=true;statsCard=null;++statsLoadSequence;}
+  function closeCardStats(){statsOverlay.hidden=true;statsCard=null;statsClient=null;++statsLoadSequence;}
   async function openCardStats(card){
     if(!card)return;
     statsCard=card;statsOverlay.hidden=false;
     const ticket=++statsLoadSequence;
+    historyPage=0;historyCount=0;historyLoading=false;
     try{
       await ensureStatsPanel();
       if(ticket!==statsLoadSequence)return;
       fillCardStats(card);
       const user=window.VHouseAuth?.getUser?.();
       if(!user){
-        renderJourneyRecords([]);
-        statField("journeys","SIGN IN");
+        showSummary({});
+        historyMessage("SIGN IN TO VIEW JOURNEY HISTORY");
+        updateHistoryPager();
         return;
       }
-      const client=window.VHouseAuth.getClient();
-      const {data,error}=await client.from("vhouse_journey_records")
-        .select("mission_id,stage_id,status,started_at,ends_at,completed_at,confirmed_at,duration_seconds,encounter_results,rewards")
-        .eq("player_id",user.id).eq("card_id",String(card.id))
-        .order("started_at",{ascending:false}).limit(100);
+      statsClient=window.VHouseAuth.getClient();
+      statsPlayerId=user.id;
+      const {data,error}=await statsClient.rpc("vhouse_vcard_journey_summary",{p_card_id:String(card.id)});
       if(error)throw error;
       if(ticket!==statsLoadSequence)return;
-      renderJourneyRecords(data||[]);
+      showSummary(data||{});
+      const loot=data?.loot||{};
+      statsPanel.querySelector("#totalLootBatches").textContent=
+        displayCount(Number(loot.IGM||0)+Number(loot.SCRAP||0)+Number(loot.CRYPTO||0));
+      await loadHistoryPage(ticket);
+      if(ticket!==statsLoadSequence)return;
       fillCardStats(card);
     }catch(error){
       console.error("VCard stats:",error);
       if(ticket===statsLoadSequence&&statsPanel){
-        const host=statsPanel.querySelector("#journeyHistoryRows");
-        host.replaceChildren();
-        const row=document.createElement("tr"),cell=document.createElement("td");
-        cell.colSpan=5;cell.textContent="JOURNEY HISTORY UNAVAILABLE: "+(error.message||"LOAD FAILED");
-        row.append(cell);host.append(row);
+        historyMessage("JOURNEY STATS UNAVAILABLE: "+(error.message||"LOAD FAILED"));
+        updateHistoryPager();
       }
     }
   }
