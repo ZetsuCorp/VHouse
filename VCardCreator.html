@@ -3133,11 +3133,32 @@ $("loadMintButton").onclick = async () => {
     receiptLink("receiptMint","mintPending","mintDetail",mintURL(),mint.toBase58());
     showPostMintUI();
     showScreen("workspace");
-    message(standard === "mpl-core"
+    // The verified wallet NFT becomes the active VCard in the Placeholder.
+    // External NFTs remain external; they are not inserted into the VHouse inventory.
+    let assignmentNotice="";
+    try {
+      const nftImage=assetURL(json.image||job.imageURI);
+      await window.VHouseCardStore.assignLoaded({
+        mint_address:mint.toBase58(),
+        ownerWallet:owner.toBase58(),
+        name:cardDisplayName(json.name||meta.name),
+        description:String(json.description||""),
+        image:nftImage,
+        team:state.team,
+        level:1,
+        atk:100,
+        def:100
+      });
+    } catch(assignError) {
+      console.error("Loaded NFT Placeholder assignment:",assignError);
+      assignmentNotice=" NFT verified, but Placeholder assignment failed: "+shortError(assignError);
+    }
+    message((standard === "mpl-core"
       ? "Metaplex Core NFT loaded. Wallet ownership verified."
       : job.updateAuthorized
         ? "Token-2022 NFT loaded. Choose UPDATE or CUSTOMIZE."
-        : "Token-2022 NFT loaded. This wallet is not the on-chain metadata update authority.");
+        : "Token-2022 NFT loaded. This wallet is not the on-chain metadata update authority.")+
+      (assignmentNotice||" Assigned to VHouse Placeholder."));
   } catch (error) {
     console.error("NFT load:",error);
     message("Load error: " + shortError(error));
