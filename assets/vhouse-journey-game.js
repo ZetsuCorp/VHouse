@@ -2,7 +2,7 @@
    The HTML/CSS remain in JourneyMissions.html. No iframe or localStorage. */
 (function(){
 "use strict";
-function init(root=document){
+function init(root=document,options={}){
   if(root.__vhouseJourneyInstance)return root.__vhouseJourneyInstance;
 "use strict";
 
@@ -74,10 +74,10 @@ const DEFAULT_CONFIG={
       type,
       letter,
       reward:type==="HUNT"
-        ?{item:"IG",quantity:1}
+        ?{item:"IGM",quantity:100,batches:1}
         :type==="FIGHT"
-          ?{item:"SCRAPS",quantity:1}
-          :null
+          ?{item:"SCRAP",quantity:1,batches:1}
+          :{item:"CRYPTO",quantity:0.10,batches:1,unit:"USD"}
     }));
     return {
       id:index+1,
@@ -92,6 +92,9 @@ const DEFAULT_CONFIG={
   })
 };
 const config=window.VHouseJourneyData||DEFAULT_CONFIG;
+const REWARD_LABELS={IGM:"IGM BAG",SCRAP:"SCRAP",CRYPTO:"CRYPTO"};
+const rewardLabel=item=>REWARD_LABELS[item]||String(item||"");
+const rewardBatches=reward=>Math.max(0,Math.floor(Number(reward?.batches)||0));
 
 const stages=[...(config.stages||[])]
   .filter(stage=>stage.enabled!==false)
@@ -117,7 +120,7 @@ const DEMO_CARD={
 };
 
 function activeCard(){
-  const stored=window.VHouseCardStore?.getActive?.();
+  const stored=findCard(state.selectedCardId);
   if(!stored)return DEMO_CARD;
   const team=String(stored.team||"").toUpperCase();
   return {
@@ -141,6 +144,8 @@ function wholeQuantity(value){
 function initialState(){
   return {
     mission:null,
+    missions:{},
+    selectedCardId:null,
     balance:{},
     receipts:[],
     events:[],
@@ -163,12 +168,59 @@ state.demoInventory||={
   ...(config.demoInventory||{LUCK:0})
 };
 
+state.missions||={};
+if(state.mission?.card?.id&&!state.missions[String(state.mission.card.id)])
+  state.missions[String(state.mission.card.id)]=state.mission;
+const availableCards=()=>window.VHouseCardStore?.getCards?.()||[DEMO_CARD];
+const findCard=id=>availableCards().find(card=>String(card.id)===String(id));
+function chooseCard(id){
+  const key=String(id||"");
+  if(!key||(!findCard(key)&&!state.missions[key]))return false;
+  state.selectedCardId=key;
+  state.mission=state.missions[key]||null;
+  return true;
+}
+const requestedCardId=options.cardId||new URLSearchParams(location.search).get("cardId");
+if(!chooseCard(requestedCardId||window.VHouseCardStore?.getActiveId?.()))
+  chooseCard(availableCards()[0]?.id);
+function selectCard(id){
+  if(!chooseCard(id))return false;
+  if(state.mission){
+    settleJourney();
+    state.mission.status==="running"?renderTravel():renderComplete();
+  }else renderSetup();
+  return true;
+}
+function cardPicker(){
+  let picker=$("journeyVCardSelect");
+  if(!picker){
+    picker=document.createElement("select");
+    picker.id="journeyVCardSelect";
+    picker.setAttribute("aria-label","Choose VCard");
+    picker.style.cssText="display:block;width:100%;margin:5px 0;padding:6px;background:#21162c;color:#ffe1a5;border:1px solid #bc9357;border-radius:5px";
+    $("playerInfo").after(picker);
+    picker.addEventListener("change",()=>selectCard(picker.value));
+  }
+  picker.replaceChildren();
+  for(const card of availableCards()){
+    const option=document.createElement("option");
+    option.value=String(card.id);
+    const mission=state.missions[String(card.id)];
+    option.textContent=(card.name||"VCARD")+
+      (mission?.status==="running"?" · ON JOURNEY":
+       mission?.status==="ready"?" · RESULTS READY":"");
+    picker.append(option);
+  }
+  if(!findCard(state.selectedCardId))chooseCard(availableCards()[0]?.id);
+  picker.value=state.selectedCardId;
+}
 let selectedStage=stages[0]?.id??null;
 let currentScreen="setup";
 
 function save(){
   // Persist Journey progress through the signed-in player's VHouse store.
   // Standalone framework mode has no persistent remote store.
+  if(state.mission?.card?.id)state.missions[String(state.mission.card.id)]=state.mission;
   return window.VHouseJourneyStore?.save?.(structuredClone(state));
 }
 
@@ -435,6 +487,7 @@ function renderSetup(){
 
   setScreen("setup");
 
+  cardPicker();
   const card=activeCard();
 
   renderCard($("setupVCard"),card);
@@ -515,7 +568,7 @@ function renderStageInfo(){
     chip.className="reward-chip";
 
     chip.textContent=
-      reward==="AWT"?"$AWT":reward;
+      "1 "+rewardLabel(reward);
 
     host.append(chip);
   }
@@ -524,7 +577,7 @@ function renderStageInfo(){
     validStage(stage)?String(stage.description||""):"";
 
   const store=window.VHouseCardStore;
-  const assigned=store?.getActive?.();
+  const assigned=findCard(state.selectedCardId);
   const locked=assigned&&store?.isLocked?.(assigned.id);
   $("setupStatus").textContent=locked
     ?"This VCard is on a Journey. Assign another VCard in the Closet."
@@ -675,7 +728,7 @@ function rewardForEncounter(
 
     return {
       item:raw,
-      quantity:1
+      quantity:1,batches:1
     };
   }
 
@@ -684,24 +737,17 @@ function rewardForEncounter(
     raw.asset||
     raw.type;
 
-  const quantity=wholeQuantity(
-    raw.quantity??
-    raw.amount??
-    1
-  );
+  const quantity=Number(raw.quantity??raw.amount??1);
+  const batches=Number(raw.batches??1);
 
   if(
     typeof item!=="string"||
     !item||
-    quantity<=0
-  ){
-    return null;
-  }
+    !Number.isFinite(quantity)||quantity<=0||
+    !Number.isInteger(batches)||batches<=0
+  )return null;
 
-  return {
-    item,
-    quantity
-  };
+  return {item,quantity,batches,unit:raw.unit||null};
 }
 
 /* START JOURNEY */
@@ -710,7 +756,7 @@ async function startJourney(){
 
   const stage=stageById(selectedStage);
   const store=window.VHouseCardStore;
-  const assigned=store?.getActive?.();
+  const assigned=findCard(state.selectedCardId);
   if(store&&!assigned){
     $("setupStatus").textContent="Assign a VCard before starting a Journey.";
     return;
@@ -745,7 +791,7 @@ async function startJourney(){
   card.luck=luck;
 
   state.mission={
-    id:"JR-"+now.toString(36).toUpperCase(),
+    id:"JR-"+now.toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,8).toUpperCase(),
     stageId:stage.id,
     stage:structuredClone(stage),
     card,
@@ -767,6 +813,7 @@ async function startJourney(){
   try{
     await save();
   }catch(error){
+    delete state.missions[String(card.id)];
     state.mission=null;
     $("setupStatus").textContent="Journey could not start: "+(error.message||"save failed");
     return;
@@ -953,13 +1000,14 @@ function settleJourney(){
     Apply configured rewards.
   */
 
-  const rewards={};
-
+  const rewards={},batches={};
   results.forEach(result=>{
     if(!result.won||!result.reward)return;
-    rewards[result.reward.item]=
-      (rewards[result.reward.item]||0)+result.reward.quantity;
+    const item=result.reward.item;
+    rewards[item]=Number(((rewards[item]||0)+Number(result.reward.quantity)).toFixed(8));
+    batches[item]=(batches[item]||0)+rewardBatches(result.reward);
   });
+  mission.rewardBatches=batches;
 
   /*
     Record Stage totals.
@@ -993,22 +1041,7 @@ function settleJourney(){
 
   mission.status="ready";
 
-  /*
-    Internal framework balance.
-
-    This records the rewards once.
-    CONFIRM does not reward again.
-  */
-
-  for(
-    const [asset,quantity] of
-    Object.entries(rewards)
-  ){
-
-    state.balance[asset]=
-      (state.balance[asset]||0)+
-      quantity;
-  }
+  /* Rewards remain pending until receipt confirmation. */
 
   const event={
     type:"journey.completed",
@@ -1084,10 +1117,7 @@ function renderComplete(){
 
   rewardHost.replaceChildren();
 
-  for(
-    const asset of
-    mission.stage.rewardTypes||[]
-  ){
+  for(const asset of Object.keys(mission.rewardBatches||{})){
 
     const tile=document.createElement("div");
 
@@ -1096,12 +1126,12 @@ function renderComplete(){
     const label=document.createElement("span");
 
     label.textContent=
-      asset==="AWT"?"$AWT":asset;
+      rewardLabel(asset);
 
     const amount=document.createElement("strong");
 
     amount.textContent=
-      "+"+(mission.rewards[asset]||0);
+      (mission.rewardBatches?.[asset]||0)+" BATCH"+((mission.rewardBatches?.[asset]||0)===1?"":"ES");
 
     tile.append(label,amount);
 
@@ -1156,8 +1186,7 @@ function renderComplete(){
 
     acquired.textContent=
       result.reward
-        ?"+"+result.reward.quantity+
-         " "+result.reward.item
+        ?rewardBatches(result.reward)+" "+rewardLabel(result.reward.item)
         :"—";
 
     if(result.reward){
@@ -1180,8 +1209,8 @@ function renderComplete(){
     " OF "+
     mission.totals.encounters+
     " ENCOUNTERS WON · "+
-    rewardTotal(mission)+
-    " REWARDS";
+    Object.values(mission.rewardBatches||{}).reduce((a,b)=>a+b,0)+
+    " REWARD BATCHES";
 
   $("resultState").textContent=
     confirmed
@@ -1211,7 +1240,7 @@ function renderComplete(){
 
 /* RECEIPT CONFIRMATION */
 
-function confirmReceipt(){
+async function confirmReceipt(){
 
   const mission=state.mission;
 
@@ -1223,12 +1252,17 @@ function confirmReceipt(){
   }
 
   mission.status="confirmed";
-
   mission.confirmedAt=Date.now();
-
-  state.receipts.push(
-    structuredClone(mission)
-  );
+  try{await save();}
+  catch(error){
+    mission.status="ready";mission.confirmedAt=null;
+    $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
+    return;
+  }
+  if(!state.receipts.some(receipt=>receipt.id===mission.id))
+    state.receipts.push(structuredClone(mission));
+  for(const [asset,quantity] of Object.entries(mission.rewards||{}))
+    state.balance[asset]=Number(((state.balance[asset]||0)+quantity).toFixed(8));
 
   const event={
     type:"journey.receipt.confirmed",
@@ -1272,9 +1306,6 @@ function newJourney(){
   }
 
   state.mission=null;
-
-  save();
-
   renderSetup();
 }
 
@@ -1405,6 +1436,7 @@ if(state.mission){
 */
 
 const controller={
+  selectCard,
 
   getState:()=>
     structuredClone(state),
