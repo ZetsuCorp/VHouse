@@ -602,7 +602,7 @@ function renderStageInfo(){
     chip.className="reward-chip";
 
     chip.textContent=
-      "1 "+rewardLabel(reward);
+      "+1 "+rewardLabel(reward);
 
     host.append(chip);
   }
