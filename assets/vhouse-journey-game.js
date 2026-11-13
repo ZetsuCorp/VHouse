@@ -356,22 +356,27 @@ function setScreen(screen){
 
 /* BACKGROUND */
 
-function background(){
+function background(stageId){
 
-  const url=config.sceneImage;
+  // The start screen stays at home; the running Journey uses its stage scene.
+  const home=config.sceneImage||"assets/VCrad Town.png";
+  const id=Number(stageId);
+  const journey=id>=1&&id<=3
+    ?"assets/Vhouse Journeypath.png"
+    :id>=4&&id<=6
+      ?"assets/Vhouse Journeypath2.png"
+      :id>=7&&id<=10
+        ?"assets/Vhouse Journeypath3.png"
+        :home;
 
-  if(typeof url!=="string"||
-     !/^(assets\/|https?:\/\/)/i.test(url)){
-    return;
-  }
-
-  const safe=url.replace(/["\\]/g,"");
-
-  for(const id of [
-    "setupWorld",
-    "travelWorld"
+  for(const [world,url] of [
+    ["setupWorld",home],
+    ["travelWorld",journey]
   ]){
-    $(id).style.setProperty(
+    if(typeof url!=="string"||
+       !/^(assets\/|https?:\/\/)/i.test(url))continue;
+    const safe=url.replace(/["\\]/g,"");
+    $(world).style.setProperty(
       "--scene-image",
       'url("'+safe+'")'
     );
@@ -834,6 +839,7 @@ async function startJourney(){
 function renderTravel(){
 
   const mission=state.mission;
+  background(mission?.stageId);
 
   if(!mission)return;
 
