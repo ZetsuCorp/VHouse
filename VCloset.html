@@ -140,10 +140,31 @@ html, body {
   background:#5d3683;
   box-shadow:0 0 1cqw #ffb62d88;
 }
-.closet-assignment .closet-confirm:disabled {
+ .closet-assignment .closet-confirm:disabled {
   opacity:.55;
   cursor:default;
 }
+.closet-slot{position:relative}
+.closet-card-status{
+  position:absolute;left:50%;top:4%;transform:translateX(-50%);
+  z-index:8;max-width:88%;padding:.32cqw .55cqw;
+  border:1px solid #c18e4d;border-radius:.35cqw;
+  background:#170e25ed;color:#ffe2ac;
+  font:900 .78cqw Arial,sans-serif;letter-spacing:.04em;
+  line-height:1.15;text-align:center;white-space:nowrap;
+  pointer-events:none;text-shadow:0 1px 2px #000;
+}
+.closet-card-status[data-status="ON_JOURNEY"]{color:#a9e9ff;border-color:#62b8d5}
+.closet-card-status[data-status="RESULTS_READY"]{color:#b5ffe0;border-color:#70d8a9}
+.closet-stats-overlay{
+  position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.48);
+}
+.closet-stats-overlay[hidden]{display:none}
+.closet-stats-window{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:80%;height:84%;min-width:0;min-height:0;
+}
+.closet-stats-content{width:100%;height:100%;min-width:0;min-height:0}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-vcard.css">
@@ -172,6 +193,11 @@ html, body {
     </div>
     <button class="vhouse-btn carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
     <button class="vhouse-btn carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
+    <div id="closetStatsOverlay" class="closet-stats-overlay" hidden>
+      <div class="closet-stats-window" role="dialog" aria-modal="true" aria-label="VCard statistics">
+        <div id="closetStatsContent" class="closet-stats-content"></div>
+      </div>
+    </div>
     <div class="closet-assignment" role="group" aria-label="Active VCard selection">
       <div class="closet-assignment-info" title="Currently active VCard">
         ACTIVE VCARD: <strong id="closetActiveName">NONE</strong>
@@ -211,6 +237,246 @@ html, body {
   let selected = 0;
   let assigning = false;
   let firstLoaded = false;
+  const statsOverlay = document.getElementById("closetStatsOverlay");
+  const statsContent = document.getElementById("closetStatsContent");
+  let statsCard = null;
+  let statsPanel = null;
+  let statsLoadSequence = 0;
+
+  function statField(id,value){
+    const el=statsPanel?.querySelector('[data-stat-field="'+id+'"]');
+    if(el)el.textContent=value===null||value===undefined||value===""?"—":String(value);
+  }
+  function durationText(seconds){
+    const n=Math.max(0,Math.floor(Number(seconds)||0));
+    const hours=Math.floor(n/3600),minutes=Math.floor(n%3600/60),secs=n%60;
+    return hours?hours+"h "+String(minutes).padStart(2,"0")+"m":
+      minutes+"m "+String(secs).padStart(2,"0")+"s";
+  }
+  function makeMeta(host,label,value){
+    const row=document.createElement("div");row.className="meta";
+    const name=document.createElement("span");name.textContent=label;
+    const amount=document.createElement("strong");amount.textContent=value;
+    row.append(name,amount);host.append(row);
+  }
+  function recordElapsed(record){
+    const start=Date.parse(record.started_at);
+    let end=Date.parse(record.completed_at||record.ends_at);
+    if(record.status==="ON_JOURNEY")end=Math.min(Date.now(),Number.isFinite(Date.parse(record.ends_at))?Date.parse(record.ends_at):Date.now());
+    if(!Number.isFinite(start)||!Number.isFinite(end))return Number(record.duration_seconds)||0;
+    return Math.max(0,Math.round((end-start)/1000));
+  }
+  function recordLoot(record){
+    const loot={};
+    const stored=record.rewards&&typeof record.rewards==="object"?record.rewards:{};
+    for(const [item,quantity] of Object.entries(stored)){
+      const n=Number(quantity);if(n>0)loot[item]=(loot[item]||0)+n;
+    }
+    if(!Object.keys(loot).length&&Array.isArray(record.encounter_results)){
+      for(const result of record.encounter_results){
+        if(result?.won&&result.reward?.item){
+          const n=Number(result.reward.quantity)||1;
+          loot[result.reward.item]=(loot[result.reward.item]||0)+n;
+        }
+      }
+    }
+    return loot;
+  }
+  function fillCardStats(card){
+    if(!statsPanel||!card)return;
+    const state=store.getStatus(card.id);
+    const active=card.id===store.getActiveId();
+    const image=statsPanel.querySelector("#vcardImage");
+    image.replaceChildren();
+    if(typeof card.image==="string"&&/^(https?:\/\/|ipfs:\/\/)/i.test(card.image)){
+      const img=document.createElement("img");
+      img.src=card.image.startsWith("ipfs://")?"https://gateway.pinata.cloud/ipfs/"+card.image.slice(7):card.image;
+      img.alt=card.name||"VCard";img.referrerPolicy="no-referrer";image.append(img);
+    }
+    statField("cardId",card.id);
+    statField("name",card.name||"VCard");
+    statField("status",(active?"ACTIVE":"AVAILABLE")+
+      (state.status==="ON_JOURNEY"?" · ON JOURNEY":
+       state.status==="RESULTS_READY"?" · RESULTS READY":""));
+    statField("team",card.team);
+    statField("level",card.level);
+    statField("atk",card.atk);
+    statField("def",card.def);
+    statField("speed",card.speed);
+    statField("luck",card.luck);
+    statField("stage",state.stageId?("STAGE "+state.stageId):"—");
+    statField("mission",state.missionId||"—");
+  }
+  function renderJourneyRecords(records){
+    const total=records.length;
+    const stageTotals=new Map(),lootTotals={};
+    let wins=0,losses=0,totalSeconds=0,completed=0;
+    const history=statsPanel.querySelector("#journeyHistoryRows");
+    history.replaceChildren();
+    for(const record of records){
+      const seconds=recordElapsed(record);totalSeconds+=seconds;
+      const stage=Number(record.stage_id)||0;
+      const stageEntry=stageTotals.get(stage)||{count:0,seconds:0};
+      stageEntry.count++;stageEntry.seconds+=seconds;stageTotals.set(stage,stageEntry);
+      if(record.status==="CONFIRMED")completed++;
+      const results=Array.isArray(record.encounter_results)?record.encounter_results:[];
+      const won=results.filter(item=>item?.won).length;
+      const lost=results.filter(item=>item&&!item.won).length;
+      wins+=won;losses+=lost;
+      const loot=recordLoot(record);
+      for(const [item,quantity] of Object.entries(loot))lootTotals[item]=(lootTotals[item]||0)+quantity;
+      const tr=document.createElement("tr");
+      const values=[
+        record.started_at?new Date(record.started_at).toLocaleString():"—",
+        "STAGE "+stage,
+        durationText(seconds),
+        won+" W / "+lost+" L",
+        Object.entries(loot).map(([item,quantity])=>item+" ×"+quantity).join(", ")||"—"
+      ];
+      for(const value of values){const td=document.createElement("td");td.textContent=value;tr.append(td);}
+      history.append(tr);
+    }
+    if(!records.length){
+      const tr=document.createElement("tr"),td=document.createElement("td");
+      td.colSpan=5;td.textContent="NO JOURNEY HISTORY RECORDED FOR THIS VCARD";
+      tr.append(td);history.append(tr);
+    }
+    statField("journeys",total);
+    statField("completed",completed);
+    statField("wins",wins);
+    statField("losses",losses);
+    statField("time",durationText(totalSeconds));
+    const stageHost=statsPanel.querySelector("#stageTimeStats");stageHost.replaceChildren();
+    if(!stageTotals.size)makeMeta(stageHost,"STAGES","NO RECORDED TIME");
+    for(const [stage,value] of [...stageTotals.entries()].sort((a,b)=>a[0]-b[0])){
+      makeMeta(stageHost,"STAGE "+stage,value.count+" JOURNEYS · "+durationText(value.seconds));
+    }
+    const lootHost=statsPanel.querySelector("#lootStats");lootHost.replaceChildren();
+    if(!Object.keys(lootTotals).length)makeMeta(lootHost,"LOOT","NONE RECORDED");
+    for(const [item,quantity] of Object.entries(lootTotals).sort((a,b)=>a[0].localeCompare(b[0]))){
+      makeMeta(lootHost,item,"× "+quantity);
+    }
+  }
+  async function ensureStatsPanel(){
+    if(statsPanel)return;
+    const response=await fetch("./billboard.html",{cache:"no-store"});
+    if(!response.ok)throw Error("Billboard container could not be loaded.");
+    const source=new DOMParser().parseFromString(await response.text(),"text/html");
+    const css=source.querySelector("style")?.textContent;
+    if(!css)throw Error("Billboard styles are missing.");
+    const shadow=statsContent.shadowRoot||statsContent.attachShadow({mode:"open"});
+    const sheet=document.createElement("style");
+    sheet.textContent=css+`
+      :host{display:block;position:relative;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
+      #billboard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transform-origin:center center;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
+      #billboard .cols,#billboard .activity{min-height:0;overflow:auto;scrollbar-width:thin}
+      #billboard .activity{display:none;flex:1 1 auto}
+      #billboard .right{min-width:0}
+      #billboard .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+      #billboard .chartbox{margin-bottom:7px}
+      #billboard .record-empty{color:#c3a7bc;font-size:10px}
+      #billboard .billboard-back{cursor:pointer;color:#ffe2ac;border:1px solid #a87b4c;background:#371b33;padding:3px 7px;border-radius:4px;font-weight:900;font-size:10px}
+      #billboard .billboard-back:hover{background:#67243b;border-color:#f2cb83}
+      #billboard .activity td{font-size:9px;padding:6px 4px;overflow-wrap:anywhere}
+      #billboard .activity th{font-size:9px;padding:6px 4px}
+      @media(max-width:510px){#billboard{width:100%;height:100%;padding:5px}#billboard .cols{grid-template-columns:1fr;gap:8px}}
+    `;
+    const panel=document.createElement("main");panel.id="billboard";
+    panel.innerHTML=`
+      <img class="billboard-watermark" src="./assets/Zetsu%20Logo%20Svg%20.png" alt="" aria-hidden="true">
+      <header class="nav">
+        <div class="tabs">
+          <button class="tab active" data-view="overview">OVERVIEW</button>
+          <button class="tab" data-view="activity">JOURNEY HISTORY</button>
+        </div>
+        <span class="brand">VCARD RECORD</span>
+        <button class="billboard-back" type="button" id="closeCardStats">← BACK</button>
+      </header>
+      <div class="cols" id="overview">
+        <div class="left">
+          <div class="art" id="vcardImage"></div>
+          <div class="artfoot"><span>VCARD</span><span data-stat-field="cardId">—</span></div>
+          <section>
+            <div class="sect">VCARD DETAILS</div>
+            <div class="detail"><span class="dk">NAME</span><span class="dv" data-stat-field="name">—</span></div>
+            <div class="detail"><span class="dk">STATUS</span><span class="dv" data-stat-field="status">—</span></div>
+            <div class="detail"><span class="dk">TEAM</span><span class="dv" data-stat-field="team">—</span></div>
+            <div class="detail"><span class="dk">LEVEL</span><span class="dv" data-stat-field="level">—</span></div>
+            <div class="detail"><span class="dk">ATK</span><span class="dv" data-stat-field="atk">—</span></div>
+            <div class="detail"><span class="dk">DEF</span><span class="dv" data-stat-field="def">—</span></div>
+            <div class="detail"><span class="dk">SPEED</span><span class="dv" data-stat-field="speed">—</span></div>
+            <div class="detail"><span class="dk">LUCK</span><span class="dv" data-stat-field="luck">—</span></div>
+            <div class="detail"><span class="dk">CURRENT STAGE</span><span class="dv" data-stat-field="stage">—</span></div>
+            <div class="detail"><span class="dk">MISSION ID</span><span class="dv" data-stat-field="mission">—</span></div>
+          </section>
+        </div>
+        <div class="right">
+          <section>
+            <div class="sect">JOURNEY TOTALS</div>
+            <div class="metrics">
+              <div class="metric"><small>JOURNEYS</small><strong data-stat-field="journeys">0</strong></div>
+              <div class="metric"><small>COMPLETED</small><strong data-stat-field="completed">0</strong></div>
+              <div class="metric"><small>TIME ON STAGES</small><strong data-stat-field="time">0m 00s</strong></div>
+              <div class="metric"><small>ENCOUNTER WINS</small><strong data-stat-field="wins">0</strong></div>
+              <div class="metric"><small>ENCOUNTER LOSSES</small><strong data-stat-field="losses">0</strong></div>
+              <div class="metric"><small>STAGE</small><strong data-stat-field="stage">—</strong></div>
+            </div>
+          </section>
+          <section class="chartbox"><div class="sect">TIME ON EACH STAGE</div><div class="metadata" id="stageTimeStats"></div></section>
+          <section class="chartbox"><div class="sect">LOOT EARNED</div><div class="metadata" id="lootStats"></div></section>
+        </div>
+      </div>
+      <section class="activity" id="activity">
+        <div class="sect">VCARD JOURNEY HISTORY</div>
+        <table><thead><tr><th>DATE</th><th>STAGE</th><th>TIME</th><th>RESULT</th><th>LOOT</th></tr></thead>
+        <tbody id="journeyHistoryRows"><tr><td colspan="5">LOADING JOURNEY HISTORY</td></tr></tbody></table>
+      </section>
+    `;
+    shadow.replaceChildren(sheet,panel);
+    panel.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{
+      const overview=button.dataset.view==="overview";
+      panel.querySelectorAll("[data-view]").forEach(tab=>tab.classList.toggle("active",tab===button));
+      panel.querySelector("#overview").style.display=overview?"grid":"none";
+      panel.querySelector("#activity").style.display=overview?"none":"block";
+    }));
+    panel.querySelector("#closeCardStats").addEventListener("click",closeCardStats);
+    statsPanel=panel;
+  }
+  function closeCardStats(){statsOverlay.hidden=true;statsCard=null;++statsLoadSequence;}
+  async function openCardStats(card){
+    if(!card)return;
+    statsCard=card;statsOverlay.hidden=false;
+    const ticket=++statsLoadSequence;
+    try{
+      await ensureStatsPanel();
+      if(ticket!==statsLoadSequence)return;
+      fillCardStats(card);
+      const user=window.VHouseAuth?.getUser?.();
+      if(!user){
+        renderJourneyRecords([]);
+        statField("journeys","SIGN IN");
+        return;
+      }
+      const client=window.VHouseAuth.getClient();
+      const {data,error}=await client.from("vhouse_journey_records")
+        .select("mission_id,stage_id,status,started_at,ends_at,completed_at,confirmed_at,duration_seconds,encounter_results,rewards")
+        .eq("player_id",user.id).eq("card_id",String(card.id))
+        .order("started_at",{ascending:false}).limit(100);
+      if(error)throw error;
+      if(ticket!==statsLoadSequence)return;
+      renderJourneyRecords(data||[]);
+      fillCardStats(card);
+    }catch(error){
+      console.error("VCard stats:",error);
+      if(ticket===statsLoadSequence&&statsPanel){
+        const host=statsPanel.querySelector("#journeyHistoryRows");
+        host.replaceChildren();
+        const row=document.createElement("tr"),cell=document.createElement("td");
+        cell.colSpan=5;cell.textContent="JOURNEY HISTORY UNAVAILABLE: "+(error.message||"LOAD FAILED");
+        row.append(cell);host.append(row);
+      }
+    }
+  }
 
   function render() {
     refreshItems();
@@ -228,21 +494,39 @@ html, body {
         slot.appendChild(host);
       }
       VHouseVCard.render(host, card);
+      let stateBadge=slot.querySelector(".closet-card-status");
+      if(!stateBadge){stateBadge=document.createElement("span");stateBadge.className="closet-card-status";slot.append(stateBadge);}
+      if(card){
+        const state=store.getStatus(card.id),isActive=card.id===store.getActiveId();
+        const label=(isActive?"ACTIVE":"AVAILABLE")+
+          (state.status==="ON_JOURNEY"?" · ON JOURNEY":
+           state.status==="RESULTS_READY"?" · RESULTS READY":"");
+        stateBadge.textContent=label;
+        stateBadge.dataset.status=state.status;
+        stateBadge.hidden=false;
+      }else{stateBadge.textContent="";stateBadge.hidden=true;}
       slot.setAttribute("aria-label", card ? String(card.name) + (offset === 0 ? ", selected" : ", select") : "Empty VCard slot");
       slot.classList.toggle("is-center", offset === 0);
       slot.setAttribute("aria-current", String(offset === 0));
     });
     const current = items[selected];
     const active = store.getActive();
-    const lock = active ? store.getStatus(active.id).status : "AVAILABLE";
-    activeName.textContent = active
-      ? String(active.name || "VCard") + (lock !== "AVAILABLE" ? " · LOCKED" : "")
-      : "NONE";
+    const activeState=active?store.getStatus(active.id).status:"AVAILABLE";
+    activeName.textContent=active
+      ?String(active.name||"VCard")+
+        (activeState==="ON_JOURNEY"?" · ON JOURNEY":
+         activeState==="RESULTS_READY"?" · RESULTS READY":"")
+      :"NONE";
     activeName.title = activeName.textContent;
     selectedName.textContent = current ? String(current.name || "VCard") : "NONE";
     selectedName.title = selectedName.textContent;
-    confirmButton.disabled = assigning || !current || current.id === store.getActiveId();
-    confirmButton.textContent = assigning ? "SAVING…" : current?.id === store.getActiveId() ? "ACTIVE ✓" : "SET AS ACTIVE";
+    const currentState=current?store.getStatus(current.id).status:"AVAILABLE";
+    const currentLocked=currentState!=="AVAILABLE";
+    confirmButton.disabled=assigning||!current||current.id===store.getActiveId()||currentLocked;
+    confirmButton.textContent=assigning?"SAVING…":
+      current?.id===store.getActiveId()?"ACTIVE ✓":
+      currentState==="ON_JOURNEY"?"ON JOURNEY":
+      currentState==="RESULTS_READY"?"RESULTS READY":"SET AS ACTIVE";
     VHouseMessage.set(messageHost, {
       header: current ? (current.id === store.getActiveId() ? "ACTIVE VCARD" : "VIEWING VCARD") : "EMPTY SLOT",
       title: current ? String(current.name || "VCard") : "VCard Slot",
@@ -288,8 +572,19 @@ html, body {
   document.querySelector(".carousel-prev").addEventListener("click", () => move(-1));
   document.querySelector(".carousel-next").addEventListener("click", () => move(1));
   slots.forEach(slot => slot.addEventListener("click", () => {
-    move(Number(slot.dataset.position));
+    const index=(selected+Number(slot.dataset.position)+items.length)%items.length;
+    const card=items[index];
+    if(!card)return;
+    selected=index;
+    render();
+    void openCardStats(card);
   }));
+  statsOverlay.addEventListener("click",event=>{
+    if(event.target===statsOverlay)closeCardStats();
+  });
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape"&&!statsOverlay.hidden)closeCardStats();
+  });
   let startX = null;
   showcase.addEventListener("pointerdown", event => { startX = event.clientX; });
   showcase.addEventListener("pointerup", event => {
@@ -323,6 +618,7 @@ html, body {
     if (event.key === "ArrowRight") move(1);
   });
   store.subscribe(() => {
+    if(statsCard&&statsPanel&& !statsOverlay.hidden)fillCardStats(statsCard);
     // On the first Supabase load, show the active card in the center.
     // After that, browsing must never be overridden by an active-card update.
     refreshItems();
