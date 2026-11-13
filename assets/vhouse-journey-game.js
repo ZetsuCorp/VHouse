@@ -1103,6 +1103,12 @@ function settleJourney(mission=state.mission){
 
   mission.completedAt=Date.now();
 
+  // Only IGM is an internal balance credit. Crypto and LP rewards
+  // remain recorded results, not pretend on-chain transfers.
+  const earnedIGM=Number(rewards.IGM)||0;
+  if(earnedIGM>0)
+    state.balance.IGM=Number(((Number(state.balance.IGM)||0)+earnedIGM).toFixed(8));
+
   mission.status="ready";
 
   /* Earned results and rewards are recorded before the receipt is confirmed. */
