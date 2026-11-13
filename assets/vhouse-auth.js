@@ -162,7 +162,7 @@
     const playerId=user.id;
     const [accountResult,inventoryResult]=await Promise.all([
       client.from("vhouse_accounts")
-        .select("id,active_vcard_id").eq("id",playerId).maybeSingle(),
+        .select("id,active_vcard_id,active_vcard_snapshot").eq("id",playerId).maybeSingle(),
       client.from("vhouse_player_inventory")
         .select("thing,type,quantity,state,updated_at").eq("player_id",playerId)
     ]);
@@ -178,11 +178,30 @@
   }
   async function syncActiveVCard(card){
     await ready;
-    if(!currentUser)return;
-    const {error}=await client.from("vhouse_accounts").update({
-      active_vcard_id:card?.id||null,avatar_url:card?.image||null
-    }).eq("id",currentUser.id);
+    const id=currentUser?.id;
+    if(!id)throw Error("Sign in before assigning a VCard.");
+    if(!card?.id)throw Error("Select a VCard.");
+    // An external NFT is saved as a display snapshot, not as an internal VCard.
+    const snapshot=card.external?{
+      id:String(card.id),external:true,
+      mint_address:String(card.mint_address||""),
+      owner_wallet:String(card.owner_wallet||""),
+      name:String(card.name||"Loaded NFT").slice(0,16),
+      description:String(card.description||"").slice(0,100),
+      image:String(card.image||""),
+      team:card.team,level:card.level,atk:card.atk,def:card.def
+    }:null;
+    const {data,error}=await client.from("vhouse_accounts").update({
+      active_vcard_id:String(card.id),
+      active_vcard_snapshot:snapshot,
+      avatar_url:card.image||null,
+      updated_at:new Date().toISOString()
+    }).eq("id",id).select("active_vcard_id").maybeSingle();
     if(error)throw error;
+    if(!data||data.active_vcard_id!==String(card.id))
+      throw Error("The VCard assignment was not saved.");
+    if(currentUser?.id!==id)throw Error("VHouse account changed during assignment.");
+    return data;
   }
   async function signOut(){
     await ready;
