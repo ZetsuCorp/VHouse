@@ -73,9 +73,9 @@ function mount(host){
     cashAmount.textContent="— IGM";
     try{
       const {data,error}=await auth.getClient()
-        .from("vhouse_player_balances")
+        .from("vhouse_accounts")
         .select("igm_balance")
-        .eq("player_id",user.id)
+        .eq("id",user.id)
         .maybeSingle();
       if(error)throw error;
       if(ticket!==cashRequest||auth.getUser()?.id!==user.id)return;
