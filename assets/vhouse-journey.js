@@ -41,8 +41,9 @@ async function refreshInventory(){
   }
 }
 
-/* Restore and persist the full Journey receipt state for the signed-in player.
-   The public browser never holds another player's progress. */
+/* Every VCard has its own persistent Journey record. Historical records remain
+   in Supabase after confirmation; only unconfirmed missions resume on load.
+   The old player-wide snapshot is read only as a migration fallback. */
 async function prepareJourneyStore(){
   const auth=window.VHouseAuth;
   if(!auth)return;
@@ -50,32 +51,96 @@ async function prepareJourneyStore(){
   const id=auth.getUser()?.id;
   if(!id)return;
   const client=auth.getClient();
-  const {data,error}=await client.from("vhouse_journey_progress")
-    .select("progress").eq("player_id",id).maybeSingle();
+  const {data:records,error}=await client.from("vhouse_journey_records")
+    .select("mission_id,card_id,status,snapshot,started_at")
+    .eq("player_id",id)
+    .in("status",["ON_JOURNEY","RESULTS_READY"])
+    .order("started_at",{ascending:false});
   if(error)throw error;
-  const snapshot=data?.progress&&typeof data.progress==="object"
-    ?data.progress:null;
-  let queue=Promise.resolve();
-  if(!window.VHouseJourneyStore){
-    window.VHouseJourneyStore={
-      load(){
-        return auth.getUser()?.id===id?snapshot:null;
-      },
-      save(next){
-        if(auth.getUser()?.id!==id)return Promise.reject(Error("Player changed."));
-        const safe=structuredClone(next);
-        queue=queue.catch(()=>{}).then(async()=>{
-          if(auth.getUser()?.id!==id)throw Error("Player changed.");
-          const {error:writeError}=await client.from("vhouse_journey_progress")
-            .upsert({player_id:id,progress:safe,updated_at:new Date().toISOString()},
-                    {onConflict:"player_id"});
-          if(writeError)throw writeError;
-        });
-        queue.catch(err=>console.error("Journey progress not saved:",err));
-        return queue;
-      }
-    };
+
+  const missions={};
+  const saved=new Map();
+  for(const row of records||[]){
+    const mission=row.snapshot;
+    if(!mission||typeof mission!=="object"||!mission.card?.id)continue;
+    if(String(mission.card.id)!==String(row.card_id))continue;
+    saved.set(String(row.mission_id),JSON.stringify(mission));
+    if(!missions[String(row.card_id)])missions[String(row.card_id)]=mission;
   }
+
+  let legacy=null;
+  if(!Object.keys(missions).length){
+    const old=await client.from("vhouse_journey_progress")
+      .select("progress").eq("player_id",id).maybeSingle();
+    if(old.error)throw old.error;
+    legacy=old.data?.progress&&typeof old.data.progress==="object"
+      ?old.data.progress:null;
+    const previous=legacy?.mission;
+    if(previous?.id&&previous?.card?.id&&previous.status!=="confirmed"){
+      missions[String(previous.card.id)]=previous;
+    }
+  }
+
+  const snapshot={
+    missions,
+    balance:legacy?.balance||{},
+    receipts:legacy?.receipts||[],
+    events:legacy?.events||[],
+    demoInventory:legacy?.demoInventory||{LUCK:0}
+  };
+  let queue=Promise.resolve();
+
+  window.VHouseJourneyStore={
+    playerId:id,
+    load(){
+      return auth.getUser()?.id===id?structuredClone(snapshot):null;
+    },
+    save(next){
+      if(auth.getUser()?.id!==id)return Promise.reject(Error("Player changed."));
+      const missionsToWrite=Object.values(next.missions||{})
+        .filter(m=>m&&m.id&&m.card?.id&&m.stageId);
+      const changed=missionsToWrite.map(mission=>{
+        const safe=structuredClone(mission);
+        const serialized=JSON.stringify(safe);
+        return {mission:safe,serialized};
+      }).filter(entry=>saved.get(String(entry.mission.id))!==entry.serialized);
+      if(!changed.length)return queue;
+      queue=queue.catch(()=>{}).then(async()=>{
+        if(auth.getUser()?.id!==id)throw Error("Player changed.");
+        for(const {mission,serialized} of changed){
+          const status=mission.status==="running"?"ON_JOURNEY":
+            mission.status==="ready"?"RESULTS_READY":"CONFIRMED";
+          const iso=ms=>Number.isFinite(Number(ms))
+            ?new Date(Number(ms)).toISOString():null;
+          const started=iso(mission.startedAt);
+          const ends=iso(mission.endsAt);
+          if(!started||!ends)throw Error("Journey is missing its timer.");
+          const {error:writeError}=await client.from("vhouse_journey_records")
+            .upsert({
+              player_id:id,
+              mission_id:String(mission.id),
+              card_id:String(mission.card.id),
+              stage_id:Number(mission.stageId),
+              status,
+              started_at:started,
+              ends_at:ends,
+              completed_at:iso(mission.completedAt),
+              confirmed_at:iso(mission.confirmedAt),
+              duration_seconds:Math.max(0,Math.round((Number(mission.endsAt)-Number(mission.startedAt))/1000)),
+              luck_quantity:Math.max(0,Math.floor(Number(mission.luck?.quantity)||0)),
+              encounter_results:mission.results||[],
+              rewards:mission.rewards||{},
+              snapshot:mission,
+              updated_at:new Date().toISOString()
+            },{onConflict:"player_id,mission_id"});
+          if(writeError)throw writeError;
+          saved.set(String(mission.id),serialized);
+        }
+      });
+      queue.catch(err=>console.error("VCard Journey record not saved:",err));
+      return queue;
+    }
+  };
 }
 
 const embeddedCSS=`
@@ -231,7 +296,9 @@ async function load(host,options={}){
       const shadow=host.shadowRoot;
       if(shadow?.getElementById("game")){
         fitJourney(host);
-        return window.VHouseJourneyGame?.init(shadow)||null;
+        const instance=window.VHouseJourneyGame?.init(shadow)||null;
+        if(options.cardId)instance?.selectCard?.(options.cardId);
+        return instance;
       }
       const response=await fetch(new URL("./JourneyMissions.html",document.baseURI),{cache:"no-store"});
       if(!response.ok)throw Error("Journey source returned "+response.status);
@@ -245,7 +312,7 @@ async function load(host,options={}){
       sheet.textContent=css+"\n"+embeddedCSS;
       root.replaceChildren(sheet,document.importNode(markup,true));
       fitJourney(host);
-      return window.VHouseJourneyGame.init(root);
+      return window.VHouseJourneyGame.init(root,options);
     }catch(error){
       console.error("VHouse Journey:",error);
       if(!host.shadowRoot?.getElementById("game"))host.textContent="Journey Missions could not be loaded.";
