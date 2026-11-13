@@ -206,7 +206,9 @@ function selectCard(id){
   if(!chooseCard(id))return false;
   if(state.mission){
     settleJourney();
-    state.mission.status==="running"?renderTravel():renderComplete();
+    if(state.mission.status==="running")renderTravel();
+    else if(state.mission.status==="ready")renderComplete();
+    else renderSetup();
   }else renderSetup();
   return true;
 }
@@ -1288,6 +1290,8 @@ function renderComplete(){
       ?"RECEIPT CONFIRMED · VCARD AVAILABLE"
       :"REWARDS ACQUIRED · CONFIRMATION REQUIRED";
 
+  // Always enable CONFIRM for a new unconfirmed receipt.
+  $("confirmButton").disabled=confirmed;
   $("confirmButton").hidden=confirmed;
 
   $("confirmedStamp").hidden=!confirmed;
@@ -1345,10 +1349,8 @@ async function confirmReceipt(){
   }
 
   emit("journey-confirmed",event);
-  $("confirmButton").hidden=true;
-  $("confirmedStamp").hidden=false;
-  $("newJourneyButton").hidden=false;
-  $("resultState").textContent="RECEIPT CONFIRMED · VCARD AVAILABLE";
+  // Confirmation finishes this Journey and returns to stage selection.
+  newJourney();
 }
 
 /* NEW JOURNEY */
@@ -1450,9 +1452,13 @@ if(state.mission){
 
     renderTravel();
 
-  }else{
+  }else if(state.mission.status==="ready"){
 
     renderComplete();
+
+  }else{
+
+    renderSetup();
 
   }
 
