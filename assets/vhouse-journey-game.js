@@ -71,15 +71,19 @@ const DEFAULT_CONFIG={
   demoInventory:{LUCK:1},
   stages:DEFAULT_STAGE_DATA.map((definition,index)=>{
     const stageId=index+1;
-    const encounters=definition.encounters.map(([type,letter])=>{
-      // Stage sets determine eligible reward bags. Every won encounter
-      // keeps its original Hunt/Fight bag, plus its set's crypto bags.
-      const rewards=[];
-      if(type==="HUNT")rewards.push({item:"IGM",quantity:100,batches:1});
-      if(type==="FIGHT")rewards.push({item:"SCRAP",quantity:1,batches:1});
-      if(stageId>=3)rewards.push({item:"AWT",quantity:0.10,batches:1,unit:"USD"});
-      if(stageId>=7)rewards.push({item:"SOL",quantity:0.10,batches:1,unit:"USD"});
-      return {type,letter,reward:rewards};
+    // One bag opportunity per encounter. Sets add eligible rewards,
+    // not extra automatic rewards to every successful encounter.
+    const rewardSet=stageId<=2?["IGM","SCRAP"]
+      :stageId<=6?["IGM","SCRAP","AWT"]
+      :["IGM","SCRAP","AWT","SOL"];
+    const encounters=definition.encounters.map(([type,letter],encounterIndex)=>{
+      const asset=rewardSet[encounterIndex%rewardSet.length];
+      const reward=asset==="IGM"
+        ?{item:"IGM",quantity:100,batches:1}
+        :asset==="SCRAP"
+          ?{item:"SCRAP",quantity:1,batches:1}
+          :{item:"CRYPTO",quantity:0.10,batches:1,unit:"USD",token:asset};
+      return {type,letter,reward};
     });
     return {
       id:index+1,
@@ -88,21 +92,27 @@ const DEFAULT_CONFIG={
       hunts:encounters.filter(entry=>entry.type==="HUNT").length,
       fights:encounters.filter(entry=>entry.type==="FIGHT").length,
       bosses:encounters.filter(entry=>entry.type==="TOTEM BOSS").length,
-      rewardTypes:[...new Set(encounters.flatMap(entry=>entry.reward.map(bag=>bag.item)))],
+      rewardTypes:[...new Set(encounters.map(entry=>entry.reward.item))],
+      rewardTokens:[...new Set(encounters.map(entry=>entry.reward.token).filter(Boolean))],
       encounters
     };
   })
 };
 const config=window.VHouseJourneyData||DEFAULT_CONFIG;
+// Display names are value categories; bag denominations belong in the Shop.
 const REWARD_LABELS={
-  IGM:"IGM BAG",SCRAP:"SCRAP",AWT:"$AWT BAG",SOL:"SOL BAG",
-  CRYPTO:"CRYPTO BAG"
+  IGM:"VCARD CASH",SCRAP:"LP TOKENS",CRYPTO:"CRYPTO",
+  AWT:"CRYPTO",SOL:"CRYPTO"
 };
-const rewardPlural=(item,count)=>{
-  const singular=rewardLabel(item);
-  return count===1?singular:singular+(item==="SCRAP"?"S":"S");
+const REWARD_BAG_LABELS={
+  IGM:"IGM BAG",SCRAP:"SCRAP",CRYPTO:"CRYPTO BAG",
+  AWT:"CRYPTO BAG",SOL:"CRYPTO BAG"
 };
 const rewardLabel=item=>REWARD_LABELS[item]||String(item||"");
+const rewardPlural=(item,count)=>{
+  const singular=REWARD_BAG_LABELS[item]||String(item||"");
+  return count===1?singular:singular+"S";
+};
 const rewardBatches=reward=>Math.max(0,Math.floor(Number(reward?.batches)||0));
 
 const stages=[...(config.stages||[])]
@@ -618,20 +628,13 @@ function renderStageInfo(){
     }
   }
 
-  const rewardCategories={
-    IGM:"VCARD CASH",
-    SCRAP:"LP TOKENS",
-    AWT:"CRYPTO",
-    SOL:"CRYPTO",
-    CRYPTO:"CRYPTO"
-  };
   for(const [item,max] of possible){
     const chip=document.createElement("span");
     chip.className="reward-chip";
 
     const category=document.createElement("small");
     category.className="reward-category";
-    category.textContent=rewardCategories[item]||String(item);
+    category.textContent=rewardLabel(item);
 
     const amount=document.createElement("strong");
     amount.textContent="UP TO +"+max+" "+rewardPlural(item,max);
@@ -795,7 +798,7 @@ function rewardForEncounter(stage,encounter,result,index){
     if(typeof item!=="string"||!item||
        !Number.isFinite(quantity)||quantity<=0||
        !Number.isInteger(batches)||batches<=0)return null;
-    return {item,quantity,batches,unit:entry.unit||null};
+    return {item,quantity,batches,unit:entry.unit||null,token:entry.token||null};
   }).filter(Boolean);
 }
 
@@ -1052,16 +1055,24 @@ function settleJourney(mission=state.mission){
     Apply configured rewards.
   */
 
-  const rewards={},batches={};
+  const rewards={},batches={},rewardTokens={};
   results.forEach(result=>{
     if(!result.won)return;
     for(const bag of earnedBags(result)){
       const item=bag.item;
       rewards[item]=Number(((rewards[item]||0)+Number(bag.quantity)).toFixed(8));
       batches[item]=(batches[item]||0)+rewardBatches(bag);
+      if(item==="CRYPTO"&&bag.token){
+        const token=bag.token;
+        const record=rewardTokens[token]||{batches:0,usdValue:0};
+        record.batches+=rewardBatches(bag);
+        record.usdValue=Number((record.usdValue+Number(bag.quantity)).toFixed(8));
+        rewardTokens[token]=record;
+      }
     }
   });
   mission.rewardBatches=batches;
+  mission.rewardTokens=rewardTokens;
 
   /*
     Record Stage totals.
@@ -1105,6 +1116,7 @@ function settleJourney(mission=state.mission){
     results,
     totals:mission.totals,
     rewards,
+    rewardTokens,
     at:mission.completedAt
   };
 
@@ -1184,8 +1196,8 @@ function renderComplete(){
 
     const amount=document.createElement("strong");
 
-    amount.textContent=
-      (mission.rewardBatches?.[asset]||0)+" BATCH"+((mission.rewardBatches?.[asset]||0)===1?"":"ES");
+    const count=mission.rewardBatches?.[asset]||0;
+    amount.textContent=count+" "+rewardPlural(asset,count);
 
     tile.append(label,amount);
 
@@ -1240,7 +1252,7 @@ function renderComplete(){
 
     const earned=earnedBags(result);
     acquired.textContent=earned.length
-      ?earned.map(bag=>rewardBatches(bag)+" "+rewardPlural(bag.item,rewardBatches(bag))).join(" · ")
+      ?earned.map(bag=>rewardBatches(bag)+" "+rewardLabel(bag.item)).join(" · ")
       :"—";
 
     if(earned.length){
@@ -1324,6 +1336,7 @@ async function confirmReceipt(){
     cardId:mission.card.id,
     stageId:mission.stageId,
     rewards:mission.rewards,
+    rewardTokens:mission.rewardTokens||{},
     at:mission.confirmedAt
   };
 
