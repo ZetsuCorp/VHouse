@@ -89,6 +89,60 @@ html, body {
 }
 .carousel-prev { left:12%; }
 .carousel-next { right:12%; }
+/* Selection is not assignment. A single fixed bar stays inside the game stage. */
+.closet-assignment {
+  position:absolute;
+  z-index:6;
+  left:21%;
+  top:68%;
+  width:58%;
+  height:7%;
+  min-height:0;
+  display:flex;
+  align-items:stretch;
+  gap:.5cqw;
+  color:#fff;
+  font:700 1.13cqw Arial,sans-serif;
+}
+.closet-assignment .closet-assignment-info {
+  flex:1 1 0;
+  min-width:0;
+  padding:.35cqw .7cqw;
+  border:1px solid #ae7a34;
+  border-radius:.45cqw;
+  background:#160d27e8;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.4cqw;
+  white-space:nowrap;
+}
+.closet-assignment .closet-assignment-info strong {
+  color:#ffdd94;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.closet-assignment .closet-confirm {
+  flex:0 0 24%;
+  min-width:0;
+  padding:0 .5cqw;
+  border:2px solid #ffb62d;
+  border-radius:.45cqw;
+  background:#3d2352;
+  color:#fff0bf;
+  font:900 1.25cqw Arial,sans-serif;
+  cursor:pointer;
+}
+.closet-assignment .closet-confirm:not(:disabled):hover,
+.closet-assignment .closet-confirm:not(:disabled):focus-visible {
+  background:#5d3683;
+  box-shadow:0 0 1cqw #ffb62d88;
+}
+.closet-assignment .closet-confirm:disabled {
+  opacity:.55;
+  cursor:default;
+}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-vcard.css">
@@ -117,6 +171,15 @@ html, body {
     </div>
     <button class="vhouse-btn carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
     <button class="vhouse-btn carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
+    <div class="closet-assignment" role="group" aria-label="VCard Placeholder selection">
+      <div class="closet-assignment-info" title="Currently assigned to the Placeholder">
+        PLACEHOLDER: <strong id="closetActiveName">NONE</strong>
+      </div>
+      <div class="closet-assignment-info" title="VCard selected in the Closet">
+        SELECTED: <strong id="closetSelectedName">NONE</strong>
+      </div>
+      <button class="closet-confirm" id="confirmPlaceholder" type="button" disabled>CONFIRM</button>
+    </div>
     <div id="closetMessage" class="vhouse-message--game" aria-live="polite" data-vhouse-message
       data-header="VCARD CLOSET" data-title="VCard Closet" data-info="Finished VCards and outfits are displayed here."></div>
     <a class="vhouse-btn back-button" href="./Vhouse.html">← BACK</a>
@@ -141,8 +204,12 @@ html, body {
   const slots = [...document.querySelectorAll(".closet-slot")];
   const showcase = document.getElementById("closetShowcase");
   const messageHost = document.getElementById("closetMessage");
-  const colors = {R: "#2d7bdc", P: "#1abf96", S: "#b16df4"};
+  const activeName = document.getElementById("closetActiveName");
+  const selectedName = document.getElementById("closetSelectedName");
+  const confirmButton = document.getElementById("confirmPlaceholder");
   let selected = 0;
+  let assigning = false;
+  let firstLoaded = false;
 
   function render() {
     refreshItems();
@@ -165,34 +232,57 @@ html, body {
       slot.setAttribute("aria-current", String(offset === 0));
     });
     const current = items[selected];
+    const active = store.getActive();
+    const lock = active ? store.getStatus(active.id).status : "AVAILABLE";
+    activeName.textContent = active
+      ? String(active.name || "VCard") + (lock !== "AVAILABLE" ? " · LOCKED" : "")
+      : "NONE";
+    activeName.title = activeName.textContent;
+    selectedName.textContent = current ? String(current.name || "VCard") : "NONE";
+    selectedName.title = selectedName.textContent;
+    confirmButton.disabled = assigning || !current || current.id === store.getActiveId();
+    confirmButton.textContent = assigning ? "SAVING…" : current?.id === store.getActiveId() ? "ACTIVE ✓" : "CONFIRM";
     VHouseMessage.set(messageHost, {
       header: current ? (current.id === store.getActiveId() ? "ACTIVE VCARD" : "VIEWING VCARD") : "EMPTY SLOT",
       title: current ? String(current.name || "VCard") : "VCard Slot",
       info: current ? String(current.description || "No description entered.") : "Finished VCards and outfits can be viewed here."
     });
   }
-  let assigning = false;
-  async function assign(card) {
-    if (!card || assigning) return;
+  async function confirmSelection() {
+    if (assigning) return;
+    const card = items[selected];
+    if (!card || card.id === store.getActiveId()) return;
     assigning = true;
+    render();
+    let failed = null;
     try {
       await store.setActive(card.id);
     } catch (error) {
-      console.error("VCloset assignment:",error);
-      VHouseMessage.set(messageHost,{
-        header:"VCARD ASSIGNMENT FAILED",
-        title:card.name||"VCard",
-        info:error.message||"Unable to assign this VCard."
-      });
+      failed = error;
+      console.error("VCloset Placeholder assignment:",error);
     } finally {
       assigning = false;
+      render();
+    }
+    if (failed) {
+      VHouseMessage.set(messageHost, {
+        header:"ASSIGNMENT FAILED",
+        title:card.name || "VCard",
+        info:failed.message || "Could not assign this VCard."
+      });
+    } else {
+      VHouseMessage.set(messageHost, {
+        header:"PLACEHOLDER UPDATED",
+        title:card.name || "VCard",
+        info:"This VCard is now assigned to the Placeholder."
+      });
     }
   }
+  confirmButton.addEventListener("click", () => { void confirmSelection(); });
   function move(direction) {
+    if (assigning) return;
     selected = (selected + direction + items.length) % items.length;
-    const card = items[selected];
     render();
-    if (card) void assign(card);
   }
   document.querySelector(".carousel-prev").addEventListener("click", () => move(-1));
   document.querySelector(".carousel-next").addEventListener("click", () => move(1));
@@ -231,11 +321,15 @@ html, body {
     if (event.key === "ArrowLeft") move(-1);
     if (event.key === "ArrowRight") move(1);
   });
-  const initiallyActive = items.findIndex(card => card?.id === store.getActiveId());
-  selected = initiallyActive >= 0 ? initiallyActive : 0;
   store.subscribe(() => {
-    const next = store.getCards().findIndex(card => card.id === store.getActiveId());
-    if (next >= 0) selected = next;
+    // On the first Supabase load, show the active card in the center.
+    // After that, browsing must never be overridden by an active-card update.
+    refreshItems();
+    if (!firstLoaded && items.some(Boolean)) {
+      const index = items.findIndex(card => card?.id === store.getActiveId());
+      selected = index >= 0 ? index : 0;
+      firstLoaded = true;
+    }
     render();
   });
   render();
