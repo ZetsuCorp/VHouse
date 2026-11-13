@@ -124,14 +124,15 @@ html, body {
   white-space:nowrap;
 }
 .closet-assignment .closet-confirm {
-  flex:0 0 24%;
+  flex:0 0 28%;
   min-width:0;
-  padding:0 .5cqw;
+  padding:0 .35cqw;
   border:2px solid #ffb62d;
   border-radius:.45cqw;
   background:#3d2352;
   color:#fff0bf;
-  font:900 1.25cqw Arial,sans-serif;
+  font:900 1.05cqw Arial,sans-serif;
+  white-space:nowrap;
   cursor:pointer;
 }
 .closet-assignment .closet-confirm:not(:disabled):hover,
@@ -171,14 +172,14 @@ html, body {
     </div>
     <button class="vhouse-btn carousel-arrow carousel-prev" type="button" aria-label="Previous card">&#8249;</button>
     <button class="vhouse-btn carousel-arrow carousel-next" type="button" aria-label="Next card">&#8250;</button>
-    <div class="closet-assignment" role="group" aria-label="VCard Placeholder selection">
-      <div class="closet-assignment-info" title="Currently assigned to the Placeholder">
-        PLACEHOLDER: <strong id="closetActiveName">NONE</strong>
+    <div class="closet-assignment" role="group" aria-label="Active VCard selection">
+      <div class="closet-assignment-info" title="Currently active VCard">
+        ACTIVE VCARD: <strong id="closetActiveName">NONE</strong>
       </div>
       <div class="closet-assignment-info" title="VCard selected in the Closet">
-        SELECTED: <strong id="closetSelectedName">NONE</strong>
+        SELECTED VCARD: <strong id="closetSelectedName">NONE</strong>
       </div>
-      <button class="closet-confirm" id="confirmPlaceholder" type="button" disabled>CONFIRM</button>
+      <button class="closet-confirm" id="confirmPlaceholder" type="button" disabled>SET AS ACTIVE</button>
     </div>
     <div id="closetMessage" class="vhouse-message--game" aria-live="polite" data-vhouse-message
       data-header="VCARD CLOSET" data-title="VCard Closet" data-info="Finished VCards and outfits are displayed here."></div>
@@ -241,7 +242,7 @@ html, body {
     selectedName.textContent = current ? String(current.name || "VCard") : "NONE";
     selectedName.title = selectedName.textContent;
     confirmButton.disabled = assigning || !current || current.id === store.getActiveId();
-    confirmButton.textContent = assigning ? "SAVING…" : current?.id === store.getActiveId() ? "ACTIVE ✓" : "CONFIRM";
+    confirmButton.textContent = assigning ? "SAVING…" : current?.id === store.getActiveId() ? "ACTIVE ✓" : "SET AS ACTIVE";
     VHouseMessage.set(messageHost, {
       header: current ? (current.id === store.getActiveId() ? "ACTIVE VCARD" : "VIEWING VCARD") : "EMPTY SLOT",
       title: current ? String(current.name || "VCard") : "VCard Slot",
@@ -259,7 +260,7 @@ html, body {
       await store.setActive(card.id);
     } catch (error) {
       failed = error;
-      console.error("VCloset Placeholder assignment:",error);
+      console.error("VCloset active VCard assignment:",error);
     } finally {
       assigning = false;
       render();
@@ -272,9 +273,9 @@ html, body {
       });
     } else {
       VHouseMessage.set(messageHost, {
-        header:"PLACEHOLDER UPDATED",
+        header:"ACTIVE VCARD UPDATED",
         title:card.name || "VCard",
-        info:"This VCard is now assigned to the Placeholder."
+        info:"This VCard is now active."
       });
     }
   }
