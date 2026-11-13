@@ -70,15 +70,17 @@ const DEFAULT_CONFIG={
   sceneImage:"assets/VCrad Town.png",
   demoInventory:{LUCK:1},
   stages:DEFAULT_STAGE_DATA.map((definition,index)=>{
-    const encounters=definition.encounters.map(([type,letter])=>({
-      type,
-      letter,
-      reward:type==="HUNT"
-        ?{item:"IGM",quantity:100,batches:1}
-        :type==="FIGHT"
-          ?{item:"SCRAP",quantity:1,batches:1}
-          :{item:"CRYPTO",quantity:0.10,batches:1,unit:"USD"}
-    }));
+    const stageId=index+1;
+    const encounters=definition.encounters.map(([type,letter])=>{
+      // Stage sets determine eligible reward bags. Every won encounter
+      // keeps its original Hunt/Fight bag, plus its set's crypto bags.
+      const rewards=[];
+      if(type==="HUNT")rewards.push({item:"IGM",quantity:100,batches:1});
+      if(type==="FIGHT")rewards.push({item:"SCRAP",quantity:1,batches:1});
+      if(stageId>=3)rewards.push({item:"AWT",quantity:0.10,batches:1,unit:"USD"});
+      if(stageId>=7)rewards.push({item:"SOL",quantity:0.10,batches:1,unit:"USD"});
+      return {type,letter,reward:rewards};
+    });
     return {
       id:index+1,
       description:definition.description,
@@ -86,13 +88,20 @@ const DEFAULT_CONFIG={
       hunts:encounters.filter(entry=>entry.type==="HUNT").length,
       fights:encounters.filter(entry=>entry.type==="FIGHT").length,
       bosses:encounters.filter(entry=>entry.type==="TOTEM BOSS").length,
-      rewardTypes:[...new Set(encounters.map(entry=>entry.reward?.item).filter(Boolean))],
+      rewardTypes:[...new Set(encounters.flatMap(entry=>entry.reward.map(bag=>bag.item)))],
       encounters
     };
   })
 };
 const config=window.VHouseJourneyData||DEFAULT_CONFIG;
-const REWARD_LABELS={IGM:"IGM BAG",SCRAP:"SCRAP",CRYPTO:"CRYPTO"};
+const REWARD_LABELS={
+  IGM:"IGM BAG",SCRAP:"SCRAP",AWT:"$AWT BAG",SOL:"SOL BAG",
+  CRYPTO:"CRYPTO BAG"
+};
+const rewardPlural=(item,count)=>{
+  const singular=rewardLabel(item);
+  return count===1?singular:singular+(item==="SCRAP"?"S":"S");
+};
 const rewardLabel=item=>REWARD_LABELS[item]||String(item||"");
 const rewardBatches=reward=>Math.max(0,Math.floor(Number(reward?.batches)||0));
 
@@ -594,35 +603,29 @@ function renderStageInfo(){
   const host=$("possibleRewards");
   host.replaceChildren();
 
-  // Display the actual stage reward batches and odds for this VCard.
-  // Matching letters lose the first round; only LUCK retries can win.
-  const card=pending?mission.card:activeCard();
-  const luck=pending?wholeQuantity(mission.luck?.quantity):luckStat();
+  // POSSIBLE REWARDS = the full stage reward pool, never filtered
+  // by the selected VCard, letter matches, LUCK, or current win odds.
   const possible=new Map();
-
   for(const encounter of encounterPlan(stage)){
-    const reward=encounter.reward??stage?.rewardsByType?.[encounter.type];
-    const item=typeof reward==="string"
-      ?reward:(reward?.item||reward?.asset||reward?.type);
-    const batches=typeof reward==="string"?1:Number(reward?.batches??1);
-    if(!item||!Number.isInteger(batches)||batches<=0)continue;
-
-    const attempts=luck+(card?.team===encounter.letter?0:1);
-    const chance=1-Math.pow(0.5,attempts);
-    if(chance<=0)continue;
-
-    const entry=possible.get(item)||{max:0,noneChance:1};
-    entry.max+=batches;
-    entry.noneChance*=1-chance;
-    possible.set(item,entry);
+    const configured=encounter.reward??stage?.rewardsByType?.[encounter.type];
+    const bags=Array.isArray(configured)?configured:[configured];
+    for(const bag of bags){
+      const item=typeof bag==="string"
+        ?bag:(bag?.item||bag?.asset||bag?.type);
+      const batches=typeof bag==="string"?1:Number(bag?.batches??1);
+      if(!item||!Number.isInteger(batches)||batches<=0)continue;
+      possible.set(item,(possible.get(item)||0)+batches);
+    }
   }
 
   const rewardCategories={
     IGM:"VCARD CASH",
     SCRAP:"LP TOKENS",
+    AWT:"CRYPTO",
+    SOL:"CRYPTO",
     CRYPTO:"CRYPTO"
   };
-  for(const [item,{max,noneChance}] of possible){
+  for(const [item,max] of possible){
     const chip=document.createElement("span");
     chip.className="reward-chip";
 
@@ -631,20 +634,13 @@ function renderStageInfo(){
     category.textContent=rewardCategories[item]||String(item);
 
     const amount=document.createElement("strong");
-    const label=rewardLabel(item);
-    amount.textContent="UP TO +"+max+" "+label+
-      (max>1&&item!=="CRYPTO"?"S":"");
+    amount.textContent="UP TO +"+max+" "+rewardPlural(item,max);
 
-    const odds=document.createElement("small");
-    odds.className="reward-odds";
-    odds.textContent=Number(((1-noneChance)*100).toFixed(1))+
-      "% CHANCE OF 1+";
-
-    chip.append(category,amount,odds);
+    chip.append(category,amount);
     host.append(chip);
   }
 
-  if(!possible.size)host.textContent="NO WINNABLE REWARDS";
+  if(!possible.size)host.textContent="NO REWARDS CONFIGURED";
 
   $("setupDescription").textContent=
     validStage(stage)?String(stage.description||""):"";
@@ -783,51 +779,29 @@ function resolveEncounter(
   the framework's configured reward amounts.
 */
 
-function rewardForEncounter(
-  stage,
-  encounter,
-  result,
-  index
-){
+function rewardForEncounter(stage,encounter,result,index){
+  const hook=window.VHouseJourneyRewardForEncounter;
+  const raw=typeof hook==="function"
+    ?hook(stage,encounter,result,index)
+    :(encounter.reward??stage.rewardsByType?.[encounter.type]??null);
 
-  const hook=
-    window.VHouseJourneyRewardForEncounter;
+  const entries=Array.isArray(raw)?raw:[raw];
+  return entries.map(entry=>{
+    if(!entry)return null;
+    if(typeof entry==="string")return {item:entry,quantity:1,batches:1};
+    const item=entry.item||entry.asset||entry.type;
+    const quantity=Number(entry.quantity??entry.amount??1);
+    const batches=Number(entry.batches??1);
+    if(typeof item!=="string"||!item||
+       !Number.isFinite(quantity)||quantity<=0||
+       !Number.isInteger(batches)||batches<=0)return null;
+    return {item,quantity,batches,unit:entry.unit||null};
+  }).filter(Boolean);
+}
 
-  const raw=
-    typeof hook==="function"
-      ?hook(stage,encounter,result,index)
-      :(
-        encounter.reward??
-        stage.rewardsByType?.[encounter.type]??
-        null
-      );
-
-  if(!raw)return null;
-
-  if(typeof raw==="string"){
-
-    return {
-      item:raw,
-      quantity:1,batches:1
-    };
-  }
-
-  const item=
-    raw.item||
-    raw.asset||
-    raw.type;
-
-  const quantity=Number(raw.quantity??raw.amount??1);
-  const batches=Number(raw.batches??1);
-
-  if(
-    typeof item!=="string"||
-    !item||
-    !Number.isFinite(quantity)||quantity<=0||
-    !Number.isInteger(batches)||batches<=0
-  )return null;
-
-  return {item,quantity,batches,unit:raw.unit||null};
+function earnedBags(result){
+  if(Array.isArray(result?.rewards))return result.rewards;
+  return result?.reward?[result.reward]:[];
 }
 
 /* START JOURNEY */
@@ -1000,7 +974,7 @@ function advanceEncounters(mission=state.mission){
     const index=mission.results.length;
     const encounter=plan[index];
     const result=resolveEncounter(mission.card,encounter,index,mission.luck.quantity);
-    if(result.won)result.reward=rewardForEncounter(mission.stage,encounter,result,index);
+    if(result.won)result.rewards=rewardForEncounter(mission.stage,encounter,result,index);
     mission.results.push(result);
     changed=true;
   }
@@ -1080,10 +1054,12 @@ function settleJourney(mission=state.mission){
 
   const rewards={},batches={};
   results.forEach(result=>{
-    if(!result.won||!result.reward)return;
-    const item=result.reward.item;
-    rewards[item]=Number(((rewards[item]||0)+Number(result.reward.quantity)).toFixed(8));
-    batches[item]=(batches[item]||0)+rewardBatches(result.reward);
+    if(!result.won)return;
+    for(const bag of earnedBags(result)){
+      const item=bag.item;
+      rewards[item]=Number(((rewards[item]||0)+Number(bag.quantity)).toFixed(8));
+      batches[item]=(batches[item]||0)+rewardBatches(bag);
+    }
   });
   mission.rewardBatches=batches;
 
@@ -1262,12 +1238,12 @@ function renderComplete(){
 
     const acquired=document.createElement("td");
 
-    acquired.textContent=
-      result.reward
-        ?rewardBatches(result.reward)+" "+rewardLabel(result.reward.item)
-        :"—";
+    const earned=earnedBags(result);
+    acquired.textContent=earned.length
+      ?earned.map(bag=>rewardBatches(bag)+" "+rewardPlural(bag.item,rewardBatches(bag))).join(" · ")
+      :"—";
 
-    if(result.reward){
+    if(earned.length){
       acquired.className="earned";
     }
 
