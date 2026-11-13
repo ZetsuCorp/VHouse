@@ -18,7 +18,7 @@ function mount(host){
   // Player-wide VCard Cash is shown only beside the Index Player Placeholder.
   const showCash=!!host.closest(".town-player-hud");
   const cashBox=document.createElement("div");
-  cashBox.className="vhouse-player-cash";cashBox.hidden=true;
+  cashBox.className="vhouse-player-cash";
   const cashTitle=document.createElement("strong");
   cashTitle.textContent="VCARD CASH";
   const cashAmount=document.createElement("span");
