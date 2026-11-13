@@ -82,7 +82,7 @@ const DEFAULT_CONFIG={
         ?{item:"IGM",quantity:100,batches:1}
         :asset==="SCRAP"
           ?{item:"SCRAP",quantity:1,batches:1}
-          :{item:"CRYPTO",quantity:0.10,batches:1,unit:"USD",token:asset};
+          :{item:"CRYPTO",quantity:1,batches:1,token:asset};
       return {type,letter,reward};
     });
     return {
@@ -1064,9 +1064,8 @@ function settleJourney(mission=state.mission){
       batches[item]=(batches[item]||0)+rewardBatches(bag);
       if(item==="CRYPTO"&&bag.token){
         const token=bag.token;
-        const record=rewardTokens[token]||{batches:0,usdValue:0};
+        const record=rewardTokens[token]||{batches:0};
         record.batches+=rewardBatches(bag);
-        record.usdValue=Number((record.usdValue+Number(bag.quantity)).toFixed(8));
         rewardTokens[token]=record;
       }
     }
@@ -1306,30 +1305,23 @@ function renderComplete(){
 
 /* RECEIPT CONFIRMATION */
 
+let confirmationPending=false;
 async function confirmReceipt(){
-
   const mission=state.mission;
+  if(confirmationPending||!mission||mission.status!=="ready")return;
 
-  if(
-    !mission||
-    mission.status!=="ready"
-  ){
-    return;
-  }
+  confirmationPending=true;
+  $("confirmButton").disabled=true;
+  const previous={
+    status:mission.status,
+    confirmedAt:mission.confirmedAt,
+    receipts:state.receipts.slice(),
+    balance:{...state.balance},
+    events:state.events.slice()
+  };
 
   mission.status="confirmed";
   mission.confirmedAt=Date.now();
-  try{await save();}
-  catch(error){
-    mission.status="ready";mission.confirmedAt=null;
-    $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
-    return;
-  }
-  if(!state.receipts.some(receipt=>receipt.id===mission.id))
-    state.receipts.push(structuredClone(mission));
-  for(const [asset,quantity] of Object.entries(mission.rewards||{}))
-    state.balance[asset]=Number(((state.balance[asset]||0)+quantity).toFixed(8));
-
   const event={
     type:"journey.receipt.confirmed",
     missionId:mission.id,
@@ -1340,26 +1332,34 @@ async function confirmReceipt(){
     at:mission.confirmedAt
   };
 
-  state.events.push(event);
+  if(!state.receipts.some(receipt=>receipt.id===mission.id)){
+    state.receipts.push(structuredClone(mission));
+    for(const [asset,quantity] of Object.entries(mission.rewards||{})){
+      state.balance[asset]=Number(((state.balance[asset]||0)+Number(quantity)).toFixed(8));
+    }
+    state.events.push(event);
+  }
 
-  save();
+  try{
+    await save();
+  }catch(error){
+    mission.status=previous.status;
+    mission.confirmedAt=previous.confirmedAt;
+    state.receipts=previous.receipts;
+    state.balance=previous.balance;
+    state.events=previous.events;
+    $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
+    $("confirmButton").disabled=false;
+    confirmationPending=false;
+    return;
+  }
 
+  confirmationPending=false;
   emit("journey-confirmed",event);
-
-  /*
-    Confirmation only acknowledges
-    the results and unlocks the VCard.
-  */
-
   $("confirmButton").hidden=true;
-
   $("confirmedStamp").hidden=false;
-
   $("newJourneyButton").hidden=false;
-
-  $("resultState").textContent=
-    "RECEIPT CONFIRMED · VCARD AVAILABLE";
-
+  $("resultState").textContent="RECEIPT CONFIRMED · VCARD AVAILABLE";
 }
 
 /* NEW JOURNEY */

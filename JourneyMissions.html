@@ -367,7 +367,17 @@ button:disabled{
 .setup-panel{
   display:flex;
   flex-direction:column;
-  gap:13px;
+  gap:10px;
+  min-height:0;
+}
+.setup-fields{
+  display:flex;
+  flex:1 1 auto;
+  min-height:0;
+  flex-direction:column;
+  gap:10px;
+  overflow-y:auto;
+  scrollbar-width:thin;
 }
 .stage-picker{
   width:100%;
@@ -422,7 +432,9 @@ button:disabled{
   letter-spacing:.4px;
 }
 .start-button{
-  margin-top:auto;
+  flex:0 0 auto;
+  width:100%;
+  margin:0;
   padding:15px;
 }
 .player-line{
@@ -833,6 +845,7 @@ td{
     </div>
 
     <div class="panel setup-panel">
+      <div class="setup-fields">
       <div>
         <h2>START JOURNEY</h2>
         <div class="player-line" id="playerInfo"></div>
@@ -864,7 +877,8 @@ td{
       </div>
 
       <p class="muted" id="setupDescription"></p>
-        <p class="muted" id="setupStatus" role="status"></p>
+      <p class="muted" id="setupStatus" role="status"></p>
+      </div>
       <button class="primary start-button" id="startButton">
         START JOURNEY
       </button>

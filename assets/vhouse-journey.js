@@ -202,22 +202,49 @@ main{
 .setup-world{height:100%;min-height:0}
 .setup-card{width:175px;max-width:90%}
 .setup-panel{
-  padding:10px;
+  padding:8px;
   min-height:0;
-  gap:7px;
+  gap:5px;
+  overflow:hidden;
 }
-.setup-panel h2{font-size:18px;margin:0 0 5px}
-.setup-panel h3{font-size:12px;margin:0 0 5px}
+#setupScreen .setup-fields{
+  gap:5px;
+  min-height:0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  padding-right:2px;
+}
+.setup-panel h2{font-size:17px;margin:0 0 3px}
+.setup-panel h3{font-size:11px;margin:0 0 3px}
 .setup-panel .player-line{font-size:11px;line-height:1.3}
-.stage-picker{padding:8px}
-.stage-summary{gap:5px}
-.metric{padding:6px 3px}
-.metric b{font-size:20px}
+.stage-picker{padding:6px}
+.stage-summary{gap:4px}
+.metric{padding:4px 3px}
+.metric b{font-size:18px}
 .metric small{font-size:9px}
-.reward-list{gap:5px}
-.reward-chip{padding:6px 9px;font-size:11px}
-.setup-panel > .muted{font-size:11px;line-height:1.35;margin:0}
-.start-button{padding:10px;margin-top:auto}
+#setupScreen .reward-list{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:4px;
+}
+#setupScreen .reward-chip{
+  min-width:0;
+  padding:6px 5px;
+  font-size:10px;
+  line-height:1.15;
+}
+#setupScreen .reward-category{font-size:9px}
+#setupScreen .setup-fields > .muted{
+  font-size:10px;
+  line-height:1.2;
+  margin:0;
+}
+.start-button{
+  flex:0 0 auto;
+  width:100%;
+  padding:8px;
+  margin:0;
+}
 .travel-world{height:187px}
 .travel-card{width:112px}
 .travel-bottom{margin-top:8px;gap:9px;grid-template-columns:1fr 1fr}
@@ -242,7 +269,24 @@ main{
 .complete-top .muted{font-size:10px}
 #completeScreen .loot-card-wrap{padding:0}
 .flip{width:205px}
-.loot-receipt{padding:6px 5px}
+.loot-receipt{padding:6px 5px;min-height:0;overflow:hidden}
+#completeScreen .loot-values{
+  min-height:0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  gap:4px;
+  margin-top:4px;
+}
+#completeScreen .loot-value{padding:3px 2px}
+#completeScreen .loot-value strong{font-size:15px;margin-top:2px}
+#completeScreen .claim-footer{flex:0 0 auto;margin-top:auto}
+#completeScreen .receipt-id{
+  font-size:7px;
+  line-height:1.1;
+  margin-top:3px;
+  max-height:19px;
+  overflow:hidden;
+}
 .loot-receipt h3{font-size:14px;margin:4px 0;padding-bottom:5px}
 .loot-stage{font-size:14px;margin:5px 0}
 .loot-count{padding:5px 0;font-size:10px}
@@ -250,13 +294,13 @@ main{
 .loot-values{gap:5px;margin-top:6px}
 .loot-value{padding:5px 3px}
 .loot-value strong{font-size:18px}
-.confirm{min-height:32px;font-size:13px}
+.confirm{min-height:30px;font-size:13px;padding:5px}
 .confirmed{padding:5px 2px;font-size:11px}
 #completeScreen .result-panel{padding:9px}
 .result-panel h3{font-size:12px;margin:0 0 6px}
-.result-table-wrap{overflow:hidden;min-height:0;flex:1}
+.result-table-wrap{overflow-x:hidden;overflow-y:auto;min-height:0;flex:1;scrollbar-width:thin}
 table{table-layout:fixed;font-size:10px}
-th,td{padding:5px 3px;font-size:10px;line-height:1.15}
+th,td{padding:3px 2px;font-size:9px;line-height:1.1}
 th:nth-child(1),td:nth-child(1){width:6%}
 th:nth-child(2),td:nth-child(2){width:18%}
 th:nth-child(3),td:nth-child(3){width:15%}
