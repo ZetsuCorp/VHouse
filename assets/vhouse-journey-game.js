@@ -920,7 +920,13 @@ async function startJourney(){
   state.mission={
     id:"JR-"+now.toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,8).toUpperCase(),
     stageId:stage.id,
-    stage:structuredClone(stage),
+    stage:{
+      ...structuredClone(stage),
+      encounters:encounterPlan(stage).map(encounter=>({
+        ...encounter,
+        letter:LETTERS[Math.floor(Math.random()*LETTERS.length)]
+      }))
+    },
     card,
 
     luck:{
