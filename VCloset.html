@@ -365,11 +365,13 @@ html, body {
     const state=store.getStatus(card.id);
     const active=card.id===store.getActiveId();
     const image=statsPanel.querySelector("#vcardImage");
-    image.replaceChildren();
-    if(typeof card.image==="string"&&/^(https?:\/\/|ipfs:\/\/)/i.test(card.image)){
-      const img=document.createElement("img");
-      img.src=card.image.startsWith("ipfs://")?"https://gateway.pinata.cloud/ipfs/"+card.image.slice(7):card.image;
-      img.alt=card.name||"VCard";img.referrerPolicy="no-referrer";image.append(img);
+    if(image.dataset.cardId!==String(card.id)){
+      image.dataset.cardId=String(card.id);
+      image.replaceChildren();
+      const preview=document.createElement("div");
+      preview.className="record-vcard-preview";
+      image.append(preview);
+      VHouseVCard.render(preview,card);
     }
     statField("cardId",card.id);
     statField("name",card.name||"VCard");
@@ -383,6 +385,35 @@ html, body {
     statField("speed",card.speed);
     statField("luck",card.luck);
 
+  }
+  async function loadMintedVCardImage(card,ticket){
+    // The artwork in card.image is not the complete NFT card image.
+    // The mint receipt stores the full VCard PNG uploaded to IPFS.
+    if(!statsClient||card.external||!card.id)return;
+    try{
+      const {data,error}=await statsClient.from("vcard_list")
+        .select("mint_receipt").eq("card_id",String(card.id)).maybeSingle();
+      if(error)throw error;
+      if(ticket!==statsLoadSequence||statsCard?.id!==card.id)return;
+      const uri=data?.mint_receipt?.image_uri;
+      if(typeof uri!=="string")return;
+      const url=uri.startsWith("ipfs://")
+        ?"https://gateway.pinata.cloud/ipfs/"+uri.slice(7).replace(/^ipfs\//,""):uri;
+      if(!/^https?:\/\//i.test(url))return;
+      const nftImage=new Image();
+      nftImage.alt=(card.name||"VCard")+" full NFT";
+      nftImage.referrerPolicy="no-referrer";
+      nftImage.className="minted-vcard-image";
+      nftImage.onload=()=>{
+        if(ticket!==statsLoadSequence||statsCard?.id!==card.id)return;
+        const host=statsPanel?.querySelector("#vcardImage");
+        if(host?.dataset.cardId===String(card.id))host.replaceChildren(nftImage);
+      };
+      nftImage.onerror=()=>console.warn("Minted VCard PNG unavailable; showing VCard preview.");
+      nftImage.src=url;
+    }catch(error){
+      console.warn("Could not load minted VCard PNG; showing VCard preview.",error);
+    }
   }
   async function ensureStatsPanel(){
     if(statsPanel)return;
@@ -421,6 +452,20 @@ html, body {
       #billboard .activity th:nth-child(5),#billboard .activity td:nth-child(5){width:30%}
       #billboard .right{min-width:0}
       #billboard .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+      #billboard .art .minted-vcard-image{width:100%;height:100%;object-fit:contain}
+      #billboard .art .record-vcard-preview{width:100%;height:100%;overflow:hidden}
+      #billboard .metric:nth-child(1) strong{color:#dba8ff}
+      #billboard .metric:nth-child(2) strong{color:#ffd47d}
+      #billboard .metric:nth-child(3) strong{color:#dba8ff}
+      #billboard .metric:nth-child(4) strong{color:#ffd47d}
+      #billboard .metric:nth-child(5) strong{color:#ff718f}
+      #billboard .metric:nth-child(6) strong{color:#ffd47d}
+      #billboard .stage-tile strong{color:#dba8ff}
+      #billboard .stage-tile:nth-child(3n+2) strong{color:#ffd47d}
+      #billboard .stage-tile:nth-child(3n) strong{color:#ff718f}
+      #billboard .loot-tile:nth-child(1) strong{color:#ffd47d}
+      #billboard .loot-tile:nth-child(2) strong{color:#dba8ff}
+      #billboard .loot-tile:nth-child(3) strong{color:#ff718f}
 
       #billboard .record-empty{color:#c3a7bc;font-size:10px}
       #billboard .billboard-back{cursor:pointer;color:#ffe2ac;border:1px solid #a87b4c;background:#371b33;padding:3px 7px;border-radius:4px;font-weight:900;font-size:10px}
@@ -487,7 +532,10 @@ html, body {
         <div class="history-pager"><button type="button" id="historyPrev">◀ PREV</button><span id="historyPageLabel">PAGE 1 / 1</span><button type="button" id="historyNext">NEXT ▶</button></div>
       </section>
     `;
-    shadow.replaceChildren(sheet,panel);
+    const vcardStyles=document.createElement("link");
+    vcardStyles.rel="stylesheet";
+    vcardStyles.href="./assets/vhouse-vcard.css";
+    shadow.replaceChildren(vcardStyles,sheet,panel);
     panel.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{
       const overview=button.dataset.view==="overview";
       panel.querySelectorAll("[data-view]").forEach(tab=>tab.classList.toggle("active",tab===button));
@@ -532,6 +580,7 @@ html, body {
       }
       statsClient=window.VHouseAuth.getClient();
       statsPlayerId=user.id;
+      void loadMintedVCardImage(card,ticket);
       const {data,error}=await statsClient.rpc("vhouse_vcard_journey_summary",{p_card_id:String(card.id)});
       if(error)throw error;
       if(ticket!==statsLoadSequence)return;
