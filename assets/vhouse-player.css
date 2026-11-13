@@ -70,3 +70,68 @@
   flex: 0 0 auto;
   transform: none;
 }
+
+
+/* Placeholder Mini-Game: portrait stays exactly in the existing position. */
+.vhouse-player{pointer-events:auto}
+.vhouse-placeholder-trigger{
+  position:absolute;inset:0;z-index:4;
+  padding:0;border:0;border-radius:50%;
+  background:transparent;cursor:pointer;
+}
+.vhouse-placeholder-trigger:focus-visible{outline:2px solid #ffe0a6;outline-offset:3px}
+.vhouse-placeholder-status{
+  position:absolute;z-index:3;left:50%;bottom:0;
+  transform:translate(-50%,40%);
+  padding:3px 5px;border:1px solid #f3ce88;border-radius:4px;
+  background:#171b26;color:#ffe0a6;font:700 9px Arial,sans-serif;
+  white-space:nowrap;pointer-events:none;
+}
+.vhouse-player.is-locked .vhouse-player-portrait{filter:grayscale(.85) brightness(.55)}
+.vhouse-player.is-locked::after{
+  border-color:#f2c96b;box-shadow:0 0 12px #f2c96baa;
+}
+.vhouse-player.results-ready::after{
+  border-color:#78e2b8;box-shadow:0 0 12px #78e2b899;
+}
+.vhouse-player.results-ready .vhouse-placeholder-status{
+  color:#b3ffe2;border-color:#78e2b8;
+}
+.vhouse-placeholder-panel{
+  position:absolute;z-index:55;top:105%;left:0;
+  width:clamp(235px,24cqw,310px);
+  max-width:calc(100vw - 15px);
+  padding:10px;overflow:visible;
+  background:#101e2b;border:2px solid #bc9357;border-radius:7px;
+  box-shadow:0 8px 28px #000c;color:#ecf3f6;
+  font:12px Arial,sans-serif;pointer-events:auto;
+}
+.vhouse-placeholder-panel[hidden]{display:none!important}
+.vhouse-placeholder-title{
+  display:flex;justify-content:space-between;align-items:center;
+  color:#f4d79f;font-weight:900;letter-spacing:.5px;
+  border-bottom:1px solid #6d5436;padding-bottom:6px;
+}
+.vhouse-placeholder-title button{
+  border:0;background:transparent;color:#ffe0a6;
+  font-size:15px;cursor:pointer;padding:1px 5px;
+}
+.vhouse-placeholder-selection{
+  margin:9px 0 5px;color:#fff;font-size:14px;font-weight:900;
+  overflow-wrap:anywhere;
+}
+.vhouse-placeholder-details{color:#b6ccd3;font-size:11px;margin-bottom:8px}
+.vhouse-placeholder-journeys{
+  display:grid;gap:4px;max-height:90px;overflow:hidden;
+  font-size:10px;overflow-wrap:anywhere;
+}
+.vhouse-placeholder-journeys strong{color:#f4d79f}
+.vhouse-placeholder-actions{display:flex;gap:5px;margin-top:10px}
+.vhouse-placeholder-actions button{
+  flex:1;min-width:0;padding:8px 3px;
+  color:#f4d79f;border:1px solid #bc9357;
+  border-radius:4px;background:#203547;
+  font:bold 10px Arial,sans-serif;cursor:pointer;
+}
+.vhouse-placeholder-actions button:hover{background:#34536b}
+.vhouse-player-hud .vhouse-player{pointer-events:auto}
