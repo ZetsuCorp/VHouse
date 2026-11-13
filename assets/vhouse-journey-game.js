@@ -199,7 +199,11 @@ function cardPicker(){
     picker.setAttribute("aria-label","Choose VCard");
     picker.style.cssText="display:block;width:100%;margin:5px 0;padding:6px;background:#21162c;color:#ffe1a5;border:1px solid #bc9357;border-radius:5px";
     $("playerInfo").after(picker);
-    picker.addEventListener("change",()=>selectCard(picker.value));
+    picker.addEventListener("change",()=>{
+      if(!chooseCard(picker.value))return;
+      if(state.mission?.status==="running")settleJourney();
+      renderSetup();
+    });
   }
   picker.replaceChildren();
   for(const card of availableCards()){
@@ -542,7 +546,11 @@ function renderSetup(){
 
   }
 
-  if(selectedStage!==null){
+  const pending=state.mission&&["running","ready"].includes(state.mission.status);
+  select.disabled=!!pending;
+  if(pending){
+    select.value=state.mission.stageId;
+  }else if(selectedStage!==null){
     select.value=selectedStage;
   }
 
@@ -551,7 +559,9 @@ function renderSetup(){
 
 function renderStageInfo(){
 
-  const stage=stageById(selectedStage);
+  const mission=state.mission;
+  const pending=mission&&["running","ready"].includes(mission.status);
+  const stage=stageById(pending?mission.stageId:selectedStage);
 
   $("setupHunts").textContent=
     stage?.hunts??"—";
@@ -584,13 +594,20 @@ function renderStageInfo(){
   const store=window.VHouseCardStore;
   const assigned=findCard(state.selectedCardId);
   const locked=assigned&&store?.isLocked?.(assigned.id);
-  $("setupStatus").textContent=locked
-    ?"This VCard is on a Journey. Assign another VCard in the Closet."
-    :(!assigned&&store)
-      ?"Assign a VCard before starting."
-      :"";
-  $("startButton").disabled=!validStage(stage)||!!locked||
-    (!!store&&!assigned);
+  $("setupStatus").textContent=pending
+    ?(mission.status==="ready"
+      ?"Results ready. View and confirm this VCard's receipt, or select another VCard."
+      :"This VCard is on a Journey. View its progress, or select another VCard.")
+    :locked
+      ?"This VCard is unavailable for a new Journey."
+      :(!assigned&&store)
+        ?"Assign a VCard before starting."
+        :"";
+  $("startButton").textContent=pending
+    ?(mission.status==="ready"?"VIEW RESULTS":"VIEW JOURNEY")
+    :"START JOURNEY";
+  $("startButton").disabled=!pending&&(!validStage(stage)||!!locked||
+    (!!store&&!assigned));
 }
 
 $("stageSelect").addEventListener("change",()=>{
@@ -913,8 +930,7 @@ function renderEncounterProgress(){
 }
 
 /* Persist one encounter at a time, never reroll a completed encounter. */
-function advanceEncounters(){
-  const mission=state.mission;
+function advanceEncounters(mission=state.mission){
   if(!mission||mission.status!=="running")return;
   const plan=encounterPlan(mission.stage);
   const total=mission.endsAt-mission.startedAt;
@@ -932,7 +948,7 @@ function advanceEncounters(){
   }
   if(changed){
     save();
-    if(currentScreen==="travel")renderEncounterProgress();
+    if(mission===state.mission&&currentScreen==="travel")renderEncounterProgress();
   }
 }
 
@@ -985,9 +1001,7 @@ function updateTimer(){
   Encounters resolve throughout the countdown. Finalization uses only
   already-recorded outcomes and catches up any due encounters.
 */
-function settleJourney(){
-
-  const mission=state.mission;
+function settleJourney(mission=state.mission){
 
   if(
     !mission||
@@ -997,7 +1011,7 @@ function settleJourney(){
     return false;
   }
 
-  advanceEncounters();
+  advanceEncounters(mission);
   const stage=mission.stage;
   const plan=encounterPlan(stage);
   const results=mission.results||[];
@@ -1318,17 +1332,9 @@ function newJourney(){
 /* LEAVE / RETURN */
 
 function leaveJourney(){
-
-  if(
-    state.mission?.status!=="running"
-  ){
-    return;
-  }
-
-  setScreen("away");
-
-  $("message").textContent=
-    "Your Journey continues while you're away.";
+  if(state.mission?.status!=="running")return;
+  // Navigation does not interrupt the VCard's independent mission.
+  renderSetup();
 }
 
 function returnJourney(){
@@ -1357,7 +1363,16 @@ function returnJourney(){
 
 /* BUTTON EVENTS */
 
-$("startButton").onclick=startJourney;
+$("startButton").onclick=()=>{
+  const mission=state.mission;
+  if(mission&&["running","ready"].includes(mission.status)){
+    settleJourney();
+    if(mission.status==="running")renderTravel();
+    else renderComplete();
+    return;
+  }
+  void startJourney();
+};
 
 $("leaveButton").onclick=leaveJourney;
 
@@ -1366,46 +1381,25 @@ $("returnButton").onclick=returnJourney;
 $("confirmButton").onclick=confirmReceipt;
 
 $("newJourneyButton").onclick=newJourney;
+$("journeySelectionButton").onclick=renderSetup;
 
-/* PERSISTENT IN-PAGE TIMER */
-
+/* Keep every VCard's mission advancing independently of the displayed screen. */
 setInterval(()=>{
-
-  const mission=state.mission;
-
-  if(
-    !mission||
-    mission.status!=="running"
-  ){
-    return;
-  }
-
-  advanceEncounters();
-
-  if(Date.now()>=mission.endsAt){
-
-    settleJourney();
-
-    if(currentScreen==="travel"){
-
-      renderComplete();
-
-    }else if(currentScreen==="away"){
-
-      $("message").textContent=
-        "Journey complete. Return to view the receipt.";
-
+  let completedAny=false;
+  for(const mission of Object.values(state.missions)){
+    if(mission?.status!=="running")continue;
+    advanceEncounters(mission);
+    if(Date.now()>=mission.endsAt){
+      settleJourney(mission);
+      completedAny=true;
     }
-
-    return;
   }
-
-  if(currentScreen==="travel"){
-
-    updateTimer();
-
+  if(currentScreen==="travel"&&state.mission){
+    if(state.mission.status==="ready")renderComplete();
+    else if(state.mission.status==="running")updateTimer();
+  }else if(currentScreen==="setup"&&completedAny){
+    renderSetup();
   }
-
 },200);
 
 /* INITIALIZATION */
