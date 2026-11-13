@@ -439,6 +439,14 @@ html, body {
       panel.querySelector("#overview").style.display=overview?"grid":"none";
       panel.querySelector("#activity").style.display=overview?"none":"block";
     }));
+    const journeyButton=document.createElement("button");
+    journeyButton.className="billboard-back";
+    journeyButton.type="button";
+    journeyButton.textContent="JOURNEY";
+    journeyButton.addEventListener("click",()=>{
+      if(statsCard?.id)location.href="./index.html?journey=1&cardId="+encodeURIComponent(statsCard.id);
+    });
+    panel.querySelector(".nav").insertBefore(journeyButton,panel.querySelector("#closeCardStats"));
     panel.querySelector("#closeCardStats").addEventListener("click",closeCardStats);
     statsPanel=panel;
   }
