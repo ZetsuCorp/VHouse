@@ -592,20 +592,50 @@ function renderStageInfo(){
     stage?.durationSeconds??"—";
 
   const host=$("possibleRewards");
-
   host.replaceChildren();
 
-  for(const reward of stage?.rewardTypes||[]){
+  // Display the actual stage reward batches and odds for this VCard.
+  // Matching letters lose the first round; only LUCK retries can win.
+  const card=pending?mission.card:activeCard();
+  const luck=pending?wholeQuantity(mission.luck?.quantity):luckStat();
+  const possible=new Map();
 
+  for(const encounter of encounterPlan(stage)){
+    const reward=encounter.reward??stage?.rewardsByType?.[encounter.type];
+    const item=typeof reward==="string"
+      ?reward:(reward?.item||reward?.asset||reward?.type);
+    const batches=typeof reward==="string"?1:Number(reward?.batches??1);
+    if(!item||!Number.isInteger(batches)||batches<=0)continue;
+
+    const attempts=luck+(card?.team===encounter.letter?0:1);
+    const chance=1-Math.pow(0.5,attempts);
+    if(chance<=0)continue;
+
+    const entry=possible.get(item)||{max:0,noneChance:1};
+    entry.max+=batches;
+    entry.noneChance*=1-chance;
+    possible.set(item,entry);
+  }
+
+  for(const [item,{max,noneChance}] of possible){
     const chip=document.createElement("span");
-
     chip.className="reward-chip";
 
-    chip.textContent=
-      "+1 "+rewardLabel(reward);
+    const amount=document.createElement("strong");
+    const label=rewardLabel(item);
+    amount.textContent="UP TO +"+max+" "+label+
+      (max>1&&item!=="CRYPTO"?"S":"");
 
+    const odds=document.createElement("small");
+    odds.className="reward-odds";
+    odds.textContent=Number(((1-noneChance)*100).toFixed(1))+
+      "% CHANCE OF 1+";
+
+    chip.append(amount,odds);
     host.append(chip);
   }
+
+  if(!possible.size)host.textContent="NO WINNABLE REWARDS";
 
   $("setupDescription").textContent=
     validStage(stage)?String(stage.description||""):"";
