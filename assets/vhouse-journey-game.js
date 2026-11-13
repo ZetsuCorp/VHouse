@@ -686,6 +686,7 @@ function renderStageInfo(){
     const header=document.createElement("div");
     header.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:9px;font-weight:800;line-height:1.1;";
     const maximum=document.createElement("span");
+    maximum.style.cssText="color:#74f5a1;";
     maximum.textContent="UP TO +"+maxPossibleBags+" "+(maxPossibleBags===1?"BAG":"BAGS");
     const luckNote=document.createElement("span");
     luckNote.style.cssText="color:#cfb2ee;font-size:9px;";
@@ -695,22 +696,22 @@ function renderStageInfo(){
     const odds=document.createElement("div");
     odds.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:6px;margin:1px 0;font-size:9px;line-height:1.1;";
     const chanceLabel=document.createElement("span");
-    chanceLabel.style.cssText="color:#e4d1ed;";
+    chanceLabel.style.cssText="color:#b8efcb;";
     chanceLabel.textContent="CHANCE OF AT LEAST 1 BAG";
     const percent=document.createElement("strong");
-    percent.style.cssText="color:#f9d16e;font-size:12px;font-variant-numeric:tabular-nums;";
+    percent.style.cssText="color:#86efac;font-size:12px;font-variant-numeric:tabular-nums;";
     percent.textContent=chance.toFixed(1)+"%";
     odds.append(chanceLabel,percent);
 
     const track=document.createElement("div");
-    track.style.cssText="height:4px;border:1px solid #9061b7;border-radius:99px;overflow:hidden;background:#170d28;";
+    track.style.cssText="height:4px;border:1px solid #34865b;border-radius:99px;overflow:hidden;background:#092419;";
     track.setAttribute("role","progressbar");
     track.setAttribute("aria-label","Chance of earning at least one reward bag");
     track.setAttribute("aria-valuenow",chance.toFixed(1));
     track.setAttribute("aria-valuemin","0");
     track.setAttribute("aria-valuemax","100");
     const fill=document.createElement("div");
-    fill.style.cssText="height:100%;border-radius:99px;background:linear-gradient(90deg,#9b5ccc,#f7c668);";
+    fill.style.cssText="height:100%;border-radius:99px;background:linear-gradient(90deg,#166534,#22c55e,#86efac);";
     fill.style.width=chance.toFixed(2)+"%";
     track.append(fill);
     gauge.append(header,odds,track);
