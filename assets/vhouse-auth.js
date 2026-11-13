@@ -162,7 +162,7 @@
     const playerId=user.id;
     const [accountResult,inventoryResult]=await Promise.all([
       client.from("vhouse_accounts")
-        .select("id,active_vcard_id,active_vcard_snapshot").eq("id",playerId).maybeSingle(),
+        .select("id,igm_balance,active_vcard_id,active_vcard_snapshot").eq("id",playerId).maybeSingle(),
       client.from("vhouse_player_inventory")
         .select("thing,type,quantity,state,updated_at").eq("player_id",playerId)
     ]);

@@ -165,7 +165,6 @@ function initialState(){
     mission:null,
     missions:{},
     selectedCardId:null,
-    balance:{},
     receipts:[],
     events:[],
     demoInventory:{
@@ -180,7 +179,6 @@ const state=restored&&typeof restored==="object"
   ?{...initialState(),...restored}
   :initialState();
 
-state.balance||={};
 state.receipts||=[];
 state.events||=[];
 state.demoInventory||={
@@ -1175,11 +1173,9 @@ function settleJourney(mission=state.mission){
 
   mission.completedAt=Date.now();
 
-  // Only IGM is an internal balance credit. Crypto and LP rewards
-  // remain recorded results, not pretend on-chain transfers.
-  const earnedIGM=Number(rewards.IGM)||0;
-  if(earnedIGM>0)
-    state.balance.IGM=Number(((Number(state.balance.IGM)||0)+earnedIGM).toFixed(8));
+  // IGM (VCARD CASH) is credited to vhouse_accounts.igm_balance
+  // by the existing Supabase Journey trigger when this result is saved.
+  // Do not create a second balance in Journey game state.
 
   mission.status="ready";
 

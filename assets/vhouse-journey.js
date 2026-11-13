@@ -83,7 +83,6 @@ async function prepareJourneyStore(){
 
   const snapshot={
     missions,
-    balance:legacy?.balance||{},
     receipts:legacy?.receipts||[],
     events:legacy?.events||[],
     demoInventory:legacy?.demoInventory||{LUCK:0}
