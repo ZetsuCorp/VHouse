@@ -1105,7 +1105,7 @@ function settleJourney(mission=state.mission){
 
   mission.status="ready";
 
-  /* Rewards remain pending until receipt confirmation. */
+  /* Earned results and rewards are recorded before the receipt is confirmed. */
 
   const event={
     type:"journey.completed",
@@ -1305,21 +1305,15 @@ function renderComplete(){
 
 /* RECEIPT CONFIRMATION */
 
-let confirmationPending=false;
 async function confirmReceipt(){
   const mission=state.mission;
-  if(confirmationPending||!mission||mission.status!=="ready")return;
+  if(!mission||mission.status!=="ready")return;
 
-  confirmationPending=true;
+  // CONFIRM acknowledges the recorded results. It does not earn,
+  // credit, transfer, or recalculate any Journey rewards.
   $("confirmButton").disabled=true;
-  const previous={
-    status:mission.status,
-    confirmedAt:mission.confirmedAt,
-    receipts:state.receipts.slice(),
-    balance:{...state.balance},
-    events:state.events.slice()
-  };
-
+  const previousReceipts=state.receipts.slice();
+  const previousEvents=state.events.slice();
   mission.status="confirmed";
   mission.confirmedAt=Date.now();
   const event={
@@ -1327,34 +1321,23 @@ async function confirmReceipt(){
     missionId:mission.id,
     cardId:mission.card.id,
     stageId:mission.stageId,
-    rewards:mission.rewards,
-    rewardTokens:mission.rewardTokens||{},
     at:mission.confirmedAt
   };
-
-  if(!state.receipts.some(receipt=>receipt.id===mission.id)){
+  if(!state.receipts.some(receipt=>receipt.id===mission.id))
     state.receipts.push(structuredClone(mission));
-    for(const [asset,quantity] of Object.entries(mission.rewards||{})){
-      state.balance[asset]=Number(((state.balance[asset]||0)+Number(quantity)).toFixed(8));
-    }
-    state.events.push(event);
-  }
+  state.events.push(event);
 
-  try{
-    await save();
-  }catch(error){
-    mission.status=previous.status;
-    mission.confirmedAt=previous.confirmedAt;
-    state.receipts=previous.receipts;
-    state.balance=previous.balance;
-    state.events=previous.events;
+  try{await save();}
+  catch(error){
+    mission.status="ready";
+    mission.confirmedAt=null;
+    state.receipts=previousReceipts;
+    state.events=previousEvents;
     $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
     $("confirmButton").disabled=false;
-    confirmationPending=false;
     return;
   }
 
-  confirmationPending=false;
   emit("journey-confirmed",event);
   $("confirmButton").hidden=true;
   $("confirmedStamp").hidden=false;
