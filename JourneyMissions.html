@@ -457,9 +457,17 @@ button:disabled{
 }
 .loading-list{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(6,minmax(0,1fr));
   gap:7px;
 }
+.loading-item.encounter-win{
+  border-color:#70e5b2;
+}
+.loading-item.encounter-win strong{color:#70e5b2}
+.loading-item.encounter-loss{
+  border-color:#f58b8b;
+}
+.loading-item.encounter-loss strong{color:#f58b8b}
 .loading-item{
   padding:9px;
   border:1px solid #3e5568;
@@ -812,6 +820,7 @@ td{
       </div>
 
       <p class="muted" id="setupDescription"></p>
+        <p class="muted" id="setupStatus" role="status"></p>
       <button class="primary start-button" id="startButton">
         START JOURNEY
       </button>
@@ -851,7 +860,7 @@ td{
       <h3>JOURNEY ACTIVITY</h3>
       <div class="loading-list" id="loadingEncounters"></div>
       <p class="muted">
-        Results will be calculated when the timer expires.
+        Encounter results appear as your Journey progresses.
       </p>
     </div>
   </div>
