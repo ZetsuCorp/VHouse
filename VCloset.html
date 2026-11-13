@@ -293,6 +293,7 @@ html, body {
       if(host){
         host.querySelector("strong").textContent=durationText(item.seconds||0);
         host.querySelector("small").textContent=displayCount(item.journeys||0)+" JOURNEYS";
+        host.dataset.visited=Number(item.journeys||0)>0?"true":"false";
       }
     }
     const loot=summary.loot||{};
@@ -348,8 +349,22 @@ html, body {
               .map(([item,value])=>displayCount(value)+" "+(item==="IGM"?"IGM BAG":item)).join(" · ")||"—"
             :"PENDING"
         ];
-        for(const value of values){
-          const cell=document.createElement("td");cell.textContent=value;row.append(cell);
+        for(const [index,value] of values.entries()){
+          const cell=document.createElement("td");
+          if(index===3){
+            const win=document.createElement("span");
+            win.className="history-win";win.textContent=wins+" W";
+            const separator=document.createTextNode(" / ");
+            const loss=document.createElement("span");
+            loss.className="history-loss";loss.textContent=losses+" L";
+            cell.append(win,separator,loss);
+          }else{
+            cell.textContent=value;
+            if(index===1)cell.className="history-stage";
+            if(index===2)cell.className="history-time";
+            if(index===4)cell.className=record.status==="CONFIRMED"?"history-loot":"history-pending";
+          }
+          row.append(cell);
         }
         host.append(row);
       }
@@ -454,18 +469,30 @@ html, body {
       #billboard .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
       #billboard .art .minted-vcard-image{width:100%;height:100%;object-fit:contain}
       #billboard .art .record-vcard-preview{width:100%;height:100%;overflow:hidden}
-      #billboard .metric:nth-child(1) strong{color:#dba8ff}
-      #billboard .metric:nth-child(2) strong{color:#ffd47d}
-      #billboard .metric:nth-child(3) strong{color:#dba8ff}
-      #billboard .metric:nth-child(4) strong{color:#ffd47d}
-      #billboard .metric:nth-child(5) strong{color:#ff718f}
-      #billboard .metric:nth-child(6) strong{color:#ffd47d}
-      #billboard .stage-tile strong{color:#dba8ff}
-      #billboard .stage-tile:nth-child(3n+2) strong{color:#ffd47d}
-      #billboard .stage-tile:nth-child(3n) strong{color:#ff718f}
-      #billboard .loot-tile:nth-child(1) strong{color:#ffd47d}
-      #billboard .loot-tile:nth-child(2) strong{color:#dba8ff}
-      #billboard .loot-tile:nth-child(3) strong{color:#ff718f}
+      /* Existing Billboard meanings: fuchsia=initial/loss, green=progress/win,
+         gold=totals/rewards, blue=identifiers, white=neutral/time. */
+      #billboard .artfoot [data-stat-field="cardId"]{color:#63adff}
+      #billboard .detail [data-stat-field="level"],
+      #billboard .detail [data-stat-field="atk"],
+      #billboard .detail [data-stat-field="def"],
+      #billboard .detail [data-stat-field="speed"],
+      #billboard .detail [data-stat-field="luck"]{color:#ff4bc8}
+      #billboard .metric [data-stat-field="journeys"],
+      #billboard .metric #totalLootBatches{color:#e4c58f}
+      #billboard .metric [data-stat-field="completed"],
+      #billboard .metric [data-stat-field="wins"]{color:#4bea9b}
+      #billboard .metric [data-stat-field="losses"]{color:#ff4bc8}
+      #billboard .metric [data-stat-field="time"]{color:#ffffff}
+      #billboard .stage-tile strong{color:#ffffff}
+      #billboard .stage-tile small{color:#ff4bc8}
+      #billboard .stage-tile[data-visited="true"] small{color:#4bea9b}
+      #billboard .loot-tile strong{color:#e4c58f}
+      #billboard .activity .history-win{color:#4bea9b;font-weight:900}
+      #billboard .activity .history-loss{color:#ff4bc8;font-weight:900}
+      #billboard .activity .history-stage,
+      #billboard .activity .history-loot{color:#e4c58f}
+      #billboard .activity .history-pending{color:#ff4bc8}
+      #billboard .activity .history-time{color:#ffffff}
 
       #billboard .record-empty{color:#c3a7bc;font-size:10px}
       #billboard .billboard-back{cursor:pointer;color:#ffe2ac;border:1px solid #a87b4c;background:#371b33;padding:3px 7px;border-radius:4px;font-weight:900;font-size:10px}
