@@ -80,10 +80,7 @@ main{
   min-height:0;
   width:100%;
   padding:18px;
-  overflow-y:auto;
-  overflow-x:hidden;
-  scrollbar-gutter:stable;
-  overscroll-behavior:contain;
+  overflow:hidden;
 }
 
 #setupScreen,
@@ -625,7 +622,9 @@ button:disabled{
 }
 .result-table-wrap{
   max-width:100%;
-  overflow-x:auto;
+  min-height:0;
+  flex:1;
+  overflow:hidden;
 }
 table{
   width:100%;
@@ -680,6 +679,50 @@ td{
   line-height:1.6;
 }
 
+
+/* Receipt and encounter chart share one screen; never stack into a scroll. */
+#completeScreen{
+  display:grid;
+  grid-template-columns:285px minmax(0,1fr);
+  grid-template-rows:46px minmax(0,1fr) 45px;
+  column-gap:12px;
+  row-gap:8px;
+  height:100%;
+  min-height:0;
+}
+#completeScreen .complete-top{
+  grid-column:1/-1;
+  grid-row:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:14px;
+  margin:0;
+}
+#completeScreen .loot-card-wrap{
+  grid-column:1;
+  grid-row:2/4;
+  min-height:0;
+  padding:0;
+}
+#completeScreen .result-panel{
+  grid-column:2;
+  grid-row:2;
+  min-height:0;
+  margin:0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+#completeScreen > .actions{
+  grid-column:2;
+  grid-row:3;
+  margin:0;
+  align-items:center;
+  justify-content:flex-end;
+}
+
 @media(max-width:740px){
   .setup-layout{grid-template-columns:1fr;}
   .setup-world{min-height:250px;}
@@ -721,14 +764,6 @@ td{
 
 <body>
 <div class="game" id="game">
-
-<header>
-  <div>
-    <small>THE ZETSUMETSU CORPORATION · VHOUSE</small>
-    <h1>JOURNEY RECEIPT GAME</h1>
-  </div>
-  <span class="phase" id="phase">READY</span>
-</header>
 
 <main id="gameContent">
 
