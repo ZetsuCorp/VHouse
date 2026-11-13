@@ -303,6 +303,10 @@ journeyButton.addEventListener("click", () => {
   // Keep one Journey instance alive when the menu is closed and reopened.
   void VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
 });
+/* Placeholder's Journey action opens the existing Town Journey box. */
+if (new URLSearchParams(location.search).get("journey")==="1") {
+  window.addEventListener("load",()=>journeyButton.click(),{once:true});
+}
 
 journeyOverlay.addEventListener("click", (event) => {
   if (!journeyWindow.contains(event.target)) {
