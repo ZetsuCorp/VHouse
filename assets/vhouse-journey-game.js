@@ -21,84 +21,76 @@ const $=id=>root.getElementById(id);
   No localStorage.
 */
 
+/* Defined encounter letters; only the coin flips determine random outcomes. */
+const DEFAULT_STAGE_DATA=[
+  {
+    description:"Scout the nearby paths and gather your first supplies.",
+    encounters:[["HUNT","R"],["HUNT","P"]]
+  },
+  {
+    description:"Search farther out, then defend the supplies you collect.",
+    encounters:[["HUNT","R"],["HUNT","P"],["FIGHT","S"]]
+  },
+  {
+    description:"Explore new ground and face the first extended patrol.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["FIGHT","R"]]
+  },
+  {
+    description:"Collect supplies while pushing through two hostile encounters.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["FIGHT","R"],["FIGHT","P"]]
+  },
+  {
+    description:"Cross the contested route and survive three fights.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["FIGHT","R"],["FIGHT","P"],["FIGHT","S"]]
+  },
+  {
+    description:"Take the longer route to recover supplies through guarded territory.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["HUNT","R"],["FIGHT","P"],["FIGHT","S"],["FIGHT","R"]]
+  },
+  {
+    description:"Press deeper into the region and hold your ground.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["HUNT","R"],["FIGHT","P"],["FIGHT","S"],["FIGHT","R"],["FIGHT","P"]]
+  },
+  {
+    description:"Prepare for the final approach through repeated hunts and fights.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["HUNT","R"],["HUNT","P"],["FIGHT","S"],["FIGHT","R"],["FIGHT","P"],["FIGHT","S"]]
+  },
+  {
+    description:"Complete the final approach and clear the route ahead.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["HUNT","R"],["HUNT","P"],["FIGHT","S"],["FIGHT","R"],["FIGHT","P"],["FIGHT","S"],["FIGHT","R"]]
+  },
+  {
+    description:"Complete ten encounters, then face the TOTEM BOSS in encounter eleven.",
+    encounters:[["HUNT","R"],["HUNT","P"],["HUNT","S"],["HUNT","R"],["HUNT","P"],["FIGHT","S"],["FIGHT","R"],["FIGHT","P"],["FIGHT","S"],["FIGHT","R"],["TOTEM BOSS","S"]]
+  }
+];
+
 const DEFAULT_CONFIG={
   stageCount:10,
-  demoTimeScale:5,
   sceneImage:"assets/VCrad Town.png",
-
-  // Demo inventory generates the LUCK stat.
   demoInventory:{LUCK:1},
-
-  stages:[
-    {
-      id:1,
-      durationSeconds:30,
-      hunts:3,
-      fights:0,
-      rewardTypes:["IG"],
-
-      encounters:[
-        {
-          type:"HUNT",
-          letter:"R",
-          reward:{item:"IG",quantity:1}
-        },
-        {
-          type:"HUNT",
-          letter:"P",
-          reward:{item:"IG",quantity:1}
-        },
-        {
-          type:"HUNT",
-          letter:"S",
-          reward:{item:"IG",quantity:1}
-        }
-      ]
-    },
-
-    {
-      id:2,
-      durationSeconds:60,
-      hunts:4,
-      fights:2,
-      rewardTypes:["IG","SCRAPS"],
-
-      encounters:[
-        {
-          type:"HUNT",
-          letter:"R",
-          reward:{item:"IG",quantity:1}
-        },
-        {
-          type:"HUNT",
-          letter:"P",
-          reward:{item:"IG",quantity:1}
-        },
-        {
-          type:"HUNT",
-          letter:"S",
-          reward:{item:"IG",quantity:1}
-        },
-        {
-          type:"HUNT",
-          letter:"R",
-          reward:{item:"IG",quantity:1}
-        },
-        {
-          type:"FIGHT",
-          letter:"P",
-          reward:{item:"SCRAPS",quantity:1}
-        },
-        {
-          type:"FIGHT",
-          letter:"S",
-          reward:{item:"SCRAPS",quantity:1}
-        }
-      ]
-    }
-  ]
+  stages:DEFAULT_STAGE_DATA.map((definition,index)=>{
+    const encounters=definition.encounters.map(([type,letter])=>({
+      type,
+      letter,
+      reward:type==="HUNT"
+        ?{item:"IG",quantity:1}
+        :type==="FIGHT"
+          ?{item:"SCRAPS",quantity:1}
+          :null
+    }));
+    return {
+      id:index+1,
+      description:definition.description,
+      durationSeconds:(index+1)*30,
+      hunts:encounters.filter(entry=>entry.type==="HUNT").length,
+      fights:encounters.filter(entry=>entry.type==="FIGHT").length,
+      bosses:encounters.filter(entry=>entry.type==="TOTEM BOSS").length,
+      rewardTypes:[...new Set(encounters.map(entry=>entry.reward?.item).filter(Boolean))],
+      encounters
+    };
+  })
 };
-
 const config=window.VHouseJourneyData||DEFAULT_CONFIG;
 
 const stages=[...(config.stages||[])]
@@ -270,7 +262,7 @@ function validStage(stage){
   if(!encounters.length)return false;
 
   if(encounters.some(entry=>
-    !["HUNT","FIGHT"].includes(entry.type)||
+    !["HUNT","FIGHT","TOTEM BOSS"].includes(entry.type)||
     !LETTERS.includes(entry.letter)
   )){
     return false;
@@ -284,9 +276,14 @@ function validStage(stage){
     .filter(entry=>entry.type==="FIGHT")
     .length;
 
+  const bosses=encounters
+    .filter(entry=>entry.type==="TOTEM BOSS")
+    .length;
+
   return (
     hunts===Number(stage.hunts||0)&&
-    fights===Number(stage.fights||0)
+    fights===Number(stage.fights||0)&&
+    bosses===Number(stage.bosses||0)
   );
 }
 
@@ -524,18 +521,16 @@ function renderStageInfo(){
   }
 
   $("setupDescription").textContent=
-    validStage(stage)
-      ?"Matching letters give the Stage the first round. "+
-       "Otherwise, coin flip. LUCK item quantity grants "+
-       "retries after losses."
-      :"Stage encounters need configured letters.";
+    validStage(stage)?String(stage.description||""):"";
 
   const store=window.VHouseCardStore;
   const assigned=store?.getActive?.();
   const locked=assigned&&store?.isLocked?.(assigned.id);
-  if(assigned&&locked){
-    $("setupDescription").textContent="This VCard is on a Journey. Assign another VCard in the Closet.";
-  }
+  $("setupStatus").textContent=locked
+    ?"This VCard is on a Journey. Assign another VCard in the Closet."
+    :(!assigned&&store)
+      ?"Assign a VCard before starting."
+      :"";
   $("startButton").disabled=!validStage(stage)||!!locked||
     (!!store&&!assigned);
 }
@@ -717,11 +712,11 @@ async function startJourney(){
   const store=window.VHouseCardStore;
   const assigned=store?.getActive?.();
   if(store&&!assigned){
-    $("message").textContent="Assign a VCard before starting a Journey.";
+    $("setupStatus").textContent="Assign a VCard before starting a Journey.";
     return;
   }
   if(assigned&&store?.isLocked?.(assigned.id)){
-    $("message").textContent="VCard locked on Journey. Choose another VCard in the Closet.";
+    $("setupStatus").textContent="VCard locked on Journey. Choose another VCard in the Closet.";
     return;
   }
 
@@ -780,7 +775,7 @@ async function startJourney(){
     await save();
   }catch(error){
     state.mission=null;
-    $("message").textContent="Journey could not start: "+(error.message||"save failed");
+    $("setupStatus").textContent="Journey could not start: "+(error.message||"save failed");
     return;
   }
 
