@@ -41,6 +41,43 @@ async function refreshInventory(){
   }
 }
 
+/* Restore and persist the full Journey receipt state for the signed-in player.
+   The public browser never holds another player's progress. */
+async function prepareJourneyStore(){
+  const auth=window.VHouseAuth;
+  if(!auth)return;
+  await auth.ready;
+  const id=auth.getUser()?.id;
+  if(!id)return;
+  const client=auth.getClient();
+  const {data,error}=await client.from("vhouse_journey_progress")
+    .select("progress").eq("player_id",id).maybeSingle();
+  if(error)throw error;
+  const snapshot=data?.progress&&typeof data.progress==="object"
+    ?data.progress:null;
+  let queue=Promise.resolve();
+  if(!window.VHouseJourneyStore){
+    window.VHouseJourneyStore={
+      load(){
+        return auth.getUser()?.id===id?snapshot:null;
+      },
+      save(next){
+        if(auth.getUser()?.id!==id)return Promise.reject(Error("Player changed."));
+        const safe=structuredClone(next);
+        queue=queue.catch(()=>{}).then(async()=>{
+          if(auth.getUser()?.id!==id)throw Error("Player changed.");
+          const {error:writeError}=await client.from("vhouse_journey_progress")
+            .upsert({player_id:id,progress:safe,updated_at:new Date().toISOString()},
+                    {onConflict:"player_id"});
+          if(writeError)throw writeError;
+        });
+        queue.catch(err=>console.error("Journey progress not saved:",err));
+        return queue;
+      }
+    };
+  }
+}
+
 const embeddedCSS=`
 :host{
   --gold:#bc9357;
@@ -190,6 +227,7 @@ async function load(host,options={}){
     try{
       await window.VHouseCardStore?.ready?.();
       await refreshInventory();
+      await prepareJourneyStore();
       const shadow=host.shadowRoot;
       if(shadow?.getElementById("game")){
         fitJourney(host);
