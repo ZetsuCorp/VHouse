@@ -171,11 +171,28 @@ html, body {
       info: current ? String(current.description || "No description entered.") : "Finished VCards and outfits can be viewed here."
     });
   }
+  let assigning = false;
+  async function assign(card) {
+    if (!card || assigning) return;
+    assigning = true;
+    try {
+      await store.setActive(card.id);
+    } catch (error) {
+      console.error("VCloset assignment:",error);
+      VHouseMessage.set(messageHost,{
+        header:"VCARD ASSIGNMENT FAILED",
+        title:card.name||"VCard",
+        info:error.message||"Unable to assign this VCard."
+      });
+    } finally {
+      assigning = false;
+    }
+  }
   function move(direction) {
     selected = (selected + direction + items.length) % items.length;
     const card = items[selected];
-    if (card) store.setActive(card.id);
     render();
+    if (card) void assign(card);
   }
   document.querySelector(".carousel-prev").addEventListener("click", () => move(-1));
   document.querySelector(".carousel-next").addEventListener("click", () => move(1));
