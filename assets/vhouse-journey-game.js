@@ -744,11 +744,6 @@ async function startJourney(){
 
   card.luck=luck;
 
-  const timeScale=Math.max(
-    1,
-    Number(config.demoTimeScale)||1
-  );
-
   state.mission={
     id:"JR-"+now.toString(36).toUpperCase(),
     stageId:stage.id,
@@ -761,12 +756,10 @@ async function startJourney(){
     },
 
     startedAt:now,
-    endsAt:
-      now+
-      stage.durationSeconds*1000/timeScale,
+    endsAt:now+stage.durationSeconds*1000,
 
     status:"running",
-    results:null,
+    results:[],
     rewards:null,
     totals:null
   };
@@ -810,13 +803,23 @@ function renderTravel(){
 
   $("travelDescription").textContent=
     (mission.stage.hunts||0)+" HUNTS · "+
-    (mission.stage.fights||0)+" FIGHTS";
+    (mission.stage.fights||0)+" FIGHTS"+
+    (mission.stage.bosses?" · "+mission.stage.bosses+" TOTEM BOSS":"");
+
+  const travelCard=$("travelVCard").parentElement;
+  const missionSeconds=(mission.endsAt-mission.startedAt)/1000;
+  const elapsedRatio=Math.min(1,Math.max(0,(Date.now()-mission.startedAt)/(mission.endsAt-mission.startedAt)));
+  travelCard.style.animationDuration=missionSeconds+"s";
+  travelCard.style.animationIterationCount="1";
+  travelCard.style.animationDirection="normal";
+  travelCard.style.animationFillMode="forwards";
+  travelCard.style.animationDelay="-"+elapsedRatio*missionSeconds+"s";
 
   $("loadingEncounters").replaceChildren();
 
   for(
-    const encounter of
-    encounterPlan(mission.stage)
+    const [index,encounter] of
+    encounterPlan(mission.stage).entries()
   ){
 
     const item=document.createElement("div");
@@ -830,13 +833,54 @@ function renderTravel(){
     const pending=document.createElement("strong");
 
     pending.textContent="•••";
-
+    item.dataset.encounterIndex=String(index);
     item.append(title,pending);
 
     $("loadingEncounters").append(item);
   }
 
   updateTimer();
+  renderEncounterProgress();
+}
+
+function renderEncounterProgress(){
+  const results=state.mission?.results||[];
+  for(const item of $("loadingEncounters").children){
+    const result=results[Number(item.dataset.encounterIndex)];
+    const value=item.querySelector("strong");
+    if(!result){
+      value.textContent="•••";
+      item.classList.remove("encounter-win","encounter-loss");
+      continue;
+    }
+    value.textContent=result.won?"WIN":"LOSS";
+    item.classList.toggle("encounter-win",!!result.won);
+    item.classList.toggle("encounter-loss",!result.won);
+  }
+}
+
+/* Persist one encounter at a time, never reroll a completed encounter. */
+function advanceEncounters(){
+  const mission=state.mission;
+  if(!mission||mission.status!=="running")return;
+  const plan=encounterPlan(mission.stage);
+  const total=mission.endsAt-mission.startedAt;
+  const elapsed=Math.max(0,Math.min(total,Date.now()-mission.startedAt));
+  const due=Math.min(plan.length,Math.floor(elapsed/total*plan.length));
+  mission.results||=[];
+  let changed=false;
+  while(mission.results.length<due){
+    const index=mission.results.length;
+    const encounter=plan[index];
+    const result=resolveEncounter(mission.card,encounter,index,mission.luck.quantity);
+    if(result.won)result.reward=rewardForEncounter(mission.stage,encounter,result,index);
+    mission.results.push(result);
+    changed=true;
+  }
+  if(changed){
+    save();
+    if(currentScreen==="travel")renderEncounterProgress();
+  }
 }
 
 function updateTimer(){
@@ -885,12 +929,9 @@ function updateTimer(){
 /*
   JOURNEY RESULTS
 
-  All encounters calculate once the timer ends.
-
-  Encounter results and Stage totals are separate.
-  No additional Stage victory condition is invented.
+  Encounters resolve throughout the countdown. Finalization uses only
+  already-recorded outcomes and catches up any due encounters.
 */
-
 function settleJourney(){
 
   const mission=state.mission;
@@ -903,23 +944,10 @@ function settleJourney(){
     return false;
   }
 
+  advanceEncounters();
   const stage=mission.stage;
-
   const plan=encounterPlan(stage);
-
-  /*
-    Calculate each encounter.
-  */
-
-  const results=plan.map(
-    (encounter,index)=>
-      resolveEncounter(
-        mission.card,
-        encounter,
-        index,
-        mission.luck.quantity
-      )
-  );
+  const results=mission.results||[];
 
   /*
     Apply configured rewards.
@@ -927,24 +955,10 @@ function settleJourney(){
 
   const rewards={};
 
-  results.forEach((result,index)=>{
-
-    if(!result.won)return;
-
-    const reward=rewardForEncounter(
-      stage,
-      plan[index],
-      result,
-      index
-    );
-
-    if(!reward)return;
-
-    result.reward=reward;
-
-    rewards[reward.item]=
-      (rewards[reward.item]||0)+
-      reward.quantity;
+  results.forEach(result=>{
+    if(!result.won||!result.reward)return;
+    rewards[result.reward.item]=
+      (rewards[result.reward.item]||0)+result.reward.quantity;
   });
 
   /*
@@ -1328,6 +1342,8 @@ setInterval(()=>{
   ){
     return;
   }
+
+  advanceEncounters();
 
   if(Date.now()>=mission.endsAt){
 
