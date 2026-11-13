@@ -175,11 +175,9 @@ let selectedStage=stages[0]?.id??null;
 let currentScreen="setup";
 
 function save(){
-  // VHouse may supply its own storage connection.
-  // No localStorage is used in this framework.
-  window.VHouseJourneyStore?.save?.(
-    structuredClone(state)
-  );
+  // Persist Journey progress through the signed-in player's VHouse store.
+  // Standalone framework mode has no persistent remote store.
+  return window.VHouseJourneyStore?.save?.(structuredClone(state));
 }
 
 function emit(name,detail){
@@ -532,7 +530,14 @@ function renderStageInfo(){
        "retries after losses."
       :"Stage encounters need configured letters.";
 
-  $("startButton").disabled=!validStage(stage);
+  const store=window.VHouseCardStore;
+  const assigned=store?.getActive?.();
+  const locked=assigned&&store?.isLocked?.(assigned.id);
+  if(assigned&&locked){
+    $("setupDescription").textContent="This VCard is on a Journey. Assign another VCard in the Closet.";
+  }
+  $("startButton").disabled=!validStage(stage)||!!locked||
+    (!!store&&!assigned);
 }
 
 $("stageSelect").addEventListener("change",()=>{
@@ -706,9 +711,19 @@ function rewardForEncounter(
 
 /* START JOURNEY */
 
-function startJourney(){
+async function startJourney(){
 
   const stage=stageById(selectedStage);
+  const store=window.VHouseCardStore;
+  const assigned=store?.getActive?.();
+  if(store&&!assigned){
+    $("message").textContent="Assign a VCard before starting a Journey.";
+    return;
+  }
+  if(assigned&&store?.isLocked?.(assigned.id)){
+    $("message").textContent="VCard locked on Journey. Choose another VCard in the Closet.";
+    return;
+  }
 
   if(!validStage(stage))return;
 
@@ -761,7 +776,13 @@ function startJourney(){
     totals:null
   };
 
-  save();
+  try{
+    await save();
+  }catch(error){
+    state.mission=null;
+    $("message").textContent="Journey could not start: "+(error.message||"save failed");
+    return;
+  }
 
   emit("journey-started",{
     missionId:state.mission.id,
