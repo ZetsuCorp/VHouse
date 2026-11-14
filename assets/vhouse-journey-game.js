@@ -289,7 +289,7 @@ function renderUseItems(){
 }
 let startingJourney=false;
 const managedPending=new Set();
-window.addEventListener("vhouse:inventory-updated",()=>{
+window.addEventListener("vhouse:journey-inventory-refreshed",()=>{
   if(currentScreen==="setup")renderStageInfo();
 });
 
