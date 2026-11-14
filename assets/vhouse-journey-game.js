@@ -637,8 +637,9 @@ function renderStageInfo(){
   if(gauge.parentElement!==$("setupWorld"))$("setupWorld").append(gauge);
   const chanceCard=pending?mission.card:activeCard();
   const chanceLuck=luckStat();
-  let noBagChance=1;
   let maxPossibleBags=0;
+  let baseFlips=0;
+  let matchedEncounters=0;
   for(const encounter of encounterPlan(stage)){
     const raw=encounter.reward??stage?.rewardsByType?.[encounter.type];
     const bags=Array.isArray(raw)?raw:[raw];
@@ -650,14 +651,17 @@ function renderStageInfo(){
     },0);
     if(!bagCount)continue;
     maxPossibleBags+=bagCount;
-    // Matching letters skip the initial flip; each LUCK adds a retry.
-    const attempts=chanceLuck+(chanceCard?.team===encounter.letter?0:1);
-    noBagChance*=Math.pow(0.5,attempts);
+    // Lucky Charms are shared consumables, not reusable retries on every
+    // encounter. Count their total available retries only once.
+    if(chanceCard?.team===encounter.letter)matchedEncounters++;
+    else baseFlips++;
   }
 
   gauge.hidden=!maxPossibleBags;
   if(maxPossibleBags){
-    const chance=Math.max(0,Math.min(100,100*(1-noBagChance)));
+    const lanternFlips=Math.min(itemQuantity("Hunt Lantern"),matchedEncounters);
+    const totalFlips=baseFlips+lanternFlips+chanceLuck;
+    const chance=Math.max(0,Math.min(100,100*(1-Math.pow(0.5,totalFlips))));
     gauge.style.cssText="position:absolute;top:8px;left:50%;transform:translateX(-50%);width:280px;max-width:calc(100% - 16px);z-index:3;padding:3px 7px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547e8,#1b102ae8);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;pointer-events:none;";
     gauge.replaceChildren();
 
@@ -916,10 +920,7 @@ async function startJourney(){
     stageId:stage.id,
     stage:{
       ...structuredClone(stage),
-      encounters:encounterPlan(stage).map(encounter=>({
-        ...encounter,
-        letter:LETTERS[Math.floor(Math.random()*LETTERS.length)]
-      }))
+      encounters:encounterPlan(stage).map(encounter=>({...encounter}))
     },
     card,
 
