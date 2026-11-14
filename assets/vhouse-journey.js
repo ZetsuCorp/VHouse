@@ -37,6 +37,7 @@ async function refreshInventory(){
       .map(row=>[String(row.thing),quantity(row.quantity)]))
   };
   window.VHouseJourneyInventory=inventoryProvider;
+  window.dispatchEvent(new Event("vhouse:journey-inventory-refreshed"));
 }
 
 /* Every VCard has its own persistent Journey record. Historical records remain
