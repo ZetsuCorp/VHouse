@@ -40,8 +40,8 @@
 }
 .vhouse-player-login[hidden] { display: none; }
 
-/* Index account HUD: two tightly stacked containers beside the portrait. */
-.town-player-hud .vhouse-player-account{
+/* Shared Town and Shop account HUD beside the unchanged portrait. */
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-account{
   position:absolute;
   top:0%;
   left:105%;
@@ -56,9 +56,9 @@
   font:800 clamp(9px,1.05cqw,14px) Arial,sans-serif;
   text-shadow:0 1px 4px #000;
 }
-.town-player-hud .vhouse-player-account[hidden]{display:none}
-.town-player-hud .vhouse-player-account-box,
-.town-player-hud .vhouse-player-rewards-box{
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-account[hidden]{display:none}
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-account-box,
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-rewards-box{
   position:relative;
   width:100%;
   padding:5px 9px;
@@ -67,7 +67,7 @@
   background:linear-gradient(135deg,#311547ed,#1b102aed);
   box-shadow:0 0 8px #0009,inset 0 0 10px #9b5ccc18;
 }
-.town-player-hud .vhouse-player-login{
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-login{
   position:static;
   display:block;
   color:#fff;
@@ -76,22 +76,22 @@
   margin-bottom:5px;
   white-space:nowrap;
 }
-.town-player-hud .vhouse-player-cash,
-.town-player-hud .vhouse-player-rewards-box{
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-cash,
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-rewards-box{
   display:flex;
   justify-content:space-between;
   align-items:center;
   gap:10px;
   white-space:nowrap;
 }
-.town-player-hud .vhouse-player-cash strong,
-.town-player-hud .vhouse-player-rewards-box strong{color:#f4d79f}
-.town-player-hud .vhouse-player-cash span,
-.town-player-hud .vhouse-player-rewards-box > span:not(.vhouse-player-gain){
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-cash strong,
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-rewards-box strong{color:#f4d79f}
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-cash span,
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-rewards-box > span:not(.vhouse-player-gain){
   color:#86efac;
   font-variant-numeric:tabular-nums;
 }
-.town-player-hud .vhouse-player-gain{
+:is(.town-player-hud,.shop-player-hud) .vhouse-player-gain{
   position:absolute;
   right:7px;
   top:50%;
@@ -103,7 +103,7 @@
   text-shadow:0 0 6px #073b17,0 0 10px #39ff7f;
   animation:vhouse-cash-float .95s ease-out both;
 }
-.town-player-hud .vhouse-gaining{animation:vhouse-cash-glow .7s ease-out}
+:is(.town-player-hud,.shop-player-hud) .vhouse-gaining{animation:vhouse-cash-glow .7s ease-out}
 @keyframes vhouse-cash-float{
   from{opacity:0;transform:translateY(0) scale(.8)}
   20%{opacity:1;transform:translateY(-9px) scale(1.1)}

@@ -15,8 +15,8 @@ function mount(host){
   art.className="vhouse-player-portrait";art.alt="";art.draggable=false;
   const loginLabel=document.createElement("span");
   loginLabel.className="vhouse-player-login";loginLabel.hidden=true;
-  // Player-wide VCard Cash is shown only beside the Index Player Placeholder.
-  const showCash=!!host.closest(".town-player-hud");
+  // Show the same player account HUD on the Town and Shop placeholders.
+  const showCash=!!host.closest(".town-player-hud, .shop-player-hud");
   const cashBox=document.createElement("div");
   cashBox.className="vhouse-player-cash";
   const cashTitle=document.createElement("strong");
