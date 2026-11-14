@@ -1,0 +1,441 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse | Shop Item List</title>
+<style>
+:root {
+  --bg: #100c1b;
+  --surface: #21172f;
+  --surface2: #2c2040;
+  --gold: #f1c77c;
+  --purple: #bd91f3;
+  --text: #f3edf8;
+  --muted: #b7abc5;
+  --border: #55416b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 85% 0%, #44255c55, transparent 45%),
+    radial-gradient(ellipse at 0% 90%, #30234b66, transparent 50%),
+    var(--bg);
+  color: var(--text);
+  font: 14px/1.6 Arial, sans-serif;
+}
+
+/* WEBSITE HEADER */
+
+.site-header {
+  background: #191124f0;
+  border-bottom: 1px solid #82603d;
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: auto;
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.brand {
+  color: var(--gold);
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 24px;
+}
+
+.site-header a {
+  color: #ddd0ed;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.site-header a:hover {
+  color: var(--gold);
+}
+
+/* MAIN PAGE */
+
+.page {
+  width: min(100% - 48px, 1120px);
+  margin: 0 auto;
+  padding: 42px 0 70px;
+}
+
+.page-heading {
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--purple);
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  color: var(--gold);
+  font-size: clamp(25px, 3vw, 34px);
+  line-height: 1.2;
+}
+
+.intro {
+  margin: 12px 0 0;
+  max-width: 660px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* SECTION */
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 18px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  color: #f5d5a0;
+  font-size: 17px;
+}
+
+.section-line {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, #9d7846, transparent);
+}
+
+/* ITEM GRID */
+
+.items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.item {
+  background: linear-gradient(145deg, var(--surface2), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color .2s, transform .2s;
+}
+
+.item:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+}
+
+.item-icon {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 29px;
+  border: 1px solid #8665a4;
+  border-radius: 9px;
+  background: #140e22;
+}
+
+.item-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.item-title h3 {
+  margin: 0;
+  color: #ffe1ac;
+  font-size: 17px;
+}
+
+.price {
+  margin-top: 4px;
+  color: var(--purple);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.item-description {
+  padding: 0 20px 22px;
+  flex: 1;
+}
+
+.item-description p {
+  margin: 0;
+  color: #e4dbea;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.item-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid #55416b;
+  background: #17102280;
+}
+
+.item-details span {
+  color: #e6d4f5;
+  background: #3a2850;
+  border: 1px solid #66517a;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* FOOTER */
+
+.site-footer {
+  border-top: 1px solid #70533d;
+  background: #130e1df0;
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: auto;
+  padding: 22px 28px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.footer-inner strong {
+  color: var(--gold);
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+  .header-inner {
+    padding: 15px 20px;
+  }
+
+  .page {
+    width: min(100% - 32px, 1120px);
+    padding: 30px 0 45px;
+  }
+
+  .items {
+    grid-template-columns: 1fr;
+  }
+
+  .item-top {
+    padding: 16px;
+  }
+
+  .item-description {
+    padding: 0 16px 18px;
+  }
+
+  .item-details {
+    padding: 12px 16px;
+  }
+
+  .footer-inner {
+    padding: 18px 20px;
+    flex-wrap: wrap;
+  }
+}
+</style>
+</head>
+
+<body id="top">
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">VHOUSE</div>
+
+    <nav aria-label="Page navigation">
+      <a href="#mission-boosts">Mission Boosts</a>
+      <a href="#top">Back to Top</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="page-heading">
+    <p class="eyebrow">VHouse / Shop</p>
+    <h1>Shop Item List</h1>
+    <p class="intro">
+      Mission Boosts, item prices, and gameplay rules.
+      Item bonuses are determined by what the player
+      holds in inventory. Using an item consumes it.
+    </p>
+  </div>
+
+  <section id="mission-boosts">
+
+    <div class="section-heading">
+      <h2>Mission Boosts</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="items">
+
+      <!-- LUCKY CHARM -->
+
+      <article class="item">
+        <div class="item-top">
+          <div class="item-icon">🍀</div>
+          <div class="item-title">
+            <h3>Lucky Charm</h3>
+            <div class="price">600 IGM</div>
+          </div>
+        </div>
+
+        <div class="item-description">
+          <p>
+            Each Lucky Charm provides 1 Lucky Retry
+            and +1% to player stats while held in
+            inventory. Players may hold a maximum of
+            5 Lucky Charms, providing up to 5 retries
+            and +5%. Using a retry consumes one charm,
+            reducing its quantity and stat bonus.
+          </p>
+        </div>
+
+        <div class="item-details">
+          <span>1 Lucky Retry</span>
+          <span>+1% per Charm</span>
+          <span>Maximum: 5</span>
+        </div>
+      </article>
+
+      <!-- SWIFT BOOTS -->
+
+      <article class="item">
+        <div class="item-top">
+          <div class="item-icon">🥾</div>
+          <div class="item-title">
+            <h3>Swift Boots</h3>
+            <div class="price">1,200 IGM</div>
+          </div>
+        </div>
+
+        <div class="item-description">
+          <p>
+            Each pair of Swift Boots held in inventory
+            increases the player's SPEED by 1.
+            Using a pair reduces Journey time by
+            15 seconds. Only one pair may be used per
+            Stage. Once used, the boots are consumed
+            and SPEED decreases by 1.
+          </p>
+        </div>
+
+        <div class="item-details">
+          <span>+1 SPEED</span>
+          <span>−15 Seconds</span>
+          <span>1 Use per Stage</span>
+        </div>
+      </article>
+
+      <!-- HUNT LANTERN -->
+
+      <article class="item">
+        <div class="item-top">
+          <div class="item-icon">🏮</div>
+          <div class="item-title">
+            <h3>Hunt Lantern</h3>
+            <div class="price">1,800 IGM</div>
+          </div>
+        </div>
+
+        <div class="item-description">
+          <p>
+            Nullifies the Stage's RPS advantage
+            for one encounter, once.
+            The lantern is consumed after use.
+          </p>
+        </div>
+
+        <div class="item-details">
+          <span>Nullifies RPS Advantage</span>
+          <span>1 Encounter</span>
+          <span>Single Use</span>
+        </div>
+      </article>
+
+      <!-- STAGE TICKET -->
+
+      <article class="item">
+        <div class="item-top">
+          <div class="item-icon">🎟️</div>
+          <div class="item-title">
+            <h3>Stage Ticket</h3>
+            <div class="price">2,400 IGM</div>
+          </div>
+        </div>
+
+        <div class="item-description">
+          <p>
+            Allows the player to enter a Stage
+            without paying the Stage entry fee.
+            One ticket is consumed for each
+            free Stage entry.
+          </p>
+        </div>
+
+        <div class="item-details">
+          <span>Free Stage Entry</span>
+          <span>1 Ticket per Entry</span>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <strong>VHOUSE</strong>
+    <span>Shop Item List — Mission Boosts</span>
+  </div>
+</footer>
+
+</body>
+</html>
