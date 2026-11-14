@@ -248,9 +248,94 @@ const tradeCatalog = {
 };
 const ownedScraps={scrap:12,copper:5,relic:2,crystal:0,repair:0,token:0};
 const shopStock={scrap:0,copper:0,relic:0,crystal:6,repair:4,token:3};
-const boostOwned=[0,0,0,0];
-let boostMoney=1500,serviceMoney=1500;
 let selectedBoost=0,selectedService=0,tradeFrom="scrap",tradeTo="crystal";
+let shopCash=null, shopInventory=new Map(), shopBusy=false, shopLoading=false;
+let shopReadId=0, shopPlayerId=null;
+const purchasedItemNames=new Set([...boosts,...services].map(item=>item.name));
+
+async function loadShopPlayer(){
+  const readId=++shopReadId;
+  shopCash=null;
+  shopInventory=new Map();
+  shopPlayerId=null;
+  shopLoading=true;
+  if(!shopMenuOverlay.hidden)renderShop();
+  try{
+    const auth=window.VHouseAuth;
+    await auth.ready;
+    const player=await auth.loadPlayerData();
+    if(readId!==shopReadId)return;
+    if(!player){
+      shopStatus="Sign in to view your inventory and buy items.";
+      return;
+    }
+    shopPlayerId=player.playerId;
+    shopCash=Number(player.account?.igm_balance);
+    if(!Number.isFinite(shopCash)||shopCash<0)throw Error("Invalid VCARD CASH balance.");
+    for(const item of player.inventory){
+      if(item.type==="Item"&&purchasedItemNames.has(item.thing)){
+        shopInventory.set(item.thing,Number(item.quantity)||0);
+      }
+    }
+  }catch(error){
+    if(readId!==shopReadId)return;
+    console.error("Shop account load:",error);
+    shopCash=null;
+    shopStatus="Unable to load player inventory.";
+  }finally{
+    if(readId===shopReadId){
+      shopLoading=false;
+      if(!shopMenuOverlay.hidden)renderShop();
+    }
+  }
+}
+async function buyShopItem(item){
+  if(shopBusy||shopLoading)return;
+  const auth=window.VHouseAuth;
+  if(!shopPlayerId||auth?.getUser?.()?.id!==shopPlayerId){
+    shopStatus="Sign in to buy items.";
+    renderShop();
+    return;
+  }
+  if(item.name==="Lucky Charm"&&(shopInventory.get(item.name)||0)>=5){
+    shopStatus="Maximum 5 Lucky Charms.";
+    renderShop();
+    return;
+  }
+  if(shopCash===null||shopCash<item.price){
+    shopStatus="Insufficient VCARD CASH.";
+    renderShop();
+    return;
+  }
+  shopBusy=true;
+  renderShop();
+  try{
+    const buyerId=shopPlayerId;
+    const {data,error}=await auth.getClient().rpc("vhouse_buy_shop_item",{p_thing:item.name});
+    if(error)throw error;
+    if(auth.getUser()?.id!==buyerId)throw Error("Account changed during purchase.");
+    const balance=Number(data?.igm_balance),quantity=Number(data?.quantity);
+    if(!Number.isFinite(balance)||!Number.isInteger(quantity))throw Error("Invalid purchase receipt.");
+    shopCash=balance;
+    shopInventory.set(item.name,quantity);
+    shopStatus=item.name+" purchased.";
+    window.dispatchEvent(new Event("vhouse:cash-updated"));
+    window.dispatchEvent(new Event("vhouse:inventory-updated"));
+  }catch(error){
+    console.error("Shop purchase:",error);
+    const message=String(error?.message||"");
+    shopStatus=message.includes("INSUFFICIENT_IGM")?"Insufficient VCARD CASH.":
+      message.includes("LUCKY_CHARM_LIMIT_5")?"Maximum 5 Lucky Charms.":
+      message.includes("SIGN_IN_REQUIRED")?"Sign in to buy items.":
+      "Purchase unsuccessful. No items granted.";
+    // Fetch authoritative state again if the connection failed after the server processed a purchase.
+    shopBusy=false;
+    await loadShopPlayer();
+  }finally{
+    shopBusy=false;
+    if(!shopMenuOverlay.hidden)renderShop();
+  }
+}
 
 function shopItem(item,subtitle,extra,action,index,selected,disabled=false){
   return '<button type="button" class="zshop-item'+(selected?' selected':'')+
@@ -272,17 +357,19 @@ function renderShop(){
     const isBoost=activeShop==="Mission Boosts";
     const items=isBoost?boosts:services;
     const selected=isBoost?selectedBoost:selectedService;
-    const money=isBoost?boostMoney:serviceMoney;
     const item=items[selected];
     const list=items.map((v,i)=>shopItem(v,v.price?v.price.toLocaleString()+" IGM":"FREE",
-      "",isBoost?"select-boost":"select-service",i,selected===i)).join("");
+      "OWNED: "+(shopInventory.get(v.name)||0),
+      isBoost?"select-boost":"select-service",i,selected===i)).join("");
     const detail='<div class="zshop-details">'+
       '<div class="zshop-detail-icon">'+item.icon+'</div>'+
       '<strong class="zshop-detail-name">'+item.name+'</strong>'+
       '<p class="zshop-detail-description">'+item.desc+'</p>'+
       '<strong class="zshop-detail-price">'+(item.price?item.price.toLocaleString()+" IGM":"FREE")+'</strong>'+
       '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
-      '"'+(money<item.price?' disabled':'')+'>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button></div>';
+      '"'+(shopBusy||shopLoading||shopCash===null||shopCash<item.price||
+        (item.name==="Lucky Charm"&&(shopInventory.get(item.name)||0)>=5)?' disabled':'')+
+      '>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button></div>';
     body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"TICKETS","AVAILABLE",
       '<div class="zshop-grid'+(isBoost?'':' service-grid')+'">'+list+'</div>')+
       shopPanel("DETAILS","SELECTED",detail)+'</div>';
@@ -319,20 +406,10 @@ shopMenuContent.addEventListener("click",event=>{
   if(action==="select-service")selectedService=Number(index);
   if(action==="select-player")tradeFrom=index;
   if(action==="select-stock")tradeTo=index;
-  if(action==="buy-boost"){
-    const item=boosts[selectedBoost];
-    if(boostMoney>=item.price){
-      boostMoney-=item.price;
-      boostOwned[selectedBoost]++;
-      shopStatus=item.name+" purchased.";
-    }
-  }
-  if(action==="use-service"){
-    const item=services[selectedService];
-    if(serviceMoney>=item.price){
-      serviceMoney-=item.price;
-      shopStatus=item.name+" — demo service selected.";
-    }
+  if(action==="buy-boost"||action==="use-service"){
+    const item=action==="buy-boost"?boosts[selectedBoost]:services[selectedService];
+    void buyShopItem(item);
+    return;
   }
   if(action==="confirm-trade"){
     const count=Math.ceil(tradeCatalog[tradeTo].value/tradeCatalog[tradeFrom].value);
@@ -353,11 +430,23 @@ document.querySelectorAll(".shop-hotspot").forEach(button=>{
     shopStatus="";
     shopMenuOverlay.hidden=false;
     renderShop();
+    if(activeShop==="Mission Boosts"||activeShop==="Journey Service"){
+      void loadShopPlayer();
+    }
   });
+});
+window.VHouseAuth?.subscribe(()=>{
+  ++shopReadId;
+  shopCash=null;shopInventory=new Map();shopPlayerId=null;
+  if(!shopMenuOverlay.hidden&&activeShop!=="Trade Scraps")void loadShopPlayer();
+});
+window.addEventListener("pageshow",()=>{
+  if(!shopMenuOverlay.hidden&&activeShop!=="Trade Scraps")void loadShopPlayer();
 });
 function closeShopMenu(){
   if(shopMenuOverlay.hidden)return;
   shopMenuOverlay.hidden=true;
+  ++shopReadId;
   shopMenuContent.replaceChildren();
   if(shopMenuTrigger)shopMenuTrigger.focus();
 }

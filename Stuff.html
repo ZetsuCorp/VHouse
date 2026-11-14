@@ -100,8 +100,8 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 <header class="head">
 <div><div class="eyebrow">VHOUSE</div><h2>STUFF</h2></div>
 <div class="balances">
-<div class="balance"><small>IG MONEY</small><strong>1,500</strong></div>
-<div class="balance"><small>SCRAPS</small><strong>12</strong></div>
+<div class="balance"><small>IG MONEY</small><strong data-igm>—</strong></div>
+<div class="balance"><small>SCRAPS</small><strong data-scraps>—</strong></div>
 </div>
 </header>
 <div class="area">
@@ -110,10 +110,10 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 <div class="stats">
 <div class="vcard-name"><small>VCARD NAME</small><strong data-vcard-name>—</strong></div>
 <div class="statrow"><span>VCards Owned</span><strong data-cards-owned>0</strong></div>
-<div class="statrow"><span>Missions Completed</span><strong>2</strong></div>
-<div class="statrow"><span>Journey Stage</span><strong>1</strong></div>
-<div class="statrow"><span>Totem Pages</span><strong>0 / 5</strong></div>
-<div class="statrow"><span>Z Book</span><strong>Not Assembled</strong></div>
+<div class="statrow"><span>Missions Completed</span><strong>—</strong></div>
+<div class="statrow"><span>Journey Stage</span><strong>—</strong></div>
+<div class="statrow"><span>Totem Pages</span><strong>—</strong></div>
+<div class="statrow"><span>Z Book</span><strong>—</strong></div>
 </div>
 </section>
 <section class="panel" aria-label="Personal Inventory">
@@ -122,13 +122,15 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 <div class="slots" data-inventory></div>
 </div>
 <div class="details" aria-live="polite">
-<strong data-name>Scrap Metal</strong>
-<p data-description>Collected material from Journey Missions.</p>
+<strong data-name>Inventory</strong>
+<p data-description>No items owned.</p>
 </div>
 </section>
 </div>
 </div>
 </main>
+<script src="assets/vhouse-public-config.js"></script>
+<script src="assets/vhouse-auth.js"></script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-stuff.js"></script>
 <script>VHouseStuff.init(document.getElementById("vhs-demo3"));</script>
