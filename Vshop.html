@@ -104,16 +104,7 @@ html, body {
 .zshop *{box-sizing:border-box}
 .zshop button{font-family:Arial,sans-serif;cursor:pointer}
 .zshop button:focus-visible{outline:2px solid #ffe0a3;outline-offset:-2px}
-.zshop-head{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
-  gap:.7cqw;padding:.65cqw 1.05cqw;border-bottom:1px solid #8d6e4e;background:#191523}
-.zshop-headings{min-width:0}
-.zshop-eyebrow{color:#f5c98c;font-size:clamp(10px,1.35cqw,15px);font-weight:800;letter-spacing:.10em}
-.zshop-title{font:700 clamp(18px,2.7cqw,31px)/1.07 Georgia,serif;color:#ffe2ab;white-space:nowrap}
-.zshop-money{display:flex;gap:.6cqw;flex-shrink:0}
-.zshop-balance{min-width:6.9cqw;padding:.4cqw .75cqw;border:1px solid #8d6c4d;
-  border-radius:.45cqw;background:#12111f;text-align:center}
-.zshop-balance-label{display:block;font-size:clamp(10px,1.38cqw,15px);color:#edca91;white-space:nowrap}
-.zshop-balance-amount{display:block;font-size:clamp(13px,2cqw,22px);font-weight:900;color:#ffe2a2}
+.zshop-title{flex:0 0 auto;font:700 clamp(18px,2.7cqw,31px)/1.07 Georgia,serif;color:#ffe2ab;white-space:nowrap;padding:.4cqw .7cqw}
 .zshop-work{flex:1;display:grid;grid-template-columns:minmax(0,1.52fr) minmax(0,1fr);
   min-width:0;min-height:0;gap:.8cqw;padding:.65cqw}
 .zshop-work.trade-layout{grid-template-columns:repeat(2,minmax(0,1fr));padding-bottom:.25cqw}
@@ -159,10 +150,7 @@ html, body {
   padding:0 .5cqw .3cqw;color:#f5dbab;line-height:1.1}
 /* On narrow landscape screens prioritize readable labels over decorative emoji. */
 @container (max-width:650px){
-  .zshop-head{padding:.4cqw .6cqw}
   .zshop-title{font-size:clamp(15px,2.6cqw,20px)}
-  .zshop-money{gap:.3cqw}
-  .zshop-balance{padding:.2cqw .3cqw}
   .zshop-work{gap:.4cqw;padding:.35cqw}
   .zshop-panel-head{padding:.2cqw .35cqw}
   .zshop-panel-head small{display:none}
@@ -265,10 +253,6 @@ const boostOwned=[0,0,0,0];
 let boostMoney=1500,serviceMoney=1500;
 let selectedBoost=0,selectedService=0,tradeFrom="scrap",tradeTo="crystal";
 
-function shopBalance(label,value){
-  return '<div class="zshop-balance"><span class="zshop-balance-label">'+label+
-    '</span><strong class="zshop-balance-amount">'+value+'</strong></div>';
-}
 function shopItem(item,subtitle,extra,action,index,selected,disabled=false){
   return '<button type="button" class="zshop-item'+(selected?' selected':'')+
     '" data-shop-action="'+action+'" data-index="'+index+'" aria-pressed="'+selected+'"'+
@@ -284,15 +268,13 @@ function shopPanel(title,subtitle,body){
     '</strong><small>'+subtitle+'</small></div>'+body+'</section>';
 }
 function renderShop(){
-  let balance,body,footer="",title=activeShop.toUpperCase();
+  let body,footer="",title=activeShop.toUpperCase();
   if(activeShop==="Mission Boosts" || activeShop==="Journey Service"){
     const isBoost=activeShop==="Mission Boosts";
     const items=isBoost?boosts:services;
     const selected=isBoost?selectedBoost:selectedService;
     const money=isBoost?boostMoney:serviceMoney;
     const item=items[selected];
-    balance=shopBalance("IG MONEY",money.toLocaleString())+
-      (isBoost?shopBalance("BOOSTS OWNED",boostOwned.reduce((a,b)=>a+b,0)):"");
     const list=items.map((v,i)=>shopItem(v,v.price?v.price+" IG":"FREE",
       isBoost?"OWNED: "+boostOwned[i]:"",isBoost?"select-boost":"select-service",i,selected===i)).join("");
     const detail='<div class="zshop-details">'+
@@ -309,7 +291,6 @@ function renderShop(){
     if(!ownedScraps[tradeFrom]){
       tradeFrom=Object.keys(ownedScraps).find(key=>ownedScraps[key]>0)||"scrap";
     }
-    balance=shopBalance("IG MONEY","500")+shopBalance("SCRAPS",ownedScraps.scrap);
     const playerItems=Object.keys(ownedScraps).filter(key=>ownedScraps[key]>0)
       .map(key=>shopItem(tradeCatalog[key],"Owned: "+ownedScraps[key],
         tradeCatalog[key].value+" trade value","select-player",key,key===tradeFrom)).join("");
@@ -326,9 +307,7 @@ function renderShop(){
   }
   if(shopStatus)footer='<div class="zshop-status" role="status">'+shopStatus+'</div>';
   shopMenuContent.innerHTML='<div class="zshop">'+
-    '<header class="zshop-head"><div class="zshop-headings"><div class="zshop-eyebrow">ZETSU SHOP</div>'+
-    '<h2 class="zshop-title">'+title+'</h2></div>'+
-    '<div class="zshop-money">'+balance+'</div></header>'+body+footer+'</div>';
+    '<h2 class="zshop-title">'+title+'</h2>'+body+footer+'</div>';
   shopMenuWindow.setAttribute("aria-label",activeShop);
 }
 shopMenuContent.addEventListener("click",event=>{
