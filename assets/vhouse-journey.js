@@ -95,7 +95,7 @@ async function prepareJourneyStore(){
     save(next){
       if(auth.getUser()?.id!==id)return Promise.reject(Error("Player changed."));
       const missionsToWrite=Object.values(next.missions||{})
-        .filter(m=>m&&m.id&&m.card?.id&&m.stageId);
+        .filter(m=>m&&m.id&&m.card?.id&&m.stageId&&!m.itemEffects?.serverManaged);
       const changed=missionsToWrite.map(mission=>{
         const safe=structuredClone(mission);
         const serialized=JSON.stringify(safe);
@@ -138,6 +138,12 @@ async function prepareJourneyStore(){
       });
       queue.catch(err=>console.error("VCard Journey record not saved:",err));
       return queue;
+    },
+    async confirmManaged(missionId){
+      if(auth.getUser()?.id!==id)throw Error("Player changed.");
+      const {data,error}=await client.rpc("vhouse_confirm_item_journey",{p_mission_id:missionId});
+      if(error)throw error;
+      return data;
     }
   };
 }
