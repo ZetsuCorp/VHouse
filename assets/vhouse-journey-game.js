@@ -502,18 +502,38 @@ function renderCard(host,card){
 /* STAGE SELECTION */
 
 function renderJourneyAwayDots(){
-  const active=Object.values(state.missions)
-    .filter(mission=>mission?.status==="running").length;
+  // Every pending Journey has its own dot; switching views never restarts it.
+  const missions=Object.values(state.missions)
+    .filter(mission=>mission?.card?.id&&
+      ["running","ready"].includes(mission.status));
   const host=$("journeyAwayDots");
   host.replaceChildren();
-  for(let i=0;i<10;i++){
-    const dot=document.createElement("span");
-    dot.className="journey-away-dot"+(i<active?" is-active":"");
+  for(let i=0;i<Math.max(10,missions.length);i++){
+    const mission=missions[i];
+    const dot=document.createElement(mission?"button":"span");
+    dot.className="journey-away-dot";
+    if(mission){
+      const cardId=String(mission.card.id);
+      const name=mission.card.name||"VCARD";
+      const selected=String(state.selectedCardId)===cardId;
+      const ready=mission.status==="ready";
+      dot.type="button";
+      dot.classList.add("is-active");
+      if(ready)dot.classList.add("is-ready");
+      if(selected)dot.classList.add("is-selected");
+      dot.setAttribute("aria-pressed",String(selected));
+      dot.setAttribute("aria-label",name+(ready?" — results ready":" — on Journey")+
+        (selected?" — selected":""));
+      dot.title=name+(ready?" · RESULTS READY":" · ON JOURNEY");
+      dot.addEventListener("click",()=>selectCard(cardId));
+    }else{
+      dot.setAttribute("aria-hidden","true");
+    }
     host.append(dot);
   }
-  $("journeyAwayCount").textContent=active+" / 10+";
+  $("journeyAwayCount").textContent=missions.length+" / 10+";
   $("journeyAwayIndicator").setAttribute(
-    "aria-label",active+" VCards currently on Journeys"
+    "aria-label",missions.length+" VCards on Journeys or awaiting results"
   );
 }
 
