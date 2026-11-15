@@ -81,7 +81,7 @@ function mount(host){
   let lastRewards=null;
   const numberText=value=>value.toLocaleString(undefined,{maximumFractionDigits:2});
 
-  // Each confirmed reward bag counts once, regardless of the number of IGM
+  // Count only confirmed reward bags, regardless of the number of IGM
   // or other assets inside it. Records are already tied to the signed-in player.
   async function totalRewardBags(client,playerId){
     const pageSize=500;
@@ -90,7 +90,7 @@ function mount(host){
       const {data,error}=await client.from("vhouse_journey_records")
         .select("snapshot")
         .eq("player_id",playerId)
-        .in("status",["RESULTS_READY","CONFIRMED"])
+        .eq("status","CONFIRMED")
         .order("id",{ascending:true})
         .range(start,start+pageSize-1);
       if(error)throw error;
