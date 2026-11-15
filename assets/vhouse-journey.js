@@ -275,14 +275,19 @@ main{
 .flip{width:205px}
 .loot-receipt{padding:6px 5px;min-height:0;overflow:hidden}
 #completeScreen .loot-values{
+  flex:0 0 auto;
   min-height:0;
-  overflow-y:auto;
-  scrollbar-width:thin;
-  gap:4px;
+  overflow:visible;
+  gap:3px;
   margin-top:4px;
 }
-#completeScreen .loot-value{padding:3px 2px}
-#completeScreen .loot-value strong{font-size:15px;margin-top:2px}
+#completeScreen .loot-value{padding:2px 2px}
+#completeScreen .loot-value span{font-size:8px;line-height:1.1}
+#completeScreen .loot-value strong{
+  font-size:11px;
+  line-height:1.1;
+  margin-top:2px;
+}
 #completeScreen .claim-footer{flex:0 0 auto;margin-top:auto}
 #completeScreen .receipt-id{
   font-size:7px;
