@@ -2861,6 +2861,9 @@ async function finishEdit(update) {
   message("VCard " + update.mode.toUpperCase() + " verified on Solana. Click the VCard to flip and view its updated receipt.");
   lock(false);
   refresh();
+  window.dispatchEvent(new CustomEvent("vhouse:vcard-updated",{
+    detail:{mintAddress:job.mint.publicKey.toBase58()}
+  }));
 }
 
 $("applyButton").onclick = async () => {
@@ -3380,6 +3383,9 @@ $("burnSubmitButton").onclick = async () => {
           burnSOL(burnSelection.recoveredLamports) +
           ". VHouse received the $3.00 service fee.");
         $("burnReview").hidden = true;
+        window.dispatchEvent(new CustomEvent("vhouse:vcard-updated",{
+          detail:{mintAddress:burnSelection.mint.toBase58()}
+        }));
         burnSignature = null;
         burnSelection = null;
         return;

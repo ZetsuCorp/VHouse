@@ -276,7 +276,7 @@
     if(!root)return;
     const previous=state.get(root);
     if(previous?.dispose)previous.dispose();
-    let active=true,sequence=0,timer=null;
+    let active=true,sequence=0;
     const api=window.VHouseAuth,store=window.VHouseCardStore;
     const status=root.querySelector("#chartStatus");
     if(!api||!store){
@@ -315,17 +315,48 @@
         if(status)status.textContent="MARKET DATA UNAVAILABLE";
       }
     };
-    const unsubscribeCard=store.subscribe(()=>void load());
-    const unsubscribeLogin=api.subscribe(()=>void load());
     const visible=()=>!document.hidden && root.isConnected &&
       (!!root.host ? !root.host.closest("#billboardOverlay")?.hidden : true);
-    // Only poll during an open Billboard; close/reopen restores saved history.
-    timer=setInterval(()=>{if(active&&visible())void load();},60000);
+    // Refresh for an actual VCard selection or property change, not a clock tick.
+    const cardSignature=()=>{
+      const card=store.getActive();
+      return JSON.stringify(card?[
+        card.id,card.mint_address,card.name,card.image,card.description,
+        card.team,card.level,card.atk,card.def,card.speed
+      ]:null);
+    };
+    let knownCard=cardSignature();
+    let knownUser=api.getUser()?.id||null;
+    const onCardChange=()=>{
+      const next=cardSignature();
+      if(next===knownCard)return;
+      knownCard=next;
+      if(visible())void load();
+    };
+    const onLoginChange=user=>{
+      const next=user?.id||null;
+      if(next===knownUser)return;
+      knownUser=next;
+      knownCard=cardSignature();
+      if(visible())void load();
+    };
+    // Emitted only after a mint, paid edit or burn is verified on-chain.
+    const onVerifiedChange=event=>{
+      const card=store.getActive();
+      if(!card||!visible())return;
+      const id=event?.detail?.cardId, mint=event?.detail?.mintAddress;
+      if((id&&String(id)===String(card.id))||
+         (mint&&String(mint)===String(card.mint_address)))void load();
+    };
+    const unsubscribeCard=store.subscribe(onCardChange);
+    const unsubscribeLogin=api.subscribe(onLoginChange);
+    window.addEventListener("vhouse:vcard-updated",onVerifiedChange);
     state.set(root,{dispose(){
       active=false;sequence++;
-      if(timer!==null)clearInterval(timer);
       unsubscribeCard();unsubscribeLogin();
+      window.removeEventListener("vhouse:vcard-updated",onVerifiedChange);
     }});
+    // The first view or an explicit reopen reads current blockchain data.
     await load();
   }
   window.VHouseBillboardData={mount};

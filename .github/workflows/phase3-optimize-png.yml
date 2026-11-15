@@ -1,0 +1,81 @@
+name: VHouse Phase 3 - Lossless PNG Optimization
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase3-optimize-png.yml'
+permissions:
+  contents: write
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PNG optimizer
+        run: python -m pip install --disable-pip-version-check 'Pillow==11.3.0'
+      - name: Optimize only when pixels and color profile remain unchanged
+        shell: bash
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          import io
+          total_before=0
+          total_after=0
+          changed=0
+          for p in sorted(Path('assets').glob('*.png')):
+              original=p.read_bytes()
+              if len(original)<100:
+                  continue
+              try:
+                  with Image.open(io.BytesIO(original)) as img:
+                      if img.format!='PNG':
+                          continue
+                      meta=img.info.copy()
+                      saved=io.BytesIO()
+                      opts=dict(format='PNG', optimize=True, compress_level=9)
+                      if meta.get('icc_profile') is not None:
+                          opts['icc_profile']=meta['icc_profile']
+                      if meta.get('dpi') is not None:
+                          opts['dpi']=meta['dpi']
+                      if meta.get('transparency') is not None:
+                          opts['transparency']=meta['transparency']
+                      img.save(saved, **opts)
+                      candidate=saved.getvalue()
+                      with Image.open(io.BytesIO(candidate)) as check:
+                          same=(img.mode==check.mode and img.size==check.size and
+                                img.tobytes()==check.tobytes() and
+                                all(img.info.get(key)==check.info.get(key)
+                                    for key in ('icc_profile','gamma','srgb','transparency')))
+                      if not same:
+                          print(f'SKIP unsafe metadata change: {p}')
+                          continue
+                  total_before+=len(original)
+                  if len(candidate)<len(original):
+                      p.write_bytes(candidate)
+                      total_after+=len(candidate)
+                      changed+=1
+                      print(f'OPTIMIZED {p}: {len(original)} -> {len(candidate)} bytes')
+                  else:
+                      total_after+=len(original)
+              except Exception as ex:
+                  print(f'SKIP {p}: {ex}')
+          print(f'Files optimized: {changed}; saved {total_before-total_after} bytes losslessly')
+          PY
+      - name: Commit optimized images only
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- assets/*.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Phase 3: optimize PNG assets losslessly"
+            git push origin HEAD:main
+          else
+            echo "PNG files already optimized; no changes needed."
+          fi
