@@ -320,21 +320,13 @@ button:disabled{
 
 /* SCREEN 1 — PREPARE */
 
-.journey-setup-controls{
+.journey-away-title{
   position:absolute;
   left:50%;
-  top:59%;
-  bottom:auto;
+  bottom:55px;
   transform:translateX(-50%);
   z-index:3;
-  width:280px;
-  max-width:calc(100% - 16px);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:4px;
-}
-.journey-away-title{
+  white-space:nowrap;
   font-size:11px;
   font-weight:900;
   color:#ffe0a0;
@@ -342,8 +334,11 @@ button:disabled{
   letter-spacing:.08em;
 }
 .journey-away-indicator{
-  position:relative;
-  z-index:2;
+  position:absolute;
+  left:50%;
+  bottom:30px;
+  transform:translateX(-50%);
+  z-index:3;
   display:flex;
   align-items:center;
   gap:8px;
@@ -836,9 +831,8 @@ td{
     animation:none!important;
   }
 }
-#setupScreen .setup-world .journey-setup-controls{top:59%;bottom:auto}
 /* Compact pre-Journey item selector under ACTIVE MISSIONS. */
-.use-items{width:100%;border:1px solid #bc9357;border-radius:6px;background:#20142cef;color:#f5e9d7;flex-shrink:0}
+.use-items{position:absolute;top:calc(100% - 30px);left:50%;transform:translateX(-50%);z-index:3;width:280px;max-width:calc(100% - 16px);border:1px solid #bc9357;border-radius:6px;background:#20142cef;color:#f5e9d7;flex-shrink:0}
 .use-items summary{cursor:pointer;list-style:none;color:#f7d797;font-weight:900;font-size:12px;letter-spacing:.06em;padding:7px 10px;display:flex;justify-content:space-between}
 .use-items summary::-webkit-details-marker{display:none}
 .use-items summary::after{content:"⌄";color:#d3a4ff}
@@ -867,18 +861,16 @@ td{
           <div id="setupVCard"></div>
         </div>
       </div>
-      <div class="journey-setup-controls">
-        <div class="journey-away-title">ACTIVE MISSIONS</div>
+      <div class="journey-away-title">ACTIVE MISSIONS</div>
       <div class="journey-away-indicator" id="journeyAwayIndicator" role="status">
         <div class="journey-away-dots" id="journeyAwayDots" aria-hidden="true"></div>
         <span class="journey-away-count" id="journeyAwayCount">0 / 10+</span>
       </div>
-        <details class="use-items" id="useItemsMenu">
-         <summary>USE ITEMS</summary>
-         <div class="use-item-option"><label><span>🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="bootsOwned">0</b></small></span><input type="checkbox" id="useSwiftBoots" disabled></label></div>
-         <div class="use-item-option"><label><span>🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="ticketOwned">0</b></small></span><input type="checkbox" id="useStageTicket" disabled></label></div>
-       </details>
-      </div>
+      <details class="use-items" id="useItemsMenu">
+        <summary>USE ITEMS</summary>
+        <div class="use-item-option"><label><span>🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="bootsOwned">0</b></small></span><input type="checkbox" id="useSwiftBoots" disabled></label></div>
+        <div class="use-item-option"><label><span>🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="ticketOwned">0</b></small></span><input type="checkbox" id="useStageTicket" disabled></label></div>
+      </details>
     </div>
 
     <div class="panel setup-panel">
