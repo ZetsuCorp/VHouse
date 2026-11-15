@@ -23,7 +23,7 @@ const itemControl=id=>$(id)||document.getElementById(id);
   No localStorage.
 */
 
-/* Defined encounter letters; only the coin flips determine random outcomes. */
+/* Default encounter letters are placeholders; each Journey rolls fresh letters. */
 const DEFAULT_STAGE_DATA=[
   {
     description:"Scout the nearby paths and gather your first supplies.",
@@ -298,10 +298,9 @@ window.addEventListener("vhouse:journey-inventory-refreshed",()=>{
 /*
   STAGE ENCOUNTER DATA
 
-  Every encounter must have its own defined
-  R, P, or S letter.
-
-  No random letter assignment.
+  Each encounter uses an R, P, or S letter.
+  Fresh letters are independently generated
+  when a new Journey starts.
 */
 
 function encounterPlan(stage){
@@ -947,7 +946,10 @@ async function startJourney(){
     stageId:stage.id,
     stage:{
       ...structuredClone(stage),
-      encounters:encounterPlan(stage).map(encounter=>({...encounter}))
+      encounters:encounterPlan(stage).map(encounter=>({
+        ...encounter,
+        letter:LETTERS[Math.floor(Math.random()*LETTERS.length)]
+      }))
     },
     card,
 
