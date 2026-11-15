@@ -7,6 +7,8 @@ function init(root=document,options={}){
 "use strict";
 
 const $=id=>root.getElementById(id);
+// USE ITEMS sits below the embedded Journey frame, outside its shadow root.
+const itemControl=id=>$(id)||document.getElementById(id);
 
 /*
   STANDALONE JOURNEY DESIGN FRAMEWORK
@@ -265,52 +267,33 @@ function emit(name,detail){
   after a lost first round or failed retry.
 */
 
-function luckStat(){
-  const inventory=window.VHouseJourneyInventory;
-
-  let quantity;
-
-  if(typeof inventory?.getQuantity==="function"){
-
-    quantity=inventory.getQuantity("LUCK");
-
-  }else if(Array.isArray(inventory?.items)){
-
-    quantity=inventory.items
-      .filter(item=>
-        String(item.item||item.name)
-          .toUpperCase()==="LUCK"
-      )
-      .reduce(
-        (sum,item)=>
-          sum+wholeQuantity(item.quantity),
-        0
-      );
-
-  }else if(
-    inventory?.items&&
-    typeof inventory.items==="object"
-  ){
-
-    quantity=
-      inventory.items.LUCK?.quantity??
-      inventory.items.LUCK;
-
-  }else if(
-    inventory&&
-    Object.hasOwn(inventory,"LUCK")
-  ){
-
-    quantity=inventory.LUCK;
-
-  }else{
-
-    quantity=state.demoInventory.LUCK;
-
-  }
-
-  return wholeQuantity(quantity);
+function itemQuantity(name){
+  return wholeQuantity(window.VHouseJourneyInventory?.getQuantity?.(name)||0);
 }
+function luckStat(){
+  return Math.min(5,itemQuantity("Lucky Charm"));
+}
+function renderUseItems(){
+  const boots=itemControl("useSwiftBoots"),ticket=itemControl("useStageTicket");
+  if(!boots||!ticket)return;
+  const mission=state.mission;
+  const locked=mission&&["running","ready"].includes(mission.status);
+  const bootsOwned=itemQuantity("Swift Boots"),ticketsOwned=itemQuantity("Stage Ticket");
+  itemControl("bootsOwned").textContent=String(bootsOwned);
+  itemControl("ticketOwned").textContent=String(ticketsOwned);
+  boots.disabled=!!locked||bootsOwned<1||startingJourney;
+  // Stage fees are not configured in the existing Stage data.
+  // Don't consume a ticket to skip a fee that does not exist.
+  ticket.disabled=true;
+  ticket.title="Stage entry fee is not configured";
+  if(boots.disabled)boots.checked=false;
+  ticket.checked=false;
+}
+let startingJourney=false;
+const managedPending=new Set();
+window.addEventListener("vhouse:journey-inventory-refreshed",()=>{
+  if(currentScreen==="setup")renderStageInfo();
+});
 
 /*
   STAGE ENCOUNTER DATA
@@ -369,6 +352,11 @@ function validStage(stage){
 function setScreen(screen){
 
   currentScreen=screen;
+  const itemsMenu=document.getElementById("journeyUseItems");
+  if(itemsMenu){
+    itemsMenu.hidden=screen!=="setup";
+    if(screen!=="setup")itemsMenu.open=false;
+  }
 
   for(const name of [
     "setup","travel","complete","away"
@@ -655,10 +643,10 @@ function renderStageInfo(){
   // Put the gauge in the unused space above the VCard, not the setup panel.
   if(gauge.parentElement!==$("setupWorld"))$("setupWorld").append(gauge);
   const chanceCard=pending?mission.card:activeCard();
-  const chanceLuck=Math.min(5,pending
-    ?wholeQuantity(mission.luck?.quantity):luckStat());
-  let noBagChance=1;
+  const chanceLuck=luckStat();
   let maxPossibleBags=0;
+  let baseFlips=0;
+  let matchedEncounters=0;
   for(const encounter of encounterPlan(stage)){
     const raw=encounter.reward??stage?.rewardsByType?.[encounter.type];
     const bags=Array.isArray(raw)?raw:[raw];
@@ -670,14 +658,17 @@ function renderStageInfo(){
     },0);
     if(!bagCount)continue;
     maxPossibleBags+=bagCount;
-    // Matching letters skip the initial flip; each LUCK adds a retry.
-    const attempts=chanceLuck+(chanceCard?.team===encounter.letter?0:1);
-    noBagChance*=Math.pow(0.5,attempts);
+    // Lucky Charms are shared consumables, not reusable retries on every
+    // encounter. Count their total available retries only once.
+    if(chanceCard?.team===encounter.letter)matchedEncounters++;
+    else baseFlips++;
   }
 
   gauge.hidden=!maxPossibleBags;
   if(maxPossibleBags){
-    const chance=Math.max(0,Math.min(100,100*(1-noBagChance)));
+    const lanternFlips=Math.min(itemQuantity("Hunt Lantern"),matchedEncounters);
+    const totalFlips=baseFlips+lanternFlips+chanceLuck;
+    const chance=Math.max(0,Math.min(100,100*(1-Math.pow(0.5,totalFlips))));
     gauge.style.cssText="position:absolute;top:8px;left:50%;transform:translateX(-50%);width:280px;max-width:calc(100% - 16px);z-index:3;padding:3px 7px;border:1px solid #d7ad61;border-radius:7px;background:linear-gradient(135deg,#311547e8,#1b102ae8);color:#f8d891;box-shadow:inset 0 0 12px #c28af31c;pointer-events:none;";
     gauge.replaceChildren();
 
@@ -715,6 +706,7 @@ function renderStageInfo(){
     gauge.append(header,odds,track);
   }
 
+  renderUseItems();
   $("setupDescription").textContent=
     validStage(stage)?String(stage.description||""):"";
 
@@ -902,6 +894,9 @@ async function startJourney(){
     return;
   }
 
+  if(startingJourney)return;
+  startingJourney=true;
+  $("startButton").disabled=true;
   const now=Date.now();
 
   const card={
@@ -913,8 +908,18 @@ async function startJourney(){
     from the inventory item.
   */
 
+  const auth=window.VHouseAuth;
+  if(window.VHouseJourneyStore && auth){
+    try{
+      await window.VHouseJourneyInventory?.refresh?.();
+    }catch(error){
+      startingJourney=false;
+      $("setupStatus").textContent="Inventory unavailable. Try again.";
+      renderStageInfo();
+      return;
+    }
+  }
   const luck=luckStat();
-
   card.luck=luck;
 
   state.mission={
@@ -922,10 +927,7 @@ async function startJourney(){
     stageId:stage.id,
     stage:{
       ...structuredClone(stage),
-      encounters:encounterPlan(stage).map(encounter=>({
-        ...encounter,
-        letter:LETTERS[Math.floor(Math.random()*LETTERS.length)]
-      }))
+      encounters:encounterPlan(stage).map(encounter=>({...encounter}))
     },
     card,
 
@@ -944,13 +946,30 @@ async function startJourney(){
   };
 
   try{
-    await save();
+    if(window.VHouseJourneyStore && auth?.getUser?.()){
+      const useBoots=!!itemControl("useSwiftBoots")?.checked;
+      const useTicket=!!itemControl("useStageTicket")?.checked;
+      const {data,error}=await auth.getClient().rpc("vhouse_start_item_journey",{
+        p_mission:state.mission,p_use_boots:useBoots,p_use_ticket:useTicket
+      });
+      if(error)throw error;
+      state.mission=data;
+      state.missions[String(card.id)]=data;
+      window.dispatchEvent(new Event("vhouse:inventory-updated"));
+    }else{
+      await save();
+    }
   }catch(error){
     delete state.missions[String(card.id)];
     state.mission=null;
+    startingJourney=false;
     $("setupStatus").textContent="Journey could not start: "+(error.message||"save failed");
+    $("startButton").disabled=false;
     return;
   }
+  startingJourney=false;
+  itemControl("useSwiftBoots").checked=false;
+  itemControl("useStageTicket").checked=false;
 
   emit("journey-started",{
     missionId:state.mission.id,
@@ -1034,15 +1053,59 @@ function renderEncounterProgress(){
       item.classList.remove("encounter-win","encounter-loss");
       continue;
     }
-    value.textContent=result.won?"WIN":"LOSS";
+    value.textContent=(result.won?"WIN":"LOSS")+
+      ((result.itemsUsed||[]).length?" ✦":"");
     item.classList.toggle("encounter-win",!!result.won);
     item.classList.toggle("encounter-loss",!result.won);
   }
 }
 
 /* Persist one encounter at a time, never reroll a completed encounter. */
+async function advanceManagedEncounters(mission){
+  if(managedPending.has(mission.id)||mission.status!=="running")return;
+  managedPending.add(mission.id);
+  try{
+    const auth=window.VHouseAuth;
+    if(!auth?.getUser?.())return;
+    const client=auth.getClient();
+    const plan=encounterPlan(mission.stage);
+    const total=mission.endsAt-mission.startedAt;
+    const elapsed=Math.max(0,Math.min(total,Date.now()-mission.startedAt));
+    const due=Math.min(plan.length,Math.floor(elapsed/Math.max(1,total)*plan.length));
+    while(mission.results.length<due){
+      const index=mission.results.length;
+      const {data,error}=await client.rpc("vhouse_resolve_item_encounter",{
+        p_mission_id:mission.id,p_index:index
+      });
+      if(error)throw error;
+      if(mission.results.length===index)mission.results.push(data);
+      window.dispatchEvent(new Event("vhouse:inventory-updated"));
+      if(mission===state.mission&&currentScreen==="travel")renderEncounterProgress();
+    }
+    if(Date.now()>=mission.endsAt && mission.results.length===plan.length){
+      const {data,error}=await client.rpc("vhouse_finish_item_journey",{p_mission_id:mission.id});
+      if(error)throw error;
+      Object.assign(mission,data);
+      if(mission===state.mission&&currentScreen==="travel")renderComplete();
+      window.dispatchEvent(new Event("vhouse:cash-updated"));
+      emit("journey-completed",{missionId:mission.id,cardId:mission.card.id,
+        stageId:mission.stageId,results:mission.results,rewards:mission.rewards,
+        totals:mission.totals,at:mission.completedAt});
+    }
+  }catch(error){
+    // A clock difference may make the client try slightly before the server.
+    if(!/ENCOUNTER_NOT_DUE|JOURNEY_STILL_RUNNING/.test(String(error?.message||"")))
+      console.error("Journey encounter sync:",error);
+  }finally{
+    managedPending.delete(mission.id);
+  }
+}
 function advanceEncounters(mission=state.mission){
   if(!mission||mission.status!=="running")return;
+  if(mission.itemEffects?.serverManaged){
+    void advanceManagedEncounters(mission);
+    return;
+  }
   const plan=encounterPlan(mission.stage);
   const total=mission.endsAt-mission.startedAt;
   const elapsed=Math.max(0,Math.min(total,Date.now()-mission.startedAt));
@@ -1113,6 +1176,10 @@ function updateTimer(){
   already-recorded outcomes and catches up any due encounters.
 */
 function settleJourney(mission=state.mission){
+  if(mission?.itemEffects?.serverManaged){
+    void advanceManagedEncounters(mission);
+    return false;
+  }
 
   if(
     !mission||
@@ -1322,7 +1389,8 @@ function renderComplete(){
 
     const outcome=document.createElement("td");
 
-    outcome.textContent=result.method;
+    const used=(result.itemsUsed||[]).map(item=>item.item+" ×"+item.quantity);
+    outcome.textContent=result.method+(used.length?" · USED "+used.join(", "):"");
 
     outcome.className=
       result.won?"win":"loss";
@@ -1350,6 +1418,8 @@ function renderComplete(){
   }
 
   $("resultSummary").textContent=
+    (mission.itemEffects?.swiftBootsUsed?"SWIFT BOOTS ×1 · ":"")+
+    (mission.itemEffects?.stageTicketUsed?"STAGE TICKET ×1 · ":"")+
     mission.totals.wins+
     " OF "+
     mission.totals.encounters+
@@ -1409,7 +1479,14 @@ async function confirmReceipt(){
     state.receipts.push(structuredClone(mission));
   state.events.push(event);
 
-  try{await save();}
+  try{
+    if(mission.itemEffects?.serverManaged){
+      const confirmed=await window.VHouseJourneyStore.confirmManaged(mission.id);
+      Object.assign(mission,confirmed);
+    }else{
+      await save();
+    }
+  }
   catch(error){
     mission.status="ready";
     mission.confirmedAt=null;
