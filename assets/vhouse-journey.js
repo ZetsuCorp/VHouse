@@ -134,8 +134,7 @@ async function prepareJourneyStore(){
           if(writeError)throw writeError;
           saved.set(String(mission.id),serialized);
         }
-        // The database updates account cash when a completed mission is saved.
-        window.dispatchEvent(new Event("vhouse:cash-updated"));
+        // Journey results are pending until receipt confirmation.
       });
       queue.catch(err=>console.error("VCard Journey record not saved:",err));
       return queue;
