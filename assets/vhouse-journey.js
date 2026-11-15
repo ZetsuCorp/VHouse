@@ -5,14 +5,7 @@
 "use strict";
 
 let loading=null;
-let inventorySnapshot={playerId:null,items:new Map()};
-const inventoryProvider={
-  getQuantity(name){
-    if(window.VHouseAuth?.getUser()?.id!==inventorySnapshot.playerId)return 0;
-    return inventorySnapshot.items.get(String(name||""))||0;
-  },
-  refresh:()=>refreshInventory()
-};
+let inventorySnapshot={playerId:null,luck:0};
 
 function quantity(value){
   const n=Number(value);
@@ -25,19 +18,27 @@ async function refreshInventory(){
   await auth.ready;
   const playerId=auth.getUser()?.id;
   if(!playerId){
-    inventorySnapshot={playerId:null,items:new Map()};
+    inventorySnapshot={playerId:null,luck:0};
     return;
   }
   const data=await auth.loadPlayerData();
   if(!data||data.playerId!==playerId||auth.getUser()?.id!==playerId)return;
   inventorySnapshot={
     playerId,
-    items:new Map((data.inventory||[])
-      .filter(row=>row.type==="Item" && quantity(row.quantity)>0)
-      .map(row=>[String(row.thing),quantity(row.quantity)]))
+    luck:(data.inventory||[])
+      .filter(row=>String(row.thing||"").trim().toUpperCase()==="LUCK")
+      .reduce((sum,row)=>sum+quantity(row.quantity),0)
   };
-  window.VHouseJourneyInventory=inventoryProvider;
-  window.dispatchEvent(new Event("vhouse:journey-inventory-refreshed"));
+  // Respect a live inventory provider if the game already supplies one.
+  if(!window.VHouseJourneyInventory){
+    window.VHouseJourneyInventory={
+      getQuantity(name){
+        if(String(name).toUpperCase()!=="LUCK")return 0;
+        if(window.VHouseAuth?.getUser()?.id!==inventorySnapshot.playerId)return 0;
+        return inventorySnapshot.luck;
+      }
+    };
+  }
 }
 
 /* Every VCard has its own persistent Journey record. Historical records remain
@@ -84,7 +85,7 @@ async function prepareJourneyStore(){
     missions,
     receipts:legacy?.receipts||[],
     events:legacy?.events||[],
-    demoInventory:{LUCK:0}
+    demoInventory:legacy?.demoInventory||{LUCK:0}
   };
   let queue=Promise.resolve();
 
@@ -96,7 +97,7 @@ async function prepareJourneyStore(){
     save(next){
       if(auth.getUser()?.id!==id)return Promise.reject(Error("Player changed."));
       const missionsToWrite=Object.values(next.missions||{})
-        .filter(m=>m&&m.id&&m.card?.id&&m.stageId&&!m.itemEffects?.serverManaged);
+        .filter(m=>m&&m.id&&m.card?.id&&m.stageId);
       const changed=missionsToWrite.map(mission=>{
         const safe=structuredClone(mission);
         const serialized=JSON.stringify(safe);
@@ -139,12 +140,6 @@ async function prepareJourneyStore(){
       });
       queue.catch(err=>console.error("VCard Journey record not saved:",err));
       return queue;
-    },
-    async confirmManaged(missionId){
-      if(auth.getUser()?.id!==id)throw Error("Player changed.");
-      const {data,error}=await client.rpc("vhouse_confirm_item_journey",{p_mission_id:missionId});
-      if(error)throw error;
-      return data;
     }
   };
 }
@@ -216,7 +211,8 @@ main{
 #setupScreen .setup-fields{
   gap:5px;
   min-height:0;
-  overflow:hidden;
+  overflow-y:auto;
+  scrollbar-width:thin;
   padding-right:2px;
 }
 .setup-panel h2{font-size:17px;margin:0 0 3px}
@@ -372,6 +368,5 @@ async function load(host,options={}){
   finally{loading=null;}
 }
 
-window.addEventListener("vhouse:inventory-updated",()=>{void refreshInventory().catch(error=>console.error("Journey inventory:",error));});
 window.VHouseJourney={load};
 })();
