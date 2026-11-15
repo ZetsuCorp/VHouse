@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Restart startup validation only on a browser reload; regular game links are unchanged. -->
+<script>
+if (performance.getEntriesByType("navigation").some(entry => entry.type === "reload")) {
+  window.location.replace("./startup.html");
+}
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VHouse Shop</title>
