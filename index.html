@@ -196,6 +196,28 @@ html, body {
   height: 69.68%;
 }
 
+
+/* Item selector added in the free frame space: existing Journey layout is unchanged. */
+#journeyUseItems{
+  position:absolute;
+  left:25%;top:87%;
+  transform:translateX(-50%);
+  z-index:8;
+  width:min(280px,26%);min-width:185px;
+  border:1px solid #bc9357;border-radius:6px;
+  background:#21142def;color:#f5e9d7;
+  box-shadow:0 2px 8px #0009;
+}
+#journeyUseItems[hidden]{display:none!important}
+#journeyUseItems summary{cursor:pointer;list-style:none;color:#f7d797;font-weight:900;font-size:12px;padding:4px 9px;display:flex;justify-content:space-between}
+#journeyUseItems summary::-webkit-details-marker{display:none}
+#journeyUseItems summary::after{content:"⌄";color:#d3a4ff}
+#journeyUseItems[open] summary::after{content:"⌃"}
+#journeyUseItems .use-item-option{border-top:1px solid #62477b}
+#journeyUseItems .use-item-option label{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:3px 8px;cursor:pointer;font-size:11px}
+#journeyUseItems .use-item-option small{display:block;margin-top:1px;font-size:9px;color:#cba5ed}
+#journeyUseItems .use-item-option input{accent-color:#bd91f3;width:15px;height:15px;flex-shrink:0}
+#journeyUseItems .use-item-option input:disabled{opacity:.4}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
@@ -264,6 +286,11 @@ html, body {
       <div class="journey-window">
         <img class="vhouse-frame-art" src="assets/Vcontainer.png" alt="" draggable="false">
         <div class="vhouse-frame-content" id="journeyContent"></div>
+        <details id="journeyUseItems" hidden>
+          <summary>USE ITEMS</summary>
+          <div class="use-item-option"><label><span>🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="bootsOwned">0</b></small></span><input type="checkbox" id="useSwiftBoots" disabled></label></div>
+          <div class="use-item-option"><label><span>🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="ticketOwned">0</b></small></span><input type="checkbox" id="useStageTicket" disabled></label></div>
+        </details>
       </div>
     </div>
 
