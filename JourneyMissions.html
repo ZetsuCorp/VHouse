@@ -343,8 +343,13 @@ button:disabled{
 }
 .journey-away-dots{display:flex;align-items:center;gap:5px}
 .journey-away-dot{
+  flex:0 0 7px;
   width:7px;
   height:7px;
+  padding:0;
+  margin:0;
+  line-height:0;
+  appearance:none;
   border-radius:50%;
   background:#423a31;
   border:1px solid #76634a;
@@ -353,6 +358,22 @@ button:disabled{
   background:#f0c465;
   border-color:#ffe1a0;
   box-shadow:0 0 7px #f0c465;
+}
+button.journey-away-dot{cursor:pointer}
+button.journey-away-dot:hover,
+button.journey-away-dot:focus-visible{
+  border-color:#fff0c7;
+  box-shadow:0 0 0 2px #a98249,0 0 9px #f0c465;
+  outline:none;
+}
+.journey-away-dot.is-ready{
+  background:#bd91f3;
+  border-color:#e6c9ff;
+  box-shadow:0 0 7px #bd91f3;
+}
+.journey-away-dot.is-selected{
+  outline:2px solid #bd91f3;
+  outline-offset:2px;
 }
 .journey-away-count{font-size:10px;color:#f4d79f;font-weight:800}
 
@@ -846,7 +867,7 @@ td{
       </div>
       <div class="journey-away-title">ACTIVE MISSIONS</div>
       <div class="journey-away-indicator" id="journeyAwayIndicator" role="status">
-        <div class="journey-away-dots" id="journeyAwayDots" aria-hidden="true"></div>
+        <div class="journey-away-dots" id="journeyAwayDots" role="group" aria-label="Select a VCard Journey"></div>
         <span class="journey-away-count" id="journeyAwayCount">0 / 10+</span>
       </div>
     </div>
