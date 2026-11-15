@@ -968,8 +968,8 @@ async function startJourney(){
     return;
   }
   startingJourney=false;
-  itemControl("useSwiftBoots").checked=false;
-  itemControl("useStageTicket").checked=false;
+  if(itemControl("useSwiftBoots"))itemControl("useSwiftBoots").checked=false;
+  if(itemControl("useStageTicket"))itemControl("useStageTicket").checked=false;
 
   emit("journey-started",{
     missionId:state.mission.id,
