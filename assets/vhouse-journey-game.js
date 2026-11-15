@@ -279,8 +279,6 @@ function renderUseItems(){
   const bootsOwned=itemQuantity("Swift Boots"),ticketsOwned=itemQuantity("Stage Ticket");
   $("bootsOwned").textContent=String(bootsOwned);
   $("ticketOwned").textContent=String(ticketsOwned);
-  boots.hidden=bootsOwned<1;
-  ticket.hidden=ticketsOwned<1;
   boots.disabled=!!locked||bootsOwned<1||startingJourney;
   // Stage fees are not configured in the existing Stage data.
   // Don't consume a ticket to skip a fee that does not exist.
