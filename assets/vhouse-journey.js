@@ -216,8 +216,7 @@ main{
 #setupScreen .setup-fields{
   gap:5px;
   min-height:0;
-  overflow-y:auto;
-  scrollbar-width:thin;
+  overflow:hidden;
   padding-right:2px;
 }
 .setup-panel h2{font-size:17px;margin:0 0 3px}
