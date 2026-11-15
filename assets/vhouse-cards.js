@@ -136,9 +136,11 @@ async function assignLoaded(details){
     return copy(card);
   });
 }
+/* DB trigger already saved this status with the Journey record.
+   Update local presentation, then reconcile with authoritative Supabase state. */
 async function setJourneyStatus(cardId,status,missionId,stageId){
-  const id=key(cardId),account=playerId();
-  if(!id||!account)return;
+  const id=key(cardId);
+  if(!id||!playerId())return;
   if(!["ON_JOURNEY","RESULTS_READY","AVAILABLE"].includes(status))
     throw Error("Unknown VCard Journey status.");
   const previous=journeyStates.get(id);
@@ -149,27 +151,9 @@ async function setJourneyStatus(cardId,status,missionId,stageId){
     journeyStates.set(id,{status,missionId,stageId:stageId??null});
   }
   notify();
-  const client=auth().getClient();
-  let result;
-  if(status==="AVAILABLE"){
-    result=await client.from("vhouse_vcard_journey_states").delete()
-      .eq("player_id",account).eq("card_id",id)
-      .eq("mission_id",missionId);
-  }else{
-    result=await client.from("vhouse_vcard_journey_states").upsert({
-      player_id:account,card_id:id,status,mission_id:missionId,
-      stage_id:stageId??null,updated_at:new Date().toISOString()
-    },{onConflict:"player_id,card_id"});
-  }
-  if(result.error){
-    if(playerId()===account){
-      if(previous)journeyStates.set(id,previous);
-      else journeyStates.delete(id);
-      notify();
-    }
-    throw result.error;
-  }
+  await refresh();
 }
+
 const api={
   getCards,getActive,getActiveId:()=>activeId,
   getLoadedPlayerId:()=>loadedPlayerId,

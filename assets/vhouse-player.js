@@ -81,31 +81,6 @@ function mount(host){
   let lastRewards=null;
   const numberText=value=>value.toLocaleString(undefined,{maximumFractionDigits:2});
 
-  // Count only confirmed reward bags, regardless of the number of IGM
-  // or other assets inside it. Records are already tied to the signed-in player.
-  async function totalRewardBags(client,playerId){
-    const pageSize=500;
-    let total=0;
-    for(let start=0;;start+=pageSize){
-      const {data,error}=await client.from("vhouse_journey_records")
-        .select("snapshot")
-        .eq("player_id",playerId)
-        .eq("status","CONFIRMED")
-        .order("id",{ascending:true})
-        .range(start,start+pageSize-1);
-      if(error)throw error;
-      for(const record of data||[]){
-        const batches=record.snapshot?.rewardBatches;
-        if(!batches||typeof batches!=="object"||Array.isArray(batches))continue;
-        for(const amount of Object.values(batches)){
-          const count=Number(amount);
-          if(Number.isFinite(count)&&count>0)total+=Math.floor(count);
-        }
-      }
-      if(!data||data.length<pageSize)break;
-    }
-    return total;
-  }
   function showGain(box,value,unit){
     if(value<=0)return;
     const pop=document.createElement("span");
@@ -135,16 +110,15 @@ function mount(host){
     }
     try{
       const client=auth.getClient();
-      const [account,earned]=await Promise.all([
-        client.from("vhouse_accounts").select("igm_balance")
-          .eq("id",user.id).maybeSingle(),
-        totalRewardBags(client,user.id)
-      ]);
+      const account=await client.from("vhouse_accounts")
+        .select("igm_balance,reward_bags_total")
+        .eq("id",user.id).maybeSingle();
       if(account.error)throw account.error;
       if(ticket!==cashRequest||auth.getUser()?.id!==user.id)return;
       const cash=Number(account.data?.igm_balance??0);
       if(!Number.isFinite(cash))throw Error("Invalid VCard Cash balance.");
       cashAmount.textContent=numberText(cash)+" IGM";
+      const earned=Number(account.data?.reward_bags_total??0);
       rewardsAmount.textContent=numberText(earned);
       if(lastCash!==null&&cash>lastCash)showGain(accountBox,cash-lastCash,"IGM");
       if(lastRewards!==null&&earned>lastRewards)showGain(rewardsBox,earned-lastRewards,"");

@@ -1083,40 +1083,42 @@ function renderEncounterProgress(){
   }
 }
 
-/* Persist one encounter at a time, never reroll a completed encounter. */
+/* One server transaction resolves all due encounters and settles a completed
+   Journey. The server keeps all coin flips, LUCK, item usage and rewards. */
+const managedRetryAt=new Map();
 async function advanceManagedEncounters(mission){
   if(managedPending.has(mission.id)||mission.status!=="running")return;
+  const plan=encounterPlan(mission.stage);
+  const total=Math.max(1,mission.endsAt-mission.startedAt);
+  const due=Math.min(plan.length,Math.floor(
+    Math.max(0,Math.min(total,Date.now()-mission.startedAt))/total*plan.length));
+  const already=mission.results?.length||0;
+  if(due<=already && Date.now()<mission.endsAt)return;
+  if(Date.now()<(managedRetryAt.get(mission.id)||0))return;
   managedPending.add(mission.id);
   try{
     const auth=window.VHouseAuth;
     if(!auth?.getUser?.())return;
-    const client=auth.getClient();
-    const plan=encounterPlan(mission.stage);
-    const total=mission.endsAt-mission.startedAt;
-    const elapsed=Math.max(0,Math.min(total,Date.now()-mission.startedAt));
-    const due=Math.min(plan.length,Math.floor(elapsed/Math.max(1,total)*plan.length));
-    while(mission.results.length<due){
-      const index=mission.results.length;
-      const {data,error}=await client.rpc("vhouse_resolve_item_encounter",{
-        p_mission_id:mission.id,p_index:index
-      });
-      if(error)throw error;
-      if(mission.results.length===index)mission.results.push(data);
+    const {data,error}=await auth.getClient().rpc("vhouse_advance_item_journey",{
+      p_mission_id:mission.id
+    });
+    if(error)throw error;
+    if(!data||typeof data!=="object")throw Error("Journey sync unavailable.");
+    const previousCount=already;
+    Object.assign(mission,data);
+    managedRetryAt.delete(mission.id);
+    if((mission.results?.length||0)>previousCount){
       window.dispatchEvent(new Event("vhouse:inventory-updated"));
       if(mission===state.mission&&currentScreen==="travel")renderEncounterProgress();
     }
-    if(Date.now()>=mission.endsAt && mission.results.length===plan.length){
-      const {data,error}=await client.rpc("vhouse_finish_item_journey",{p_mission_id:mission.id});
-      if(error)throw error;
-      Object.assign(mission,data);
+    if(mission.status==="ready"){
       if(mission===state.mission&&currentScreen==="travel")renderComplete();
-      window.dispatchEvent(new Event("vhouse:cash-updated"));
       emit("journey-completed",{missionId:mission.id,cardId:mission.card.id,
         stageId:mission.stageId,results:mission.results,rewards:mission.rewards,
         totals:mission.totals,at:mission.completedAt});
     }
   }catch(error){
-    // A clock difference may make the client try slightly before the server.
+    managedRetryAt.set(mission.id,Date.now()+1000);
     if(!/ENCOUNTER_NOT_DUE|JOURNEY_STILL_RUNNING/.test(String(error?.message||"")))
       console.error("Journey encounter sync:",error);
   }finally{
