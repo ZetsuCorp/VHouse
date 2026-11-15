@@ -251,6 +251,10 @@ const shopStock={scrap:0,copper:0,relic:0,crystal:6,repair:4,token:3};
 let selectedBoost=0,selectedService=0,tradeFrom="scrap",tradeTo="crystal";
 let shopCash=null, shopInventory=new Map(), shopBusy=false, shopLoading=false;
 let shopReadId=0, shopPlayerId=null;
+let shopActiveJourneys=[];
+const shopSafe=value=>String(value??"").replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
 const purchasedItemNames=new Set([...boosts,...services].map(item=>item.name));
 
 async function loadShopPlayer(){
@@ -258,6 +262,7 @@ async function loadShopPlayer(){
   shopCash=null;
   shopInventory=new Map();
   shopPlayerId=null;
+  shopActiveJourneys=[];
   shopLoading=true;
   if(!shopMenuOverlay.hidden)renderShop();
   try{
@@ -277,6 +282,16 @@ async function loadShopPlayer(){
         shopInventory.set(item.thing,Number(item.quantity)||0);
       }
     }
+    const {data:journeys,error:journeyError}=await auth.getClient()
+      .from("vhouse_journey_records")
+      .select("card_id,snapshot")
+      .eq("player_id",player.playerId)
+      .eq("status","ON_JOURNEY");
+    if(journeyError)throw journeyError;
+    if(readId!==shopReadId||auth.getUser()?.id!==player.playerId)return;
+    shopActiveJourneys=(journeys||[]).map(journey=>({
+      id:journey.card_id,name:journey.snapshot?.card?.name||"VCard"
+    }));
   }catch(error){
     if(readId!==shopReadId)return;
     console.error("Shop account load:",error);
@@ -337,6 +352,39 @@ async function buyShopItem(item){
   }
 }
 
+async function recallShopJourneys(all){
+  if(shopBusy||shopLoading)return;
+  if(!shopPlayerId||window.VHouseAuth?.getUser?.()?.id!==shopPlayerId){
+    shopStatus="Sign in to recall your VCards.";renderShop();return;
+  }
+  if((shopInventory.get("Emergency Recall Ticket")||0)<1){
+    shopStatus="You need an Emergency Recall Ticket.";renderShop();return;
+  }
+  const target=all?null:shopMenuContent.querySelector("#shopRecallCard")?.value;
+  if(!all&&!target){shopStatus="Select a VCard to recall.";renderShop();return;}
+  shopBusy=true;
+  renderShop();
+  try{
+    const auth=window.VHouseAuth;
+    const {data,error}=await auth.getClient().rpc("vhouse_recall_item_journeys",{p_card_id:target});
+    if(error)throw error;
+    shopStatus=data.recalledCount+" VCard"+(data.recalledCount===1?"":"s")+" recalled. Results ready.";
+    window.dispatchEvent(new Event("vhouse:inventory-updated"));
+    window.dispatchEvent(new Event("vhouse:cash-updated"));
+    shopBusy=false;
+    await loadShopPlayer();
+  }catch(error){
+    console.error("Journey recall:",error);
+    const message=String(error?.message||"");
+    shopStatus=message.includes("NO_ACTIVE_JOURNEYS")?"No active Journeys to recall.":
+      message.includes("RECALL_TICKET_NOT_OWNED")?"You need an Emergency Recall Ticket.":
+      "Recall failed. Ticket was not used.";
+  }finally{
+    shopBusy=false;
+    if(!shopMenuOverlay.hidden)renderShop();
+  }
+}
+
 function shopItem(item,subtitle,extra,action,index,selected,disabled=false){
   return '<button type="button" class="zshop-item'+(selected?' selected':'')+
     '" data-shop-action="'+action+'" data-index="'+index+'" aria-pressed="'+selected+'"'+
@@ -361,6 +409,19 @@ function renderShop(){
     const list=items.map((v,i)=>shopItem(v,v.price?v.price.toLocaleString()+" IGM":"FREE",
       "OWNED: "+(shopInventory.get(v.name)||0),
       isBoost?"select-boost":"select-service",i,selected===i)).join("");
+    const recallOwned=shopInventory.get("Emergency Recall Ticket")||0;
+    const recallControls=!isBoost
+      ?'<div class="shop-recall-controls" style="display:grid;gap:5px;width:100%;font-size:11px">'+
+        '<select id="shopRecallCard" aria-label="Choose VCard to recall" style="min-width:0;width:100%;padding:5px;color:#ffe2ab;background:#21162c;border:1px solid #bc9357">'+
+        (shopActiveJourneys.length?shopActiveJourneys.map(card=>
+          '<option value="'+shopSafe(card.id)+'">'+shopSafe(card.name)+'</option>').join("")
+          :'<option value="">No active Journeys</option>')+'</select>'+
+        '<div style="display:flex;gap:5px">'+
+        '<button class="zshop-action" style="min-width:0;flex:1" data-shop-action="recall-one"'+
+        (shopBusy||shopLoading||recallOwned<1||!shopActiveJourneys.length?' disabled':'')+'>RECALL 1</button>'+
+        '<button class="zshop-action" style="min-width:0;flex:1" data-shop-action="recall-all"'+
+        (shopBusy||shopLoading||recallOwned<1||!shopActiveJourneys.length?' disabled':'')+'>RECALL ALL</button>'+
+        '</div></div>':'';
     const detail='<div class="zshop-details">'+
       '<div class="zshop-detail-icon">'+item.icon+'</div>'+
       '<strong class="zshop-detail-name">'+item.name+'</strong>'+
@@ -369,7 +430,7 @@ function renderShop(){
       '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
       '"'+(shopBusy||shopLoading||shopCash===null||shopCash<item.price||
         (item.name==="Lucky Charm"&&(shopInventory.get(item.name)||0)>=5)?' disabled':'')+
-      '>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button></div>';
+      '>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button>'+recallControls+'</div>';
     body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"TICKETS","AVAILABLE",
       '<div class="zshop-grid'+(isBoost?'':' service-grid')+'">'+list+'</div>')+
       shopPanel("DETAILS","SELECTED",detail)+'</div>';
@@ -406,6 +467,10 @@ shopMenuContent.addEventListener("click",event=>{
   if(action==="select-service")selectedService=Number(index);
   if(action==="select-player")tradeFrom=index;
   if(action==="select-stock")tradeTo=index;
+  if(action==="recall-one"||action==="recall-all"){
+    void recallShopJourneys(action==="recall-all");
+    return;
+  }
   if(action==="buy-boost"||action==="use-service"){
     const item=action==="buy-boost"?boosts[selectedBoost]:services[selectedService];
     void buyShopItem(item);
@@ -437,7 +502,7 @@ document.querySelectorAll(".shop-hotspot").forEach(button=>{
 });
 window.VHouseAuth?.subscribe(()=>{
   ++shopReadId;
-  shopCash=null;shopInventory=new Map();shopPlayerId=null;
+  shopCash=null;shopInventory=new Map();shopPlayerId=null;shopActiveJourneys=[];
   if(!shopMenuOverlay.hidden&&activeShop!=="Trade Scraps")void loadShopPlayer();
 });
 window.addEventListener("pageshow",()=>{
