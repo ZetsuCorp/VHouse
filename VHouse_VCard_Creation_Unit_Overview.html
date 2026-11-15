@@ -97,16 +97,16 @@
       <article class="panel">
         <div class="panel-top"><div class="bubble" aria-hidden="true">◇</div><span class="chip">Existing character</span></div>
         <h3>LOAD NFT</h3>
-        <p><strong>Already implemented — LOAD &amp; VIEW:</strong> VHouse identifies the NFT standard, retrieves the original artwork and metadata, and verifies on-chain ownership against the connected Phantom wallet.</p>
-        <p><strong>Already implemented — CREATE VCARD:</strong> The loaded NFT's image and information are prepared as a VHouse-compatible VCard.</p>
-        <p><strong>Next step — MINT &amp; ACTIVATE ($5.00):</strong> Mint a new VHouse Token-2022 VCard linked to the original NFT, register it in VHouse, and activate it for Journeys and earnings. The original NFT stays in its owner's wallet; its mint address remains unchanged.</p>
+        <p><strong>Already implemented — LOAD &amp; VIEW:</strong> Read NFT data from the blockchain, verify ownership against the connected Phantom wallet, and display the artwork and metadata.</p>
+        <p><strong>Already implemented — CREATE VCARD:</strong> Use the verified NFT data to prepare a VHouse-compatible VCard.</p>
+        <p><strong>Remaining work — MINT &amp; ACTIVATE ($5.00 total LOAD service fee):</strong> Pass the prepared VCard data into VHouse's existing Token-2022 minting process, register the minted VCard with the player, and enable its use in Journeys and earnings under VHouse rules. The LOAD price includes this minting step; it is not an additional $3.00 MINT charge.</p>
         <div class="nested">
           <h3>UPDATE VCARD</h3>
-          <p>After activation, update the VCard's character information and artwork without minting another VCard.</p>
+          <p>After LOAD activation, update the minted VCard's character information and artwork through the existing paid UPDATE process.</p>
         </div>
         <div class="nested">
           <h3>CUSTOMIZE VCARD</h3>
-          <p>After activation, apply visual effects to the VCard without replacing its minted identity.</p>
+          <p>After LOAD activation, apply effects through the existing paid CUSTOMIZE process.</p>
         </div>
       </article>
     </div>
@@ -142,8 +142,8 @@
       <article class="panel">
         <h3>On-Chain Identity</h3>
         <p>New VCards are Token-2022 NFTs designed with a single-token supply, non-transferable character ownership, a metadata pointer, and MintCloseAuthority for the mint account.</p>
-        <p>A minted VHouse VCard retains its own mint address across supported UPDATE and CUSTOMIZE operations. When created through LOAD, the new VCard is linked to the source NFT without changing the source NFT's ownership or mint address.</p>
-        <p>Existing NFTs can be recognized as Token-2022 or Metaplex Core when loading. The LOAD &amp; VIEW and card-preparation steps already work; minting and activating the linked VHouse VCard is the remaining integration work.</p>
+        <p>VHouse is a data-driven game: <strong>DATA + HOUSE RULES = GAME FUNCTIONALITY.</strong> EX (Existence), OWN (Ownership), and USE (Usage) govern whether a VCard can be used. A minted VHouse VCard retains its mint address across supported UPDATE and CUSTOMIZE operations.</p>
+        <p>LOAD already reads and verifies supported NFT data, including Token-2022 and Metaplex Core, and prepares a playable VCard. The remaining work is connecting that prepared data to the existing VHouse minting process and activating the VCard under the same house rules. No additional NFT linkage system is required.</p>
       </article>
       <article class="panel">
         <h3>Artwork &amp; Attribute Records</h3>
