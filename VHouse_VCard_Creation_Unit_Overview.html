@@ -97,14 +97,16 @@
       <article class="panel">
         <div class="panel-top"><div class="bubble" aria-hidden="true">◇</div><span class="chip">Existing character</span></div>
         <h3>LOAD NFT</h3>
-        <p>The existing-NFT side of VHouse. It identifies supported NFT standards, reads available artwork and metadata, and checks on-chain ownership against the connected Phantom wallet.</p>
+        <p><strong>Already implemented — LOAD &amp; VIEW:</strong> VHouse identifies the NFT standard, retrieves the original artwork and metadata, and verifies on-chain ownership against the connected Phantom wallet.</p>
+        <p><strong>Already implemented — CREATE VCARD:</strong> The loaded NFT's image and information are prepared as a VHouse-compatible VCard.</p>
+        <p><strong>Next step — MINT &amp; ACTIVATE ($5.00):</strong> Mint a new VHouse Token-2022 VCard linked to the original NFT, register it in VHouse, and activate it for Journeys and earnings. The original NFT stays in its owner's wallet; its mint address remains unchanged.</p>
         <div class="nested">
           <h3>UPDATE VCARD</h3>
-          <p>Changes character information and artwork on the existing NFT.</p>
+          <p>After activation, update the VCard's character information and artwork without minting another VCard.</p>
         </div>
         <div class="nested">
           <h3>CUSTOMIZE VCARD</h3>
-          <p>Applies visual effects and evolves the character's presentation without replacing its identity.</p>
+          <p>After activation, apply visual effects to the VCard without replacing its minted identity.</p>
         </div>
       </article>
     </div>
@@ -140,8 +142,8 @@
       <article class="panel">
         <h3>On-Chain Identity</h3>
         <p>New VCards are Token-2022 NFTs designed with a single-token supply, non-transferable character ownership, a metadata pointer, and MintCloseAuthority for the mint account.</p>
-        <p>The character retains its original mint address across supported UPDATE and CUSTOMIZE operations.</p>
-        <p>Existing NFTs can be recognized as Token-2022 or Metaplex Core when loading. Editing depends on the NFT program and its update authority; Core-specific editing is separate from the Token-2022 update mechanism.</p>
+        <p>A minted VHouse VCard retains its own mint address across supported UPDATE and CUSTOMIZE operations. When created through LOAD, the new VCard is linked to the source NFT without changing the source NFT's ownership or mint address.</p>
+        <p>Existing NFTs can be recognized as Token-2022 or Metaplex Core when loading. The LOAD &amp; VIEW and card-preparation steps already work; minting and activating the linked VHouse VCard is the remaining integration work.</p>
       </article>
       <article class="panel">
         <h3>Artwork &amp; Attribute Records</h3>
@@ -155,18 +157,41 @@
   <section aria-labelledby="value-title">
     <div class="section-head"><h2 id="value-title">Character Value &amp; Service Fees</h2></div>
     <div class="panel">
-      <p>Every supported paid UPDATE or CUSTOMIZE adds a small amount of SOL directly to the character NFT's mint account. The player supplies both portions in the transaction: VHouse receives its service share, and the NFT receives its character-value share. Accumulated SOL is not an in-game spending balance.</p>
+      <p>MINT, LOAD &amp; ACTIVATE, BURN, and Journey entry are paid VHouse services; their service fees go to VHouse. UPDATE and CUSTOMIZE keep their existing payment structure: $0.50 to VHouse and $0.25 in SOL deposited to the VCard NFT's mint account per $0.75 edit. The accumulated SOL is not an in-game spending balance.</p>
       <table class="price-table">
-        <thead><tr><th>VCard operation</th><th>Service price</th><th>VHouse share</th><th>NFT share</th></tr></thead>
+        <thead><tr><th>VHouse service</th><th>Price</th></tr></thead>
         <tbody>
-          <tr><td class="primary">CREATE · current test</td><td>0.001 SOL</td><td>0.001 SOL</td><td>—</td></tr>
-          <tr><td class="primary">UPDATE · current</td><td>$0.75</td><td>$0.50</td><td>$0.25</td></tr>
-          <tr><td class="primary">CUSTOMIZE · current</td><td>$0.75</td><td>$0.50</td><td>$0.25</td></tr>
-          <tr><td class="primary">UPDATE / CUSTOMIZE · future</td><td>$1.00</td><td>$0.75</td><td>$0.25</td></tr>
-          <tr><td class="primary">CREATE · planned full game</td><td>$5.00</td><td>To be defined</td><td>To be defined</td></tr>
+          <tr><td class="primary">MINT VCARD</td><td>$3.00</td></tr>
+          <tr><td class="primary">LOAD &amp; ACTIVATE NFT</td><td>$5.00</td></tr>
+          <tr><td class="primary">UPDATE VCARD</td><td>$0.75</td></tr>
+          <tr><td class="primary">CUSTOMIZE VCARD</td><td>$0.75</td></tr>
+          <tr><td class="primary">BURN VCARD</td><td>$3.00</td></tr>
         </tbody>
       </table>
-      <p class="price-note">USD-denominated edit prices are converted to SOL at transaction time. Solana network costs and any required account rent are additional. No collection system or in-game burn/redeem feature is part of this unit.</p>
+      <p class="price-note">These are the agreed service prices, not a claim that all updated payment gates are already implemented. USD prices are converted to SOL at payment time. Solana network fees and any required account rent are additional.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="journey-fees-title">
+    <div class="section-head"><h2 id="journey-fees-title">Journey Stage Entry Fees</h2></div>
+    <div class="panel">
+      <p>A Journey entry is priced by Stage. Each attempt, including a repeat of the same Stage, requires its Stage entry fee unless a Stage Ticket is used.</p>
+      <table class="price-table">
+        <thead><tr><th>Journey Stage</th><th>Entry fee</th></tr></thead>
+        <tbody>
+          <tr><td class="primary">Stage 1</td><td>$0.45</td></tr>
+          <tr><td class="primary">Stage 2</td><td>$0.55</td></tr>
+          <tr><td class="primary">Stage 3</td><td>$0.65</td></tr>
+          <tr><td class="primary">Stage 4</td><td>$0.75</td></tr>
+          <tr><td class="primary">Stage 5</td><td>$0.85</td></tr>
+          <tr><td class="primary">Stage 6</td><td>$0.95</td></tr>
+          <tr><td class="primary">Stage 7</td><td>$1.10</td></tr>
+          <tr><td class="primary">Stage 8</td><td>$1.25</td></tr>
+          <tr><td class="primary">Stage 9</td><td>$1.35</td></tr>
+          <tr><td class="primary">Stage 10</td><td>$1.50</td></tr>
+        </tbody>
+      </table>
+      <p class="price-note">A Stage Ticket (2,400 IGM in the Shop) covers one Stage entry fee, at any Stage, including Stage 10. One ticket is consumed for each use. Stage fees are VHouse service payments; the entry payment integration is not yet implemented.</p>
     </div>
   </section>
 
