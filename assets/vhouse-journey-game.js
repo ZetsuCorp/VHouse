@@ -1268,8 +1268,7 @@ function settleJourney(mission=state.mission){
 
   mission.completedAt=Date.now();
 
-  // IGM (VCARD CASH) is credited to vhouse_accounts.igm_balance
-  // by the existing Supabase Journey trigger when this result is saved.
+  // IGM is credited only when the receipt is confirmed.
   // Do not create a second balance in Journey game state.
 
   mission.status="ready";
@@ -1483,8 +1482,8 @@ async function confirmReceipt(){
   const mission=state.mission;
   if(!mission||mission.status!=="ready")return;
 
-  // CONFIRM acknowledges the recorded results. It does not earn,
-  // credit, transfer, or recalculate any Journey rewards.
+  // CONFIRM is the payout event. Supabase credits IGM once when
+  // this receipt changes from RESULTS_READY to CONFIRMED.
   $("confirmButton").disabled=true;
   const previousReceipts=state.receipts.slice();
   const previousEvents=state.events.slice();
@@ -1519,6 +1518,7 @@ async function confirmReceipt(){
     return;
   }
 
+  window.dispatchEvent(new Event("vhouse:cash-updated"));
   emit("journey-confirmed",event);
   // Confirmation finishes this Journey and returns to stage selection.
   newJourney();
