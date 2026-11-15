@@ -323,7 +323,8 @@ button:disabled{
 .journey-setup-controls{
   position:absolute;
   left:50%;
-  bottom:7px;
+  top:59%;
+  bottom:auto;
   transform:translateX(-50%);
   z-index:3;
   width:280px;
@@ -835,7 +836,22 @@ td{
     animation:none!important;
   }
 }
-/* Compact pre-Journey item selector inside the existing setup panel. */
+/* Keep the left-side mission controls fixed while USE ITEMS opens downward. */
+#setupScreen .setup-world .world-content{
+  position:absolute;
+  left:0;
+  right:0;
+  top:52px;
+  bottom:43%;
+  height:auto;
+}
+#setupScreen .setup-world .setup-card{
+  width:min(175px, 67cqh);
+  max-height:100%;
+}
+#setupScreen .setup-world .world-content{container-type:size}
+#setupScreen .setup-world .journey-setup-controls{top:59%;bottom:auto}
+/* Compact pre-Journey item selector under ACTIVE MISSIONS. */
 .use-items{width:100%;border:1px solid #bc9357;border-radius:6px;background:#20142cef;color:#f5e9d7;flex-shrink:0}
 .use-items summary{cursor:pointer;list-style:none;color:#f7d797;font-weight:900;font-size:12px;letter-spacing:.06em;padding:7px 10px;display:flex;justify-content:space-between}
 .use-items summary::-webkit-details-marker{display:none}
@@ -846,7 +862,6 @@ td{
 .use-item-option small{display:block;margin:3px 0 0 18px;font-size:10px;color:#cba5ed}
 .use-item-option input{accent-color:#bd91f3;width:16px;height:16px;flex-shrink:0}
 .use-item-option input:disabled{opacity:.4}
-.use-item-option input[hidden]{display:none!important}
 </style>
 </head>
 
@@ -874,8 +889,8 @@ td{
       </div>
         <details class="use-items" id="useItemsMenu">
          <summary>USE ITEMS</summary>
-         <div class="use-item-option"><label><span>🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="bootsOwned">0</b></small></span><input type="checkbox" id="useSwiftBoots" hidden></label></div>
-         <div class="use-item-option"><label><span>🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="ticketOwned">0</b></small></span><input type="checkbox" id="useStageTicket" hidden></label></div>
+         <div class="use-item-option"><label><span>🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="bootsOwned">0</b></small></span><input type="checkbox" id="useSwiftBoots" disabled></label></div>
+         <div class="use-item-option"><label><span>🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="ticketOwned">0</b></small></span><input type="checkbox" id="useStageTicket" disabled></label></div>
        </details>
       </div>
     </div>
