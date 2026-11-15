@@ -914,6 +914,8 @@ async function startJourney(){
   }
 
   if(startingJourney)return;
+  // Preserve the player's choice before inventory refresh re-renders USE ITEMS.
+  const useBoots=!!itemControl("useSwiftBoots")?.checked;
   startingJourney=true;
   $("startButton").disabled=true;
   const now=Date.now();
@@ -969,7 +971,6 @@ async function startJourney(){
 
   try{
     if(window.VHouseJourneyStore && auth?.getUser?.()){
-      const useBoots=!!itemControl("useSwiftBoots")?.checked;
       const useTicket=!!itemControl("useStageTicket")?.checked;
       const {data,error}=await auth.getClient().rpc("vhouse_start_item_journey",{
         p_mission:state.mission,p_use_boots:useBoots,p_use_ticket:useTicket
