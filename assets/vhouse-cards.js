@@ -190,19 +190,13 @@ const api={
       p_name:card.name,p_image:card.image,
       p_description:card.description,p_designation:card.team
     };
-    if(receipt){
-      params.p_mint_address=receipt.mintAddress;
-      params.p_mint_receipt={
-        mint_address:receipt.mintAddress,
-        transaction_signature:receipt.transactionSignature,
-        owner_wallet:receipt.ownerWallet,
-        metadata_uri:receipt.metadataUri,
-        image_uri:receipt.imageUri
-      };
-    }
-    const {data,error}=await service.getClient().rpc(
-      receipt?"vhouse_create_minted_vcard":"vhouse_create_vcard",params
-    );
+    // Minted VCards are registered only after the server re-checks the
+    // confirmed Solana mint, signed fee, linked wallet and token ownership.
+    const {data,error}=receipt
+      ? await service.getClient().functions.invoke("vcard-mint-verified",{
+          body:{...card}
+        })
+      : await service.getClient().rpc("vhouse_create_vcard",params);
     if(error)throw error;
     if(!data?.card_id)throw Error("Supabase did not return a VCard.");
     if(playerId()!==account)throw Error("Account changed during creation.");
