@@ -668,6 +668,18 @@ async function linkPlayerWallet(owner){
   }
 }
 
+// A paid mint must never begin if the wallet cannot be used to register
+// its verified NFT in the player's existing VHouse account.
+async function requireLinkedMintWallet(owner){
+  const user=await requireVHousePlayer();
+  const client=await vhouseClient();
+  const {data,error}=await client.from("vhouse_accounts")
+    .select("wallet_address").eq("id",user.id).maybeSingle();
+  if(error)throw Error("VHouse wallet check failed: "+error.message);
+  if(data?.wallet_address!==owner.toBase58())
+    throw Error("Link this Phantom wallet to your VHouse account using CONNECT WALLET before minting.");
+}
+
 // CONNECT WALLET is independent of MINT, LOAD, UPDATE and BURN.
 $("connectWalletButton").addEventListener("click", async () => {
   const button=$("connectWalletButton");
@@ -1862,14 +1874,23 @@ function txURL() {
 async function verifyVHousePayment(signature,owner) {
   if (!signature || !job) return false;
 
-  const chain = await getRpc();
-  const receipt = await chain.getParsedTransaction(signature,{
-    commitment:"confirmed",
-    maxSupportedTransactionVersion:0
-  });
-
+  // Some public RPC endpoints have delayed/limited transaction history.
+  // A valid mint must not be treated as missing just because one RPC lags.
+  const preferred = await getRpc();
+  let receipt = null;
+  for (const url of [...new Set([preferred.rpcEndpoint,...RPC_URLS])]) {
+    try {
+      const chain = url === preferred.rpcEndpoint ? preferred : new Connection(url,"confirmed");
+      receipt = await chain.getParsedTransaction(signature,{
+        commitment:"confirmed",maxSupportedTransactionVersion:0
+      });
+      if (receipt) break;
+    } catch (error) {
+      console.warn("Mint receipt lookup:",url,shortError(error));
+    }
+  }
   if (!receipt) return false;
-  if (receipt.meta?.err !== null) {
+  if (!receipt.meta || receipt.meta.err !== null) {
     throw Error("VHouse payment / mint transaction failed on Solana.");
   }
 
@@ -2453,18 +2474,37 @@ async function saveMintedCardToVHouse(){
   });
 }
 async function displayMinted() {
-  minted = true;
-  $("mintButton").textContent = "MINTED ✓";
   const address = job.mint.publicKey.toBase58();
-  showPostMintUI();
   receiptLink("receiptMint","mintPending","mintDetail",mintURL(),address);
   $("flipHint").hidden = false;
   cardFlip.classList.add("flipped");
   cardFlip.setAttribute("aria-pressed","true");
   cardFlip.setAttribute("aria-label","Flip receipt back to VCard");
+
+  // The NFT is already minted. Registration errors must NEVER send the
+  // player through Phantom again or prevent checking the same receipt.
+  if (!job.registered) {
+    try {
+      await saveMintedCardToVHouse();
+      job.registered = true;
+    } catch (error) {
+      console.error("VCard registration:",error);
+      $("mintButton").textContent = "CHECK MINT";
+      message("NFT confirmed on Solana. VHouse Closet registration is pending: " +
+        shortError(error) + ". Press CHECK MINT to retry without signing or paying.");
+      return "registration-pending";
+    }
+  }
+
+  minted = true;
+  $("mintButton").textContent = "MINTED ✓";
+  showPostMintUI();
   // Download the exact PNG already uploaded to IPFS, not a second rendering.
-  if (job.png) saveVCardPNG(job.png,job.data);
-  await saveMintedCardToVHouse();
+  if (job.png && !job.pngDownloaded) {
+    job.pngDownloaded = true;
+    saveVCardPNG(job.png,job.data);
+  }
+  return "complete";
 }
 
 /* Check a submitted mint using Solana reads only. */
@@ -2481,8 +2521,7 @@ async function checkSubmittedMint() {
   const metadata = await getTokenMetadata(chain,job.mint.publicKey,"confirmed",TOKEN_2022_PROGRAM_ID);
   const fields = new Map(metadata?.additionalMetadata || []);
   if (onchainVCardAttributes(job.data).every(([key,value]) => fields.get(key) === value)) {
-    await displayMinted();
-    return "complete";
+    return await displayMinted();
   }
   if (job.attributeSignature) {
     const result = await chain.getSignatureStatuses([job.attributeSignature],{searchTransactionHistory:true});
@@ -2529,7 +2568,11 @@ $("mintButton").onclick = async () => {
         const owner = (await phantom.connect()).publicKey;
         if (!owner || owner.toBase58() !== job.owner) throw Error("Connect the original minting wallet.");
         if (await finishMintAttributes(phantom,owner)) await displayMinted();
-        else message("VCard attributes submitted. Waiting for Solana confirmation.");
+        else {
+          $("mintButton").textContent = "CHECK MINT";
+          message("VCard attributes submitted. Checking Solana without signing again.");
+          void watchSubmittedMint(job);
+        }
       } else {
         await checkSubmittedMint();
       }
@@ -2564,6 +2607,9 @@ $("mintButton").onclick = async () => {
     if (!owner) {
       throw Error("Phantom did not connect.");
     }
+    // Fail before IPFS uploads or Phantom signing if VHouse cannot
+    // register the new NFT to this account.
+    await requireLinkedMintWallet(owner);
 
     if (!job) {
       const data = cardData();
@@ -2604,12 +2650,11 @@ $("mintButton").onclick = async () => {
     );
 
     if (result === "minted") {
-      if (await finishMintAttributes(phantom,owner)) {
-        await displayMinted();
-      } else {
-        $("mintButton").textContent = "CHECK MINT";
-        message("NFT minted. Confirming on-chain attributes; press CHECK MINT without paying again.");
-      }
+      // Verification is read-only. If the transaction was too large to
+      // include attributes, FINISH VCARD explicitly requests that one
+      // separate approval instead of popping Phantom up automatically.
+      const checked = await checkSubmittedMint();
+      if (checked === "pending") void watchSubmittedMint(job);
 
     } else {
       $("mintButton").textContent = "VERIFY MINT";
