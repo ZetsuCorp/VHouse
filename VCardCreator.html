@@ -2467,10 +2467,78 @@ async function displayMinted() {
   await saveMintedCardToVHouse();
 }
 
+/* Check a submitted mint using Solana reads only. */
+async function checkSubmittedMint() {
+  if (!job?.signature) throw Error("No submitted mint to verify.");
+  const owner = new PublicKey(job.owner);
+  const failure = await getFailure(job.signature);
+  if (failure) throw Error(failure);
+  if (!(await inspectMint(owner))) {
+    message("Waiting for Solana to confirm this mint. No new transaction was sent.");
+    return "pending";
+  }
+  const chain = await getRpc();
+  const metadata = await getTokenMetadata(chain,job.mint.publicKey,"confirmed",TOKEN_2022_PROGRAM_ID);
+  const fields = new Map(metadata?.additionalMetadata || []);
+  if (onchainVCardAttributes(job.data).every(([key,value]) => fields.get(key) === value)) {
+    await displayMinted();
+    return "complete";
+  }
+  if (job.attributeSignature) {
+    const result = await chain.getSignatureStatuses([job.attributeSignature],{searchTransactionHistory:true});
+    if (result.value[0]?.err) throw Error("The VCard attributes transaction failed.");
+    message("Mint confirmed. Waiting for on-chain attributes. No new signature requested.");
+    return "pending";
+  }
+  $("mintButton").textContent = "FINISH VCARD";
+  message("Mint confirmed. Completing the on-chain attributes needs a separate Phantom approval, with no new VHouse fee.");
+  return "needs-approval";
+}
+
+/* Continue confirmation automatically rather than asking for another signature. */
+async function watchSubmittedMint(expectedJob) {
+  for (let i=0;i<30;i++) {
+    await sleep(2000);
+    if (job !== expectedJob || minted) return;
+    if (busy) continue;
+    lock(true);
+    try {
+      if ((await checkSubmittedMint()) !== "pending") return;
+    } catch (error) {
+      console.error("Mint verification:",error);
+      message("Mint verification error: " + shortError(error));
+      return;
+    } finally { lock(false); }
+  }
+  if (job === expectedJob && !minted)
+    message("Solana confirmation has not been verified. VERIFY MINT checks without another wallet signature.");
+}
+
 /* MINT button */
 
 $("mintButton").onclick = async () => {
   if (busy || minted) return;
+
+  /* Checking an existing transaction must never submit another mint. */
+  if (job?.signature) {
+    lock(true);
+    try {
+      if ($("mintButton").textContent.trim() === "FINISH VCARD") {
+        const phantom = window.phantom?.solana || window.solana;
+        if (!phantom?.isPhantom) throw Error("Phantom is required to finish VCard attributes.");
+        const owner = (await phantom.connect()).publicKey;
+        if (!owner || owner.toBase58() !== job.owner) throw Error("Connect the original minting wallet.");
+        if (await finishMintAttributes(phantom,owner)) await displayMinted();
+        else message("VCard attributes submitted. Waiting for Solana confirmation.");
+      } else {
+        await checkSubmittedMint();
+      }
+    } catch (error) {
+      console.error("VCard verification:",error);
+      message("Verification error: " + shortError(error));
+    } finally { lock(false); }
+    return;
+  }
 
   lock(true);
 
@@ -2544,12 +2612,9 @@ $("mintButton").onclick = async () => {
       }
 
     } else {
-      $("mintButton").textContent = "CHECK MINT";
-
-      message(
-        "Transaction submitted. Confirmation is still pending; press CHECK MINT to refresh its status.",
-        txURL()
-      );
+      $("mintButton").textContent = "VERIFY MINT";
+      message("Transaction submitted. VHouse is checking Solana without requesting another wallet signature.");
+      void watchSubmittedMint(job);
     }
 
   } catch (error) {
