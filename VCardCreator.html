@@ -554,6 +554,7 @@ import {
   ExtensionType,
   AuthorityType,
   getMintLen,
+  getAccountLen,
   getMint,
   getAccount,
   getNonTransferable,
@@ -2264,7 +2265,7 @@ async function buildMintTransaction(owner) {
     );
   }
 
-  return {tx,latest};
+  return {tx,latest,mintRent:lamports};
 }
 
 /* Check existing mint transactions */
@@ -2326,6 +2327,36 @@ async function verifySubmitted(owner) {
   return "pending";
 }
 
+/* Phantom handles the transaction preview/simulation and approval.
+   If it rejects the transaction, check the actual SOL balance AFTER the
+   wallet response so an unfunded wallet gets the right VHouse error. */
+async function phantomMintFailure(error,owner,tx,mintRent) {
+  const reason = shortError(error);
+  if (/user rejected|request rejected|code.?4001/i.test(reason)) return reason;
+  try {
+    const chain = await getRpc();
+    const balance = await chain.getBalance(owner,"confirmed");
+    const ataRent = await chain.getMinimumBalanceForRentExemption(
+      getAccountLen([ExtensionType.NonTransferableAccount,ExtensionType.ImmutableOwner]),
+      "confirmed"
+    );
+    const estimatedFee = await chain.getFeeForMessage(tx.compileMessage(),"confirmed");
+    if (estimatedFee.value !== null) {
+      const required = NFT_PRICE_LAMPORTS + mintRent + ataRent + estimatedFee.value;
+      if (balance < required) {
+        return "Insufficient SOL. Wallet has " + (balance/1e9).toFixed(6) +
+          " SOL; mint requires approximately " + (required/1e9).toFixed(6) +
+          " SOL including the VHouse fee, mint/token-account rent and network fee.";
+      }
+    } else if (balance < NFT_PRICE_LAMPORTS + mintRent + ataRent) {
+      return "Insufficient SOL for VCard mint, account rent and network fees.";
+    }
+  } catch (diagnosticError) {
+    console.warn("Mint balance diagnostic unavailable:",diagnosticError);
+  }
+  return reason;
+}
+
 /* Phantom transaction submission */
 
 async function mintInPhantom(phantom,owner) {
@@ -2348,15 +2379,19 @@ async function mintInPhantom(phantom,owner) {
     );
   }
 
-  const {tx,latest} = await buildMintTransaction(owner);
+  const {tx,latest,mintRent} = await buildMintTransaction(owner);
 
-  message("Approve the 0.001 SOL VHouse fee and VCard mint in Phantom...");
+  message("Review the VCard mint and Phantom transaction preview...");
 
-  const response =
-    await phantom.signAndSendTransaction(
-      tx,
-      {skipPreflight:false}
-    );
+  let response;
+  try {
+    response = await phantom.signAndSendTransaction(tx,{
+      skipPreflight:false,
+      preflightCommitment:"confirmed"
+    });
+  } catch (error) {
+    throw Error(await phantomMintFailure(error,owner,tx,mintRent));
+  }
 
   const signature =
     typeof response === "string"
