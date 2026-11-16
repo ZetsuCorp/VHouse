@@ -121,7 +121,6 @@ button:disabled{opacity:.5;cursor:default}
 #creationUnit .workspace.load-setup #nameGroup,
 #creationUnit .workspace.load-setup #imageGroup,
 #creationUnit .workspace.load-setup #descriptionGroup,
-#creationUnit .workspace.load-setup #downloadButton,
 #creationUnit .workspace.load-setup #postMint{display:none!important}
 
 /* The single VCard preview shows the loaded NFT; no second artwork panel. */
@@ -409,9 +408,6 @@ button:disabled{opacity:.5;cursor:default}
       <div class="actions" id="editorActions">
         <button class="action" id="mintButton">
           MINT · <span class="tag-fee">0.001 SOL</span>
-        </button>
-        <button class="action" id="downloadButton" disabled>
-          PREPARING VCARD...
         </button>
       </div>
     </section>
@@ -806,9 +802,6 @@ let busy = false;
 let job = null;
 let minted = false;
 let loadedSource = null; // Verified outside NFT awaiting conversion to a new VCard mint.
-let capturedPNG = null;
-let captureTimer = null;
-let captureVersion = 0;
 let editMode = null;
 let pendingOperation = null;
 
@@ -913,7 +906,6 @@ function message(text) {
 function lock(value) {
   busy = value;
   $("mintButton").disabled = value || minted;
-  $("downloadButton").disabled = value || !capturedPNG;
   const canUpdateCard = minted && editMode === "update";
   $("nameInput").disabled = value || (minted && !canUpdateCard);
   $("descriptionInput").disabled = value || (minted && !canUpdateCard);
@@ -939,6 +931,7 @@ function lock(value) {
 const cardFlip = $("cardFlip");
 
 function flipCard() {
+  if (!minted) return;
   const flipped = cardFlip.classList.toggle("flipped");
   cardFlip.setAttribute("aria-pressed",String(flipped));
   cardFlip.setAttribute("aria-label",flipped
@@ -1153,10 +1146,7 @@ function renderCard(host,data) {
 }
 
 function refresh() {
-  if (!busy && (!job || minted)) {
-    renderCard($("vcardHost"),cardData());
-    queueCardCapture();
-  }
+  if (!busy && (!job || minted)) renderCard($("vcardHost"),cardData());
 }
 
 /* Position/crop image: drag by mouse or touch and crop only on CONFIRM. */
@@ -1443,50 +1433,7 @@ async function makePNG(data) {
   });
 }
 
-/* Automatically capture the entire VCard */
-
-function queueCardCapture() {
-  const version = ++captureVersion;
-
-  capturedPNG = null;
-
-  $("downloadButton").disabled = true;
-  $("downloadButton").textContent =
-    "PREPARING VCARD...";
-
-  clearTimeout(captureTimer);
-
-  captureTimer = setTimeout(async () => {
-    try {
-      const blob = await makePNG(cardData());
-
-      if (version !== captureVersion) return;
-
-      capturedPNG = blob;
-
-      $("downloadButton").textContent =
-        "DOWNLOAD VCARD";
-
-      $("downloadButton").disabled = busy;
-
-    } catch (error) {
-      if (version !== captureVersion) return;
-
-      console.error("VCard PNG capture:",error);
-
-      $("downloadButton").textContent =
-        "PNG UNAVAILABLE";
-
-      message(
-        "VCard PNG capture failed: " +
-        shortError(error)
-      );
-    }
-  },250);
-}
-
-/* DOWNLOAD saves the complete PNG and sends the same image to IPFS. */
-
+/* Export the minted VCard automatically after confirmation. */
 function saveVCardPNG(blob,data) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -1526,32 +1473,6 @@ function showIPFSResult(imageURI,metadataURI) {
     );
   }
 }
-
-$("downloadButton").onclick = async () => {
-  if (busy || !capturedPNG) return;
-
-  const data = cardData();
-  const png = capturedPNG;
-
-  saveVCardPNG(png,data);
-
-  lock(true);
-  $("downloadButton").textContent = "SENDING TO IPFS...";
-
-  try {
-    await uploadMetadata(data,png);
-    message("IPFS test complete. Click the VCard to view the receipt.");
-  } catch (error) {
-    console.error("VCard IPFS upload:",error);
-    message(
-      "VCard downloaded, but IPFS test failed: " +
-      shortError(error)
-    );
-  } finally {
-    $("downloadButton").textContent = "DOWNLOAD VCARD";
-    lock(false);
-  }
-};
 
 /* Upload the complete VCard PNG and JSON to public IPFS.
    Pinata JWT stays in Supabase Edge Function secrets. */
@@ -1849,7 +1770,7 @@ async function uploadMetadata(data,imageBlob = null,options = {}) {
     throw Error("Metadata URI too long.");
   }
 
-  if (options.publishReceipt !== false) showIPFSResult(imageURI,uri);
+  // Prepared URI is not a completed receipt.
   return {uri,imageURI,sourceImageURI,publishedMetadata:metadata};
 }
 
@@ -2519,12 +2440,18 @@ async function saveMintedCardToVHouse(){
   });
 }
 async function displayMinted() {
+  // Called only after the minted NFT and its on-chain attributes are verified.
   const address = job.mint.publicKey.toBase58();
   receiptLink("receiptMint","mintPending","mintDetail",mintURL(),address);
+  showIPFSResult(job.imageURI,job.uri);
   $("flipHint").hidden = false;
   cardFlip.classList.add("flipped");
   cardFlip.setAttribute("aria-pressed","true");
   cardFlip.setAttribute("aria-label","Flip receipt back to VCard");
+  if (job.png && !job.pngDownloaded) {
+    job.pngDownloaded = true;
+    saveVCardPNG(job.png,job.data);
+  }
 
   // The NFT is already minted. Registration errors must NEVER send the
   // player through Phantom again or prevent checking the same receipt.
@@ -2546,11 +2473,6 @@ async function displayMinted() {
   $("mintButton").textContent = "MINTED ✓";
   showPostMintUI();
   showScreen("workspace");
-  // Download the exact PNG already uploaded to IPFS, not a second rendering.
-  if (job.png && !job.pngDownloaded) {
-    job.pngDownloaded = true;
-    saveVCardPNG(job.png,job.data);
-  }
   return "complete";
 }
 
@@ -2668,7 +2590,7 @@ $("mintButton").onclick = async () => {
         throw Error("Enter a VCard name.");
       }
 
-      const png = capturedPNG || await makePNG(data);
+      const png = await makePNG(data);
       const {uri,imageURI,sourceImageURI,publishedMetadata} = await uploadMetadata(data,png);
 
       job = {
@@ -3290,7 +3212,6 @@ $("loadMintButton").onclick = async () => {
     // Only TEAM is editable during LOAD. The original MINT and Closet registration
     // take over once the player submits this converted VCard.
     renderCard($("vcardHost"),cardData());
-    queueCardCapture();
     showScreen("workspace");
     message("NFT ownership verified. Choose a TEAM, then MINT the VCard to register it in your Closet.");
   } catch (error) {
