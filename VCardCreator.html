@@ -891,11 +891,11 @@ function lock(value) {
   busy = value;
   $("mintButton").disabled = value || minted;
   $("downloadButton").disabled = value || !capturedPNG;
-  const canUpdateCard = minted && editMode === "update";
+  const canUpdateCard = (minted || job?.loaded) && editMode === "update";
   $("nameInput").disabled = value || (minted && !canUpdateCard);
   $("descriptionInput").disabled = value || (minted && !canUpdateCard);
   document.querySelectorAll(".team-button,.art-button,#fileInput").forEach(el => {
-    el.disabled = value || (minted && !canUpdateCard) || (!!job && !minted);
+    el.disabled = value || (minted && !canUpdateCard) || (!!job && !minted && !job.loaded);
   });
   document.querySelectorAll(".mode-button[data-mode]").forEach(el => {
     el.disabled = value || (minted && !canUpdateCard);
@@ -908,7 +908,7 @@ function lock(value) {
   // Positioning is available as soon as an NFT image is loaded;
   // an UPDATE or CUSTOMIZE selection is not required to crop locally.
   const canPosition = !value && !pendingOperation &&
-    (!job || (minted && job.loaded));
+    (!job || job.loaded);
   $("positionImageButton").disabled = !canPosition;
 }
 
@@ -1130,7 +1130,7 @@ function renderCard(host,data) {
 }
 
 function refresh() {
-  if (!busy && (!job || minted)) {
+  if (!busy && (!job || minted || job.loaded)) {
     renderCard($("vcardHost"),cardData());
     queueCardCapture();
   }
@@ -1143,7 +1143,7 @@ let cropPointer = null;
 
 function mayPositionImage() {
   return !busy && !pendingOperation && !cropOpening &&
-    (!job || (minted && job.loaded));
+    (!job || job.loaded);
 }
 
 function cropGeometry() {
@@ -2497,7 +2497,11 @@ $("mintButton").onclick = async () => {
       throw Error("Phantom did not connect.");
     }
 
-    if (!job) {
+    // A loaded NFT supplies VCard data; MINT creates a separate NFT.
+    if (job?.loaded && job.owner !== owner.toBase58()) {
+      throw Error("Reconnect the wallet that owns the loaded NFT.");
+    }
+    if (!job || job.loaded) {
       const data = cardData();
 
       if (!$("nameInput").value.trim()) {
@@ -2571,13 +2575,13 @@ $("mintButton").onclick = async () => {
 
 function showPostMintUI() {
   $("postMint").hidden = false;
-  $("editorActions").hidden = true;
+  $("editorActions").hidden = !job.loaded;
   $("mintAddressInput").value = job.mint.publicKey.toBase58();
   lock(false);
 }
 
 function setEditMode(mode) {
-  if (!minted || busy || pendingOperation) return;
+  if (!(minted || job?.loaded) || busy || pendingOperation) return;
   if (editMode !== mode && job?.data) {
     // A different paid action must not silently include edits from another action.
     $("nameInput").value = job.data.name;
@@ -2873,7 +2877,7 @@ async function finishEdit(update) {
 }
 
 $("applyButton").onclick = async () => {
-  if (busy || !minted || !editMode) return;
+  if (busy || !(minted || job?.loaded) || !editMode) return;
   lock(true);
   try {
     const phantom = window.phantom?.solana || window.solana;
@@ -3133,9 +3137,9 @@ $("loadMintButton").onclick = async () => {
         : false,
       originalMetadata:json
     };
-    minted = true;
+    minted = false;
     job.data = cardData();
-    $("mintButton").textContent = "MINTED ✓";
+    paintMoney($("mintButton"),"MINT · 0.001 SOL",true);
     renderCard($("vcardHost"),job.data);
     queueCardCapture();
     showIPFSResult(job.imageURI,job.uri);
