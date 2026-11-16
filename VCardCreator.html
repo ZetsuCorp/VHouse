@@ -70,6 +70,9 @@ button:disabled{opacity:.5;cursor:default}
 .mode-button.active{border-color:#00eaff;background:#11303c;color:white}
 .default-preview{padding:10px;background:#0b141e;border-left:2px solid #00eaff;color:#a8c0c9;font-size:11px;line-height:1.5}
 .actions{display:flex;gap:9px;padding:12px 16px}
+/* LOAD only selects a team; the original NFT supplies the image and metadata. */
+.workspace.loaded-vcard .mint-edit-only,.workspace.loaded-vcard #downloadButton{display:none!important}
+.closet-link{display:block;margin-top:12px;text-align:center;text-decoration:none}
 .action{flex:1;padding:12px 5px;background:linear-gradient(100deg,#164b55,#0e263b);border:2px solid #00eaff;border-radius:7px;color:#fff;font-size:13px;font-weight:900}
 .action:hover:not(:disabled){background:#197687}
 .preview-top{display:flex;justify-content:space-between;margin:4px 0 10px;font-size:11px;font-weight:900;color:#a3b7c3}
@@ -324,7 +327,7 @@ button:disabled{opacity:.5;cursor:default}
   <div class="workspace" id="workspace" hidden>
     <section class="editor" id="editor">
       <div class="editor-head">
-        <span>VCARD CREATION</span>
+        <span id="editorHeading">VCARD CREATION</span>
         <small>LEVEL 01</small>
       </div>
 
@@ -345,7 +348,7 @@ button:disabled{opacity:.5;cursor:default}
         </div>
       </div>
 
-      <div class="group">
+      <div class="group mint-edit-only">
         <div class="group-label">
           <b>02</b> ENTER A NAME
         </div>
@@ -353,7 +356,7 @@ button:disabled{opacity:.5;cursor:default}
                maxlength="16" value="Johnny J">
       </div>
 
-      <div class="group">
+      <div class="group mint-edit-only">
         <div class="group-label">
           <b>03</b> CHOOSE YOUR IMAGE
         </div>
@@ -378,7 +381,7 @@ button:disabled{opacity:.5;cursor:default}
         </div>
       </div>
 
-      <div class="group">
+      <div class="group mint-edit-only">
         <div class="group-label">
           <b>04</b> CHARACTER DESCRIPTION
         </div>
@@ -467,6 +470,7 @@ button:disabled{opacity:.5;cursor:default}
         <div class="post-mint-note" id="operationNote">Select UPDATE to edit name and description, or CUSTOMIZE to apply a card effect. USD price is converted to SOL when submitted; <span class="tag-fee">$0.50</span> goes to VHouse and <span class="tag-balance">$0.25</span> to this NFT.</div>
         <button class="action" id="applyButton" hidden>CONFIRM UPDATE</button>
       </div>
+      <a class="action closet-link" id="loadedClosetLink" href="./VCloset.html" hidden>OPEN VCARD CLOSET</a>
       <div class="status" id="status">
         Mint creation fee: <span class="tag-fee">0.001 SOL</span> paid to VHouse.
         Solana network fees and rent are separate.
@@ -790,6 +794,7 @@ let captureTimer = null;
 let captureVersion = 0;
 let editMode = null;
 let pendingOperation = null;
+let loadedVCardFlow = false;
 
 function showScreen(screen) {
   if (screen !== "workspace") closeCropEditor();
@@ -798,11 +803,13 @@ function showScreen(screen) {
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
   $("workspaceBackButton").hidden = screen !== "workspace";
-  // Layout only: compact the loaded NFT's right column to expose fees/actions.
-  $("workspace").classList.toggle("loaded-vcard",screen === "workspace" && !!job?.loaded);
+  $("workspace").classList.toggle("loaded-vcard",screen === "workspace" && loadedVCardFlow);
+  $("editorHeading").textContent = loadedVCardFlow ? "LOAD NFT — VCARD SETUP" : "VCARD CREATION";
 }
 
 function resetForMint() {
+  loadedVCardFlow = false;
+  $("loadedClosetLink").hidden = true;
   job = null;
   minted = false;
   editMode = null;
@@ -1275,7 +1282,7 @@ $("cropConfirm").onclick = () => {
 
 document.querySelectorAll(".team-button").forEach(btn => {
   btn.onclick = () => {
-    if (busy || (job && editMode !== "update")) return;
+    if (busy || (job && !job.loaded && editMode !== "update")) return;
 
     state.team = btn.dataset.team;
 
@@ -2453,10 +2460,18 @@ async function saveMintedCardToVHouse(){
   });
 }
 async function displayMinted() {
+  // Loaded NFTs enter the Closet only after the existing mint verification.
+  if (loadedVCardFlow) await saveMintedCardToVHouse();
   minted = true;
   $("mintButton").textContent = "MINTED ✓";
   const address = job.mint.publicKey.toBase58();
-  showPostMintUI();
+  if (loadedVCardFlow) {
+    $("postMint").hidden = true;
+    $("editorActions").hidden = true;
+    $("loadedClosetLink").hidden = false;
+  } else {
+    showPostMintUI();
+  }
   receiptLink("receiptMint","mintPending","mintDetail",mintURL(),address);
   $("flipHint").hidden = false;
   cardFlip.classList.add("flipped");
@@ -2464,7 +2479,8 @@ async function displayMinted() {
   cardFlip.setAttribute("aria-label","Flip receipt back to VCard");
   // Download the exact PNG already uploaded to IPFS, not a second rendering.
   if (job.png) saveVCardPNG(job.png,job.data);
-  await saveMintedCardToVHouse();
+  if (!loadedVCardFlow) await saveMintedCardToVHouse();
+  else message("VCard minted and saved to your Closet.");
 }
 
 /* MINT button */
@@ -2508,7 +2524,7 @@ $("mintButton").onclick = async () => {
         throw Error("Enter a VCard name.");
       }
 
-      const png = capturedPNG || await makePNG(data);
+      const png = job?.loaded ? await makePNG(data) : (capturedPNG || await makePNG(data));
       const {uri,imageURI,sourceImageURI,publishedMetadata} = await uploadMetadata(data,png);
 
       job = {
@@ -3137,41 +3153,31 @@ $("loadMintButton").onclick = async () => {
         : false,
       originalMetadata:json
     };
+    loadedVCardFlow = true;
     minted = false;
     job.data = cardData();
     paintMoney($("mintButton"),"MINT · 0.001 SOL",true);
+    $("postMint").hidden = true;
+    $("editorActions").hidden = false;
+    $("loadedClosetLink").hidden = true;
+    for (const id of ["receiptMint","receiptImage","receiptJson"]) $(id).hidden = true;
+    for (const id of ["mintDetail","imageDetail","jsonDetail"]) $(id).textContent = "";
+    $("mintPending").hidden = false;
+    $("mintPending").textContent = "Not minted";
+    $("imagePending").hidden = false;
+    $("imagePending").textContent = "Awaiting mint";
+    $("jsonPending").hidden = false;
+    $("jsonPending").textContent = "Awaiting mint";
+    $("flipHint").hidden = true;
+    cardFlip.classList.remove("flipped");
+    cardFlip.setAttribute("aria-pressed","false");
+    cardFlip.setAttribute("aria-label","Flip VCard to view receipt");
     renderCard($("vcardHost"),job.data);
     queueCardCapture();
-    showIPFSResult(job.imageURI,job.uri);
-    receiptLink("receiptMint","mintPending","mintDetail",mintURL(),mint.toBase58());
-    showPostMintUI();
     showScreen("workspace");
-    // The verified wallet NFT becomes the active VCard in the Placeholder.
-    // External NFTs remain external; they are not inserted into the VHouse inventory.
-    let assignmentNotice="";
-    try {
-      const nftImage=assetURL(json.image||job.imageURI);
-      await window.VHouseCardStore.assignLoaded({
-        mint_address:mint.toBase58(),
-        ownerWallet:owner.toBase58(),
-        name:cardDisplayName(json.name||meta.name),
-        description:String(json.description||""),
-        image:nftImage,
-        team:state.team,
-        level:1,
-        atk:100,
-        def:100
-      });
-    } catch(assignError) {
-      console.error("Loaded NFT Placeholder assignment:",assignError);
-      assignmentNotice=" NFT verified, but Placeholder assignment failed: "+shortError(assignError);
-    }
-    message((standard === "mpl-core"
-      ? "Metaplex Core NFT loaded. Wallet ownership verified."
-      : job.updateAuthorized
-        ? "Token-2022 NFT loaded. Choose UPDATE or CUSTOMIZE."
-        : "Token-2022 NFT loaded. This wallet is not the on-chain metadata update authority.")+
-      (assignmentNotice||" Assigned to VHouse Placeholder."));
+    // LOAD prepares the VCard; verified MINT adds it to the Closet.
+    message((standard === "mpl-core" ? "Metaplex Core" : "Token-2022") +
+      " NFT verified. Choose a team, then MINT the VCard to add it to your Closet.");
   } catch (error) {
     console.error("NFT load:",error);
     message("Load error: " + shortError(error));
