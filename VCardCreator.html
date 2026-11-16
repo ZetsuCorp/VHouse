@@ -2302,8 +2302,6 @@ async function mintInPhantom(phantom,owner) {
 
   const {tx,latest,mintRent} = await buildMintTransaction(owner);
 
-  message("Review the VCard mint and Phantom transaction preview...");
-
   let response;
   try {
     response = await phantom.signAndSendTransaction(tx,{
@@ -2468,6 +2466,7 @@ async function displayMinted() {
   $("mintButton").textContent = "MINTED ✓";
   showPostMintUI();
   showScreen("workspace");
+  message("Look at the receipt. Flip the card to see your VCard.");
   return "complete";
 }
 
