@@ -117,11 +117,14 @@ button:disabled{opacity:.5;cursor:default}
 .wallet-heading .tag-address{font-family:monospace;font-size:11px;font-weight:normal}
 .info-line{margin:5px 0;line-height:1.5;overflow-wrap:anywhere}
 .nft-image-preview{display:block;max-width:100%;max-height:190px;min-height:80px;object-fit:contain;margin:10px auto;border:1px solid #bc9357;border-radius:7px;background:#08131d}
-/* LOAD only selects TEAM and mints a new VCard; other editors stay separate. */
+/* LOAD selects TEAM and positions the verified artwork before MINT. */
 #creationUnit .workspace.load-setup #nameGroup,
-#creationUnit .workspace.load-setup #imageGroup,
 #creationUnit .workspace.load-setup #descriptionGroup,
 #creationUnit .workspace.load-setup #postMint{display:none!important}
+#creationUnit .workspace.load-setup #imageGroup .group-label,
+#creationUnit .workspace.load-setup #imageGroup .gallery,
+#creationUnit .workspace.load-setup #imageGroup .upload{display:none!important}
+#creationUnit .workspace.load-setup #imageGroup .image-tools{grid-template-columns:1fr}
 
 /* The single VCard preview shows the loaded NFT; no second artwork panel. */
 #creationUnit .workspace.loaded-vcard .card-stand{
