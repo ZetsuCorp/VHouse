@@ -1,0 +1,382 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse | Crypto Rewards Notes</title>
+<style>
+:root {
+  --bg: #090711;
+  --panel: #151124;
+  --gold: #e8bf68;
+  --purple: #b58aff;
+  --white: #f2edf9;
+  --muted: #b6adc9;
+  --border: #7b603d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--white);
+  font-family: Arial, sans-serif;
+  line-height: 1.65;
+}
+main {
+  max-width: 1050px;
+  margin: auto;
+  padding: 35px 20px 70px;
+}
+header {
+  text-align: center;
+  padding: 35px 15px;
+  border-bottom: 2px solid var(--gold);
+}
+h1 {
+  color: var(--gold);
+  letter-spacing: 3px;
+  margin: 0;
+}
+.subtitle { color: var(--purple); }
+h2 { color: var(--gold); margin-top: 0; }
+h3 { color: var(--purple); }
+p, li { color: var(--white); }
+.note { color: var(--muted); }
+section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-top: 25px;
+  padding: 25px;
+}
+.tag {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--purple);
+  font-weight: bold;
+}
+.highlight {
+  background: #241b37;
+  border-left: 4px solid var(--gold);
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 5px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.stat {
+  background: #211a34;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+.stat strong {
+  color: var(--gold);
+  display: block;
+  font-size: 22px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+td, th {
+  border: 1px solid var(--border);
+  padding: 12px;
+  text-align: left;
+}
+th {
+  background: #302242;
+  color: var(--gold);
+}
+ol, ul { padding-left: 25px; }
+footer {
+  text-align: center;
+  margin-top: 40px;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media(max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  section { padding: 17px; }
+  h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>VHOUSE</h1>
+  <p class="subtitle">CRYPTO REWARDS SYSTEMS</p>
+  <p>System Design & Development Notes</p>
+</header>
+
+<!-- SYSTEM ONE: SCRAPS -->
+<section id="scraps">
+  <div class="tag">CRYPTO SYSTEM 01</div>
+  <h2>Scraps — Creator Holder Rewards</h2>
+
+  <p>
+    Creator rewards tokens can be shared with wallets
+    or charities from the coin page after creation.
+  </p>
+
+  <p>
+    For Creator Holders, 100% of creator rewards
+    go to holders. Anyone holding more than $20
+    worth of the coin qualifies.
+  </p>
+
+  <p>
+    The goal is to reward holders after Journeys.
+    These rewards are called <strong>Scraps</strong>.
+  </p>
+
+  <h3>Two Purposes of Scraps</h3>
+  <ol>
+    <li>Scraps function as rewards tokens.</li>
+    <li>
+      Scrap token holdings determine the ATK
+      and DEF values of VCards.
+    </li>
+  </ol>
+
+  <h3>Battle Point Calculation</h3>
+  <p>
+    The total Scrap balance is divided equally
+    between ATK and DEF.
+  </p>
+
+  <div class="highlight">
+    <strong>FORMULA</strong>
+    <p>ATK = Total Scrap Balance / 2</p>
+    <p>DEF = Total Scrap Balance / 2</p>
+  </div>
+
+  <div class="grid">
+    <div class="stat">
+      TOTAL SCRAPS
+      <strong>3532.447437</strong>
+    </div>
+    <div class="stat">
+      ATK
+      <strong>1766.2</strong>
+    </div>
+    <div class="stat">
+      DEF
+      <strong>1766.2</strong>
+    </div>
+  </div>
+
+  <p class="note">
+    Exact split: 1766.2237185 per stat.
+    Displayed values use one decimal place.
+  </p>
+
+  <h3>Last Earned Snapshots</h3>
+  <p>
+    ATK and DEF are stored as last-earned snapshots.
+    This avoids checking the player's Scrap token
+    balance every second.
+  </p>
+
+  <div class="highlight">
+    <strong>REWARD LOOP</strong>
+    <p>
+      Complete Journey → Earn Scraps →
+      Increase Scrap Balance → Increase ATK & DEF →
+      Stronger VCard
+    </p>
+  </div>
+</section>
+
+<!-- SYSTEM TWO: RAIDS -->
+<section id="raids">
+  <div class="tag">CRYPTO SYSTEM 02</div>
+  <h2>Raid Boss & Battle Points</h2>
+
+  <p>
+    ATK and DEF are called Battle Points.
+    These values are used during Raid Events.
+  </p>
+
+  <h3>Raid Structure</h3>
+  <ol>
+    <li>Raid Events occur randomly throughout the month.</li>
+    <li>Collect Raid entry fees.</li>
+    <li>Register the list of participating players.</li>
+    <li>Collect the list of participating VCards.</li>
+    <li>Set the Raid Boss timer.</li>
+    <li>
+      Run 10 rounds of increasingly stronger
+      RPS attacks.
+    </li>
+    <li>
+      Reduce each VCard's Battle Points
+      according to the rounds.
+    </li>
+    <li>Calculate survival results.</li>
+    <li>
+      Those surviving all 10 rounds are paid
+      the entry fee.
+    </li>
+  </ol>
+
+  <h3>Raid Battle Points</h3>
+  <div class="grid">
+    <div class="stat">
+      ATTACK
+      <strong>ATK</strong>
+    </div>
+    <div class="stat">
+      DEFENSE
+      <strong>DEF</strong>
+    </div>
+    <div class="stat">
+      RAID ROUNDS
+      <strong>10</strong>
+    </div>
+  </div>
+
+  <p class="note">
+    Detailed RPS attack mechanics, Battle Point
+    reductions, calculations, and Raid event
+    rules will be defined later.
+  </p>
+</section>
+
+<!-- SYSTEM THREE: CREATION -->
+<section id="creation">
+  <div class="tag">CRYPTO SYSTEM 03</div>
+  <h2>Z Creation Unit</h2>
+
+  <p>
+    The Z Creation Unit allows players to create
+    items through liquidity provision.
+    It gives purpose to the Wind, Blade,
+    and Stone attributes.
+  </p>
+
+  <h3>Creation Process</h3>
+  <ol>
+    <li>
+      The player pays the SOL, $AWT, or
+      Scrap equivalent for entry.
+    </li>
+    <li>The game grants entry to the Creation Unit.</li>
+    <li>
+      The player selects a liquidity pool:
+      Wind, Blade, or Stone.
+    </li>
+    <li>
+      The player buys liquidity for item creation.
+    </li>
+    <li>The player receives LP tokens.</li>
+    <li>
+      Holding LP tokens provides in-game advantages.
+    </li>
+    <li>
+      The player can reclaim liquidity by
+      returning LP tokens, losing the associated
+      item power.
+    </li>
+  </ol>
+
+  <h3>Liquidity Pool Token Advantages</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>LP Type</th>
+        <th>In-Game Effect</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>WIND</td>
+        <td>Nullifies RPS Advantage</td>
+      </tr>
+      <tr>
+        <td>BLADE</td>
+        <td>ATK Boost</td>
+      </tr>
+      <tr>
+        <td>STONE</td>
+        <td>DEF Boost</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Liquidity & Item Power</h3>
+
+  <div class="highlight">
+    <strong>CORE PRINCIPLE</strong>
+    <p>
+      The liquidity pool operates normally,
+      producing LP tokens.
+    </p>
+    <p>
+      VHouse assigns in-game effects to those
+      tokens because the player holds them.
+    </p>
+    <p>
+      These effects are useful during Raid Events.
+    </p>
+  </div>
+
+  <p>
+    When liquidity is reclaimed through the
+    return of LP tokens, the associated
+    item loses power.
+  </p>
+
+  <p class="note">
+    Exact boost values, LP token calculations,
+    and detailed Creation Unit mechanics
+    remain to be defined.
+  </p>
+</section>
+
+<!-- SYSTEM RELATIONSHIPS -->
+<section id="relationships">
+  <div class="tag">SYSTEM CONNECTIONS</div>
+  <h2>VHouse Crypto Ecosystem</h2>
+
+  <div class="highlight">
+    <strong>SCRAPS</strong>
+    <p>
+      Journey rewards and token holdings
+      determine VCard Battle Points.
+    </p>
+  </div>
+
+  <div class="highlight">
+    <strong>RAIDS</strong>
+    <p>
+      VCards use their Battle Points to survive
+      Raid Boss encounters.
+    </p>
+  </div>
+
+  <div class="highlight">
+    <strong>Z CREATION UNIT</strong>
+    <p>
+      Liquidity pool holdings provide Wind,
+      Blade, and Stone effects useful in Raids.
+    </p>
+  </div>
+</section>
+
+<footer>
+  VHouse — Crypto Rewards Development Notes<br>
+  The Zetsumetsu Corporation
+</footer>
+
+</main>
+</body>
+</html>
