@@ -2329,11 +2329,6 @@ async function mintInPhantom(phantom,owner) {
   job.lastValidBlockHeight =
     latest.lastValidBlockHeight;
 
-  message(
-    "Phantom submitted the transaction. Checking Solana...",
-    txURL()
-  );
-
   for (let attempt=0;attempt<16;attempt++) {
     if (await inspectMint(owner)) {
       return "minted";
