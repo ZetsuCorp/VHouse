@@ -117,6 +117,13 @@ button:disabled{opacity:.5;cursor:default}
 .wallet-heading .tag-address{font-family:monospace;font-size:11px;font-weight:normal}
 .info-line{margin:5px 0;line-height:1.5;overflow-wrap:anywhere}
 .nft-image-preview{display:block;max-width:100%;max-height:190px;min-height:80px;object-fit:contain;margin:10px auto;border:1px solid #bc9357;border-radius:7px;background:#08131d}
+/* LOAD only selects TEAM and mints a new VCard; other editors stay separate. */
+#creationUnit .workspace.load-setup #nameGroup,
+#creationUnit .workspace.load-setup #imageGroup,
+#creationUnit .workspace.load-setup #descriptionGroup,
+#creationUnit .workspace.load-setup #downloadButton,
+#creationUnit .workspace.load-setup #postMint{display:none!important}
+
 /* The single VCard preview shows the loaded NFT; no second artwork panel. */
 #creationUnit .workspace.loaded-vcard .card-stand{
   max-width:285px;
@@ -324,7 +331,7 @@ button:disabled{opacity:.5;cursor:default}
   <div class="workspace" id="workspace" hidden>
     <section class="editor" id="editor">
       <div class="editor-head">
-        <span>VCARD CREATION</span>
+        <span id="editorTitle">VCARD CREATION</span>
         <small>LEVEL 01</small>
       </div>
 
@@ -345,7 +352,7 @@ button:disabled{opacity:.5;cursor:default}
         </div>
       </div>
 
-      <div class="group">
+      <div class="group" id="nameGroup">
         <div class="group-label">
           <b>02</b> ENTER A NAME
         </div>
@@ -353,7 +360,7 @@ button:disabled{opacity:.5;cursor:default}
                maxlength="16" value="Johnny J">
       </div>
 
-      <div class="group">
+      <div class="group" id="imageGroup">
         <div class="group-label">
           <b>03</b> CHOOSE YOUR IMAGE
         </div>
@@ -378,7 +385,7 @@ button:disabled{opacity:.5;cursor:default}
         </div>
       </div>
 
-      <div class="group">
+      <div class="group" id="descriptionGroup">
         <div class="group-label">
           <b>04</b> CHARACTER DESCRIPTION
         </div>
@@ -797,6 +804,7 @@ const state = {
 let busy = false;
 let job = null;
 let minted = false;
+let loadedSource = null; // Verified outside NFT awaiting conversion to a new VCard mint.
 let capturedPNG = null;
 let captureTimer = null;
 let captureVersion = 0;
@@ -810,13 +818,15 @@ function showScreen(screen) {
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
   $("workspaceBackButton").hidden = screen !== "workspace";
-  // Layout only: compact the loaded NFT's right column to expose fees/actions.
-  $("workspace").classList.toggle("loaded-vcard",screen === "workspace" && !!job?.loaded);
+  const loadingVCard = screen === "workspace" && !!loadedSource && !minted;
+  $("workspace").classList.toggle("load-setup",loadingVCard);
+  $("editorTitle").textContent = loadingVCard ? "LOAD NFT — CHOOSE TEAM" : "VCARD CREATION";
 }
 
 function resetForMint() {
   job = null;
   minted = false;
+  loadedSource = null;
   editMode = null;
   pendingOperation = null;
   state.team = "R";
@@ -2497,8 +2507,10 @@ async function displayMinted() {
   }
 
   minted = true;
+  loadedSource = null;
   $("mintButton").textContent = "MINTED ✓";
   showPostMintUI();
+  showScreen("workspace");
   // Download the exact PNG already uploaded to IPFS, not a second rendering.
   if (job.png && !job.pngDownloaded) {
     job.pngDownloaded = true;
@@ -2610,6 +2622,9 @@ $("mintButton").onclick = async () => {
     // Fail before IPFS uploads or Phantom signing if VHouse cannot
     // register the new NFT to this account.
     await requireLinkedMintWallet(owner);
+    if (loadedSource && loadedSource.owner !== owner.toBase58()) {
+      throw Error("Connect the Phantom wallet that owns the loaded NFT.");
+    }
 
     if (!job) {
       const data = cardData();
@@ -3123,6 +3138,7 @@ $("loadMintButton").onclick = async () => {
   $("loadStatus").hidden = true;
   try {
     if (pendingOperation) throw Error("An update is pending. Verify it first.");
+    if (job?.signature && !minted) throw Error("Verify the submitted mint before loading another NFT.");
     const phantom = window.phantom?.solana || window.solana;
     if (!phantom?.isPhantom) throw Error("Connect Phantom to load your NFT.");
     const owner = (await phantom.connect()).publicKey;
@@ -3206,6 +3222,15 @@ $("loadMintButton").onclick = async () => {
       sourceImageURI = json.image;
       source = await imageDataFromIPFS(json.image);
     }
+    // Any verified NFT supplies its artwork; LOAD never offers image replacement.
+    if (!source && json?.image) {
+      sourceImageURI = json.image;
+      source = await imageDataFromIPFS(json.image);
+    }
+    // A loaded NFT is the SOURCE, not a minted VCard. Start the EXISTING MINT path.
+    resetForMint();
+    lock(true);
+    loadedSource = {owner:owner.toBase58(),mintAddress:mint.toBase58()};
     state.team = chosenTeam;
     state.art = chosenArt;
     state.image = source;
@@ -3227,57 +3252,12 @@ $("loadMintButton").onclick = async () => {
     document.querySelectorAll(".effect-button").forEach(b =>
       b.classList.toggle("active",b.dataset.effect === state.effect)
     );
-    editMode = null;
-    pendingOperation = null;
-    job = {
-      mint:{publicKey:mint},data:null,uri:meta.uri,
-      imageURI:json.image,sourceImageURI,
-      owner:owner.toBase58(),signature:null,loaded:true,standard,
-      tokenAccount:standard === "token-2022" ? held.address : null,
-      symbol:meta.symbol,
-      chainName:meta.name,
-      soulbound:mintData ? getNonTransferable(mintData) !== null : false,
-      updateAuthorized,
-      closeEnabled:mintData
-        ? getMintCloseAuthority(mintData)?.closeAuthority?.equals(owner) === true
-        : false,
-      originalMetadata:json
-    };
-    minted = true;
-    job.data = cardData();
-    $("mintButton").textContent = "MINTED ✓";
-    renderCard($("vcardHost"),job.data);
+    // Only TEAM is editable during LOAD. The original MINT and Closet registration
+    // take over once the player submits this converted VCard.
+    renderCard($("vcardHost"),cardData());
     queueCardCapture();
-    showIPFSResult(job.imageURI,job.uri);
-    receiptLink("receiptMint","mintPending","mintDetail",mintURL(),mint.toBase58());
-    showPostMintUI();
     showScreen("workspace");
-    // The verified wallet NFT becomes the active VCard in the Placeholder.
-    // External NFTs remain external; they are not inserted into the VHouse inventory.
-    let assignmentNotice="";
-    try {
-      const nftImage=assetURL(json.image||job.imageURI);
-      await window.VHouseCardStore.assignLoaded({
-        mint_address:mint.toBase58(),
-        ownerWallet:owner.toBase58(),
-        name:cardDisplayName(json.name||meta.name),
-        description:String(json.description||""),
-        image:nftImage,
-        team:state.team,
-        level:1,
-        atk:100,
-        def:100
-      });
-    } catch(assignError) {
-      console.error("Loaded NFT Placeholder assignment:",assignError);
-      assignmentNotice=" NFT verified, but Placeholder assignment failed: "+shortError(assignError);
-    }
-    message((standard === "mpl-core"
-      ? "Metaplex Core NFT loaded. Wallet ownership verified."
-      : job.updateAuthorized
-        ? "Token-2022 NFT loaded. Choose UPDATE or CUSTOMIZE."
-        : "Token-2022 NFT loaded. This wallet is not the on-chain metadata update authority.")+
-      (assignmentNotice||" Assigned to VHouse Placeholder."));
+    message("NFT ownership verified. Choose a TEAM, then MINT the VCard to register it in your Closet.");
   } catch (error) {
     console.error("NFT load:",error);
     message("Load error: " + shortError(error));
