@@ -13,8 +13,6 @@ import {
 
 // Read-only wallet readiness check. No token transfers or Journey writes.
 const SCRAP_MINT = "BGf97TZtX7SezpJs21B3DchsonwHvw8DiekDALXLpump";
-const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-const USDC_ATOMIC_PER_BAG = 250000; // $0.25 USDC (6 decimals).
 const CORS = {
   "Access-Control-Allow-Origin": "https://zetsucorp.github.io",
   "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
@@ -50,28 +48,48 @@ function amountDisplay(raw, decimals) {
   const str = raw.toString().padStart(decimals + 1, "0");
   return decimals ? str.slice(0, -decimals) + "." + str.slice(-decimals) : str;
 }
-async function getMarketQuote(bags) {
-  const amount = bags * USDC_ATOMIC_PER_BAG;
-  if (!Number.isSafeInteger(amount) || amount < 1) throw Error("INVALID_BAG_AMOUNT");
-  const url = new URL("https://api.jup.ag/swap/v1/quote");
-  url.searchParams.set("inputMint", USDC_MINT);
-  url.searchParams.set("outputMint", SCRAP_MINT);
-  url.searchParams.set("amount", String(amount));
-  url.searchParams.set("slippageBps", "50");
-  const headers = {};
-  const apiKey = Deno.env.get("JUPITER_API_KEY");
-  if (apiKey) headers["x-api-key"] = apiKey;
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+// Reuse the same Solscan API key/header as vcard-market-data.
+async function getMarketQuote() {
+  const key = Deno.env.get("SOLSCAN_API_KEY");
+  if (!key) throw Error("SOLSCAN_NOT_CONFIGURED");
+  const url = new URL("https://pro-api.solscan.io/v2.0/token/price/latest");
+  url.searchParams.append("address[]", SCRAP_MINT);
+  const res = await fetch(url, {
+    headers: { accept: "application/json", token: key },
+    signal: AbortSignal.timeout(8500),
+  });
   if (!res.ok) throw Error("MARKET_QUOTE_UNAVAILABLE");
-  const quote = await res.json();
-  if (quote.inputMint !== USDC_MINT || quote.outputMint !== SCRAP_MINT ||
-      quote.inAmount !== String(amount) || !Array.isArray(quote.routePlan) ||
-      !quote.routePlan.length) throw Error("MARKET_QUOTE_INVALID");
-  const atomic = positiveAtomic(quote.outAmount);
-  if (atomic <= 0n) throw Error("MARKET_QUOTE_INVALID");
-  return { amount: atomic, quoteUsdc: amountDisplay(BigInt(amount), 6) };
+  const payload = await res.json();
+  if (payload.success !== true || !Array.isArray(payload.data)) {
+    throw Error("MARKET_QUOTE_INVALID");
+  }
+  const quote = payload.data.find((item) => item?.address === SCRAP_MINT);
+  const priceUsd = Number(quote?.price);
+  const updatedTime = Number(quote?.updated_time);
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0 ||
+      !Number.isFinite(updatedTime) || updatedTime <= 0 ||
+      Math.abs(Date.now() / 1000 - updatedTime) > 1800) {
+    throw Error("MARKET_QUOTE_UNAVAILABLE");
+  }
+  return { priceUsd };
 }
-async function inspectWallet(sender, recipient, required) {
+// Convert USD cents to integer SPL token units without floating-point rounding.
+function scrapAtomicForBags(bags, priceUsd, decimals) {
+  const match = String(priceUsd).match(/^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i);
+  if (!match) throw Error("MARKET_QUOTE_INVALID");
+  const digits = match[1] + (match[2] || "");
+  const exponent = Number(match[3] || 0) - (match[2] || "").length;
+  if (!Number.isInteger(exponent) || Math.abs(exponent) > 40) {
+    throw Error("MARKET_QUOTE_INVALID");
+  }
+  const priceN = BigInt(digits) * (exponent > 0 ? 10n ** BigInt(exponent) : 1n);
+  const priceD = exponent < 0 ? 10n ** BigInt(-exponent) : 1n;
+  if (priceN <= 0n) throw Error("MARKET_QUOTE_INVALID");
+  const numerator = BigInt(bags) * 25n * priceD * 10n ** BigInt(decimals);
+  const denominator = 100n * priceN;
+  return (numerator + denominator - 1n) / denominator;
+}
+async function inspectWallet(sender, recipient, bags, priceUsd) {
   const rpc = Deno.env.get("SOLANA_RPC_URL") ||
     "https://api.mainnet-beta.solana.com";
   const connection = new Connection(rpc, "confirmed");
@@ -92,6 +110,7 @@ async function inspectWallet(sender, recipient, required) {
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 18) {
     throw Error("SCRAP_DECIMALS_UNAVAILABLE");
   }
+  const required = scrapAtomicForBags(bags, priceUsd, decimals);
   let available = 0n;
   for (const account of tokenAccounts.value) {
     available += positiveAtomic(account.account.data.parsed.info.tokenAmount.amount);
@@ -187,12 +206,12 @@ Deno.serve(async (req) => {
       return reply({ error: "PLAYER_WALLET_NOT_LINKED" }, 409);
     }
     const sender = signerFromSecret();
-    const quote = await getMarketQuote(bags);
-    const check = await inspectWallet(sender, account.wallet_address, quote.amount);
-    return reply({ ...check, missionId, bags, quoteUsdc: quote.quoteUsdc });
+    const quote = await getMarketQuote();
+    const check = await inspectWallet(sender, account.wallet_address, bags, quote.priceUsd);
+    return reply({ ...check, missionId, bags, usdValue: (bags * 0.25).toFixed(2) });
   } catch (error) {
     const safe = new Set([
-      "MARKET_QUOTE_UNAVAILABLE", "MARKET_QUOTE_INVALID",
+      "MARKET_QUOTE_UNAVAILABLE", "MARKET_QUOTE_INVALID", "SOLSCAN_NOT_CONFIGURED",
       "INVALID_ONCHAIN_AMOUNT", "SCRAP_MINT_UNAVAILABLE",
       "SCRAP_DECIMALS_UNAVAILABLE", "NETWORK_FEE_UNAVAILABLE",
       "VHOUSE_WALLET_NOT_CONFIGURED", "VHOUSE_WALLET_KEY_INVALID",
