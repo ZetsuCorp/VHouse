@@ -485,9 +485,12 @@ async function updateJourneyWallet(){
     if(error)throw error;
     if(auth.getUser?.()?.id!==user.id)return;
     const wallet=String(data?.wallet_address||"");
-    journeyWalletAddress.textContent=wallet;
-    journeyWalletAddress.title=wallet;
-    journeyWalletPanel.hidden=!wallet;
+    const phantom=window.phantom?.solana||window.solana;
+    const connected=phantom?.isPhantom&&phantom.isConnected&&
+      phantom.publicKey?.toBase58?.()===wallet;
+    journeyWalletAddress.textContent=connected?wallet:"";
+    journeyWalletAddress.title=connected?wallet:"";
+    journeyWalletPanel.hidden=!connected;
   }catch(error){
     console.warn("Journey connected wallet:",error);
     journeyWalletPanel.hidden=true;
