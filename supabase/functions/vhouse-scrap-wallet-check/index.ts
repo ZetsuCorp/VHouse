@@ -48,25 +48,28 @@ function amountDisplay(raw, decimals) {
   const str = raw.toString().padStart(decimals + 1, "0");
   return decimals ? str.slice(0, -decimals) + "." + str.slice(-decimals) : str;
 }
-// Read the one Scrap token price from the existing Solscan provider.
+// Public live market data. No Solscan key or server secret needed.
 async function getMarketQuote() {
-  const key = Deno.env.get("SOLSCAN_API_KEY");
-  if (!key) throw Error("SOLSCAN_NOT_CONFIGURED");
-  const url = new URL("https://pro-api.solscan.io/v2.0/token/price/latest");
-  url.searchParams.append("address[]", SCRAP_MINT);
-  const res = await fetch(url, {
-    headers: { accept: "application/json", token: key },
-    signal: AbortSignal.timeout(8500),
-  });
-  if (!res.ok) throw Error("SOLSCAN_HTTP_" + res.status);
-  const payload = await res.json();
-  if (payload.success !== true || !Array.isArray(payload.data)) {
-    throw Error("SOLSCAN_TOKEN_DATA_UNAVAILABLE");
-  }
-  const quote = payload.data.find(item => item?.address === SCRAP_MINT);
-  const priceUsd = Number(quote?.price);
+  const res = await fetch(
+    "https://api.dexscreener.com/token-pairs/v1/solana/" + SCRAP_MINT,
+    { headers: { accept: "application/json" }, cache: "no-store",
+      signal: AbortSignal.timeout(8500) },
+  );
+  if (!res.ok) throw Error("SCRAP_MARKET_UNAVAILABLE");
+  const pairs = await res.json();
+  if (!Array.isArray(pairs)) throw Error("SCRAP_MARKET_UNAVAILABLE");
+  // Only take USD prices where SCRAP is the base token.
+  const priced = pairs.filter(pair =>
+    pair?.chainId === "solana" &&
+    pair?.baseToken?.address === SCRAP_MINT &&
+    Number.isFinite(Number(pair?.priceUsd)) && Number(pair.priceUsd) > 0
+  );
+  priced.sort((x, y) =>
+    Number(y?.liquidity?.usd || 0) - Number(x?.liquidity?.usd || 0)
+  );
+  const priceUsd = Number(priced[0]?.priceUsd);
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
-    throw Error("SOLSCAN_SCRAP_PRICE_UNAVAILABLE");
+    throw Error("SCRAP_MARKET_UNAVAILABLE");
   }
   return { priceUsd };
 }
