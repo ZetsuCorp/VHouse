@@ -52,18 +52,19 @@ function amountDisplay(raw, decimals) {
 async function getMarketQuote() {
   const key = Deno.env.get("SOLSCAN_API_KEY");
   if (!key) throw Error("SOLSCAN_NOT_CONFIGURED");
-  const url = new URL("https://pro-api.solscan.io/v2.0/token/meta");
-  url.searchParams.set("address", SCRAP_MINT);
+  const url = new URL("https://pro-api.solscan.io/v2.0/token/price/latest");
+  url.searchParams.append("address[]", SCRAP_MINT);
   const res = await fetch(url, {
     headers: { accept: "application/json", token: key },
     signal: AbortSignal.timeout(8500),
   });
   if (!res.ok) throw Error("SOLSCAN_HTTP_" + res.status);
   const payload = await res.json();
-  if (payload.success !== true || payload.data?.address !== SCRAP_MINT) {
+  if (payload.success !== true || !Array.isArray(payload.data)) {
     throw Error("SOLSCAN_TOKEN_DATA_UNAVAILABLE");
   }
-  const priceUsd = Number(payload.data.price);
+  const quote = payload.data.find(item => item?.address === SCRAP_MINT);
+  const priceUsd = Number(quote?.price);
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
     throw Error("SOLSCAN_SCRAP_PRICE_UNAVAILABLE");
   }
