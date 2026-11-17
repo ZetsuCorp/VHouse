@@ -154,6 +154,75 @@ html, body {
   transform: translate(-50%, -50%);
   white-space: nowrap;
 }
+/* The six room hotspots share one Messenger/dialogue layout and text position. */
+.house-hover-guide {
+  position:absolute;
+  left:7%;
+  bottom:1.5%;
+  width:86%;
+  height:31%;
+  z-index:12;
+  display:flex;
+  align-items:center;
+  gap:0;
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(2%);
+  transition:opacity .18s ease,transform .18s ease,visibility .18s;
+  pointer-events:none;
+}
+.house-hover-messenger {
+  display:block;
+  width:24%;
+  height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 .7cqw #9d6adb88);
+}
+.house-hover-dialogue {
+  position:relative;
+  width:76%;
+  height:100%;
+}
+.house-hover-dialogue > img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:fill;
+}
+.house-hover-words {
+  position:absolute;
+  inset:42% 12% 10%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:.35cqw;
+  text-align:center;
+  color:#fff;
+  text-shadow:0 2px 5px #000;
+}
+.house-hover-words h2 {
+  margin:0;
+  color:#f6d99e;
+  font-size:clamp(11px,1.2cqw,19px);
+  line-height:1.15;
+}
+.house-hover-words p {
+  margin:0;
+  font-size:clamp(9px,.88cqw,14px);
+  line-height:1.28;
+  font-weight:600;
+}
+.house-hotspot:hover + .house-hover-guide,
+.house-hotspot:focus-visible + .house-hover-guide {
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0);
+}
+@media (prefers-reduced-motion:reduce) {
+  .house-hover-guide{transition:none;transform:none}
+}
+
 /* House player badge keeps its original placement and shared portrait renderer. */
 .hud-layer { position:absolute; inset:0; z-index:5; pointer-events:none; }
 .hud-player-icon { top:0.2%; left:50%; transform:translateX(-50%); }
@@ -313,11 +382,71 @@ html, body {
     <div class="hotspot-layer">
       <div class="fireplace-light" aria-hidden="true"></div>
       <a href="./VCloset.html" class="vhouse-btn house-hotspot hotspot-closet" data-label="VCard Closet" aria-label="VCard Closet"></a>
+      <aside class="house-hover-guide" aria-label="VCard Closet description">
+        <img class="house-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+        <div class="house-hover-dialogue">
+          <img src="assets/Message Frame.png" alt="" draggable="false">
+          <div class="house-hover-words">
+            <h2>VCARD CLOSET — YOUR COLLECTION</h2>
+            <p>View your VCards, select your active character, check stats, track Journey history, and monitor earnings and progression.</p>
+          </div>
+        </div>
+      </aside>
       <a href="./billboard.html" class="vhouse-btn house-hotspot hotspot-billboard" data-label="Billboard" aria-label="Billboard"></a>
+      <aside class="house-hover-guide" aria-label="Billboard description">
+        <img class="house-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+        <div class="house-hover-dialogue">
+          <img src="assets/Message Frame.png" alt="" draggable="false">
+          <div class="house-hover-words">
+            <h2>BILLBOARD — VCARD MARKET</h2>
+            <p>Check NFT values, track blockchain activity and VHouse growth, review sales history, and monitor your VCards' market performance.</p>
+          </div>
+        </div>
+      </aside>
       <a href="./index.html" class="vhouse-btn house-hotspot hotspot-travel" data-label="Go Outside" aria-label="Go Outside"></a>
+      <aside class="house-hover-guide" aria-label="Go Outside description">
+        <img class="house-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+        <div class="house-hover-dialogue">
+          <img src="assets/Message Frame.png" alt="" draggable="false">
+          <div class="house-hover-words">
+            <h2>GO OUTSIDE — EXPLORE V TOWN</h2>
+            <p>Return to V Town to start Journeys, earn rewards, and visit the Shop.</p>
+          </div>
+        </div>
+      </aside>
       <a href="./VCardCreator.html" class="vhouse-btn house-hotspot hotspot-create" data-label="Create VCard" aria-label="Create VCard"></a>
+      <aside class="house-hover-guide" aria-label="Create VCard description">
+        <img class="house-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+        <div class="house-hover-dialogue">
+          <img src="assets/Message Frame.png" alt="" draggable="false">
+          <div class="house-hover-words">
+            <h2>CREATE VCARD — BRING YOUR NFT TO LIFE</h2>
+            <p>Create and mint new VCards, load existing NFTs into VHouse, customize your characters, or burn eligible VCards to reclaim SOL.</p>
+          </div>
+        </div>
+      </aside>
       <button type="button" class="vhouse-btn house-hotspot hotspot-chest" data-label="Stuff" aria-label="Stuff"></button>
+      <aside class="house-hover-guide" aria-label="Stuff description">
+        <img class="house-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+        <div class="house-hover-dialogue">
+          <img src="assets/Message Frame.png" alt="" draggable="false">
+          <div class="house-hover-words">
+            <h2>STUFF — INVENTORY &amp; STATS</h2>
+            <p>Check your VCard Cash, manage inventory items, review character stats, and prepare resources for your next Journey.</p>
+          </div>
+        </div>
+      </aside>
       <button type="button" class="vhouse-btn house-hotspot hotspot-login" data-label="Log In" aria-label="Log In"></button>
+      <aside class="house-hover-guide" aria-label="Log In description">
+        <img class="house-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+        <div class="house-hover-dialogue">
+          <img src="assets/Message Frame.png" alt="" draggable="false">
+          <div class="house-hover-words">
+            <h2>LOG IN — YOUR VHOUSE ACCOUNT</h2>
+            <p>Sign in with Discord or email to access your VCards, inventory, and saved game progress.</p>
+          </div>
+        </div>
+      </aside>
     </div>
     <div class="hud-layer">
       <div class="hud-player-icon" data-vhouse-player role="img" aria-label="Active VCard"></div>
