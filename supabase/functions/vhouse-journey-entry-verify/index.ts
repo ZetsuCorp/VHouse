@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
 
     const tx = await readConfirmedTransaction(signature);
     if (!tx) return reply({ verified: false, error: "PAYMENT_CONFIRMATION_PENDING" }, 202);
-    if (tx.meta?.err !== null) return reply({ error: "PAYMENT_FAILED_ONCHAIN" }, 409);
+    if (!tx.meta || tx.meta.err !== null) return reply({ error: "PAYMENT_FAILED_ONCHAIN" }, 409);
     const keys = tx.transaction.message.accountKeys;
     const ownerSigned = keys.some(k => k.signer && k.pubkey.toBase58() === owner);
     const instructions = tx.transaction.message.instructions;
