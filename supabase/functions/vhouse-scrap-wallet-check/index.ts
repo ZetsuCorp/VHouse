@@ -48,28 +48,24 @@ function amountDisplay(raw, decimals) {
   const str = raw.toString().padStart(decimals + 1, "0");
   return decimals ? str.slice(0, -decimals) + "." + str.slice(-decimals) : str;
 }
-// Reuse the same Solscan API key/header as vcard-market-data.
+// Read the one Scrap token price from the existing Solscan provider.
 async function getMarketQuote() {
   const key = Deno.env.get("SOLSCAN_API_KEY");
   if (!key) throw Error("SOLSCAN_NOT_CONFIGURED");
-  const url = new URL("https://pro-api.solscan.io/v2.0/token/price/latest");
-  url.searchParams.append("address[]", SCRAP_MINT);
+  const url = new URL("https://pro-api.solscan.io/v2.0/token/meta");
+  url.searchParams.set("address", SCRAP_MINT);
   const res = await fetch(url, {
     headers: { accept: "application/json", token: key },
     signal: AbortSignal.timeout(8500),
   });
-  if (!res.ok) throw Error("MARKET_QUOTE_UNAVAILABLE");
+  if (!res.ok) throw Error("SOLSCAN_HTTP_" + res.status);
   const payload = await res.json();
-  if (payload.success !== true || !Array.isArray(payload.data)) {
-    throw Error("MARKET_QUOTE_INVALID");
+  if (payload.success !== true || payload.data?.address !== SCRAP_MINT) {
+    throw Error("SOLSCAN_TOKEN_DATA_UNAVAILABLE");
   }
-  const quote = payload.data.find((item) => item?.address === SCRAP_MINT);
-  const priceUsd = Number(quote?.price);
-  const updatedTime = Number(quote?.updated_time);
-  if (!Number.isFinite(priceUsd) || priceUsd <= 0 ||
-      !Number.isFinite(updatedTime) || updatedTime <= 0 ||
-      Math.abs(Date.now() / 1000 - updatedTime) > 1800) {
-    throw Error("MARKET_QUOTE_UNAVAILABLE");
+  const priceUsd = Number(payload.data.price);
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+    throw Error("SOLSCAN_SCRAP_PRICE_UNAVAILABLE");
   }
   return { priceUsd };
 }
@@ -89,7 +85,7 @@ function scrapAtomicForBags(bags, priceUsd, decimals) {
   const denominator = 100n * priceN;
   return (numerator + denominator - 1n) / denominator;
 }
-async function inspectWallet(sender, recipient, bags, priceUsd) {
+async function inspectWallet(sender, recipient, bags, priceUsd, quoteError = null) {
   const rpc = Deno.env.get("SOLANA_RPC_URL") ||
     "https://api.mainnet-beta.solana.com";
   const connection = new Connection(rpc, "confirmed");
@@ -110,10 +106,24 @@ async function inspectWallet(sender, recipient, bags, priceUsd) {
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 18) {
     throw Error("SCRAP_DECIMALS_UNAVAILABLE");
   }
-  const required = scrapAtomicForBags(bags, priceUsd, decimals);
+  const required = bags > 0 && priceUsd !== null
+    ? scrapAtomicForBags(bags, priceUsd, decimals) : null;
   let available = 0n;
   for (const account of tokenAccounts.value) {
     available += positiveAtomic(account.account.data.parsed.info.tokenAmount.amount);
+  }
+  // Balance tests still show real holdings with zero bags or unavailable pricing.
+  if (required === null || bags === 0) {
+    return {
+      status: bags === 0 ? "NO BAGS" : "CHECK FAILED",
+      reason: bags === 0 ? "NO_SCRAP_BAGS" : (quoteError || "MARKET_QUOTE_UNAVAILABLE"),
+      senderWallet: sender.publicKey.toBase58(),
+      recipientWallet: owner.toBase58(),
+      scrapTokensRequired: bags === 0 ? "0" : "—",
+      scrapTokensAvailable: amountDisplay(available, decimals),
+      solRequiredLamports: null,
+      solAvailableLamports: solBalance,
+    };
   }
   const senderAta = getAssociatedTokenAddressSync(
     mint, sender.publicKey, false, tokenProgram,
@@ -193,9 +203,6 @@ Deno.serve(async (req) => {
     if (!Number.isSafeInteger(bags) || bags < 0) {
       return reply({ error: "INVALID_SCRAP_BAGS" }, 422);
     }
-    if (bags === 0) {
-      return reply({ status: "READY", missionId, bags: 0, scrapTokensRequired: "0" });
-    }
     const { data: account, error: accountError } = await db
       .from("vhouse_accounts")
       .select("wallet_address")
@@ -206,8 +213,18 @@ Deno.serve(async (req) => {
       return reply({ error: "PLAYER_WALLET_NOT_LINKED" }, 409);
     }
     const sender = signerFromSecret();
-    const quote = await getMarketQuote();
-    const check = await inspectWallet(sender, account.wallet_address, bags, quote.priceUsd);
+    let quote = null;
+    let quoteError = null;
+    if (bags > 0) {
+      try { quote = await getMarketQuote(); }
+      catch (error) {
+        quoteError = error?.message || "MARKET_QUOTE_UNAVAILABLE";
+        console.warn("[scrap-wallet-check] Price lookup:", quoteError);
+      }
+    }
+    const check = await inspectWallet(
+      sender, account.wallet_address, bags, quote?.priceUsd ?? null, quoteError,
+    );
     return reply({ ...check, missionId, bags, usdValue: (bags * 0.25).toFixed(2) });
   } catch (error) {
     const safe = new Set([
