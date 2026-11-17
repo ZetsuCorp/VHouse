@@ -197,6 +197,12 @@ button:disabled{opacity:.5;cursor:default}
 }
 #creationUnit #burnNFTImage {max-height:220px}
 #creationUnit #burnSubmitButton {font-size:16px;padding:14px}
+/* Explain the existing BURN transaction without changing its controls. */
+#creationUnit #burnPanel .burn-steps{margin:16px 0 0;padding:12px 18px 12px 38px;border:1px solid #355066;border-radius:8px;background:#0b1723;text-align:left;color:#eaf9ff;font-size:15px;line-height:1.5}
+#creationUnit #burnPanel .burn-steps li{margin:0 0 10px;padding-left:5px}
+#creationUnit #burnPanel .burn-steps li:last-child{margin-bottom:0}
+#creationUnit #burnPanel .burn-steps li::marker{color:#e4c58f;font-weight:900}
+#creationUnit #burnPanel .burn-steps strong{color:#e4c58f}
 
 
 
@@ -336,6 +342,13 @@ button:disabled{opacity:.5;cursor:default}
     <div class="status" id="burnStatus" hidden></div>
     <a id="burnReceiptLink" href="#" target="_blank" rel="noopener noreferrer" hidden style="display:block;margin:12px 0;color:#61e9ff;overflow-wrap:anywhere">VIEW SOLANA TRANSACTION</a>
     <button class="nav-back" id="burnBackButton" type="button">BACK</button>
+    <ol class="burn-steps">
+      <li><strong>PAY SERVICE FEE</strong> — $3 worth of SOL transfers from your Phantom wallet to the VHouse treasury.</li>
+      <li><strong>BURN NFT</strong> — Token-2022 burns the VCard token.</li>
+      <li><strong>CLOSE TOKEN ACCOUNT</strong> — The SOL remaining in the NFT's token account returns to your Phantom wallet.</li>
+      <li><strong>CLOSE MINT ACCOUNT</strong> — The SOL stored in the NFT's mint account, including recoverable deposits from UPDATE/CUSTOMIZE, returns to your Phantom wallet.</li>
+      <li><strong>TRANSACTION COMPLETES</strong> — The wallet's net balance reflects the service fee, recovered SOL, and network fee.</li>
+    </ol>
   </section>
 
   <div class="workspace" id="workspace" hidden>
