@@ -173,6 +173,79 @@ html, body {
   height: 32.69%;
 }
 
+/* Location guides: appear with the existing hotspot hover/focus labels.
+   They never block hotspot clicks or change the shared map geometry. */
+.map-hover-guide {
+  position:absolute;
+  left:7%;
+  bottom:1.5%;
+  width:86%;
+  height:31%;
+  z-index:12;
+  display:flex;
+  align-items:center;
+  gap:0;
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(2%);
+  transition:opacity .18s ease, transform .18s ease, visibility .18s;
+  pointer-events:none;
+}
+.map-hover-guide--vhouse {left:4%;width:88%}
+.map-hover-guide--journey {left:8%;width:86%}
+.map-hover-guide--shop {left:10%;width:84%}
+.map-hover-guide .map-hover-messenger {
+  display:block;
+  width:24%;
+  height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 .7cqw #9d6adb88);
+}
+.map-hover-dialogue {
+  position:relative;
+  width:76%;
+  height:100%;
+}
+.map-hover-dialogue > img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:fill;
+}
+.map-hover-words {
+  position:absolute;
+  inset:27% 12% 15%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.35cqw;
+  text-align:center;
+  color:#fff;
+  text-shadow:0 2px 5px #000;
+}
+.map-hover-words h2{
+  margin:0;
+  color:#f6d99e;
+  font-size:clamp(12px,1.45cqw,23px);
+  line-height:1.15;
+}
+.map-hover-words p {
+  margin:0;
+  font-size:clamp(10px,1.05cqw,17px);
+  line-height:1.28;
+  font-weight:600;
+}
+.map-hotspot:hover + .map-hover-guide,
+.map-hotspot:focus-visible + .map-hover-guide {
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0);
+}
+@media (prefers-reduced-motion:reduce) {
+  .map-hover-guide {transition:none;transform:none}
+}
+
 /* Page placement; the icon and info box are a persistent UI object. */
 .town-player-hud { top: 1%; left: 1%; }
 /* Journey overlay, aligned to the second marked rectangle. */
@@ -263,6 +336,16 @@ html, body {
       data-label="VHouse"
       aria-label="Enter VHouse">
     </a>
+    <aside class="map-hover-guide map-hover-guide--vhouse" aria-label="VHouse description">
+      <img class="map-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+      <div class="map-hover-dialogue">
+        <img src="assets/Message Frame.png" alt="" draggable="false">
+        <div class="map-hover-words">
+          <h2>VHOUSE — YOUR HOME BASE</h2>
+          <p>Create and manage VCards, organize your NFT collection, and access your inventory. Visit the Billboard marketplace to check NFT values, track blockchain activity, monitor VCard growth and earnings, and explore sales history.</p>
+        </div>
+      </div>
+    </aside>
 
     <!-- 2. JOURNEY -->
     <button
@@ -272,6 +355,16 @@ html, body {
       data-label="Journey"
       aria-label="Journey">
     </button>
+    <aside class="map-hover-guide map-hover-guide--journey" aria-label="Journey description">
+      <img class="map-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+      <div class="map-hover-dialogue">
+        <img src="assets/Message Frame.png" alt="" draggable="false">
+        <div class="map-hover-words">
+          <h2>JOURNEY — PLAY, BATTLE &amp; EARN</h2>
+          <p>Send your VCards on missions, face encounters, and advance through stages to earn VCard Cash, collect Scraps with crypto holder rewards, and compete for $AWT and SOL. Every Journey brings new challenges, rewards, and opportunities to grow your VCards.</p>
+        </div>
+      </div>
+    </aside>
 
     <!-- 3. SHOP -->
     <a
@@ -280,6 +373,16 @@ html, body {
       data-label="Shop"
       aria-label="Enter Shop">
     </a>
+    <aside class="map-hover-guide map-hover-guide--shop" aria-label="Shop description">
+      <img class="map-hover-messenger" src="assets/Messengertalk.png" alt="" draggable="false">
+      <div class="map-hover-dialogue">
+        <img src="assets/Message Frame.png" alt="" draggable="false">
+        <div class="map-hover-words">
+          <h2>SHOP — PREPARE FOR YOUR JOURNEY</h2>
+          <p>Explore Mission Boosts, access Journey Services, and trade Scraps for resources to support your VCards on their adventures.</p>
+        </div>
+      </div>
+    </aside>
 
     <!-- Persistent player icon and reusable information box -->
     <aside class="vhouse-player-hud town-player-hud" aria-label="Player information">
