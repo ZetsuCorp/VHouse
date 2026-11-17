@@ -35,8 +35,18 @@
     } else image.removeAttribute("src");
     root.querySelector(".card-info").textContent = "LEVEL " + (card.level ?? 1);
     root.querySelector(".card-description").textContent = String(card.description ?? "").slice(0, 100);
-    root.querySelector('[data-stat="atk"]').textContent = String(card.atk ?? 100);
-    root.querySelector('[data-stat="def"]').textContent = String(card.def ?? 100);
+    // Fit the entire number inside each ATK/DEF half, even for large
+    // Scrap balances. cqw keeps the size proportional when the card scales.
+    for (const field of ["atk", "def"]) {
+      const value = root.querySelector('[data-stat="' + field + '"]');
+      const text = String(card[field] ?? 100);
+      value.textContent = text;
+      value.style.fontSize = Math.min(7.1, 60 / Math.max(1, text.length)) + "cqw";
+      value.style.display = "inline-block";
+      value.style.whiteSpace = "nowrap";
+      value.style.maxWidth = "100%";
+      value.parentElement.style.minWidth = "0";
+    }
     root.querySelector(".meta-footer-text").textContent = String(card.footer ?? defaultFooter);
     root.querySelector(".rarity").textContent = team;
     return root;
