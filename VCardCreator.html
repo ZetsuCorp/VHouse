@@ -150,7 +150,14 @@ button:disabled{opacity:.5;cursor:default}
 
 
 /* Choose creation or loading before opening the editor. */
-.entry-choice{display:flex;justify-content:center;align-items:center;gap:35px;padding:28px 10px 34px;flex-wrap:wrap}
+/* Creation menu: speaking Messenger introduces the existing three choices. */
+.entry-choice{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px;padding:12px 10px 24px}
+.creation-menu-guide{display:grid;grid-template-columns:minmax(0,280px) minmax(0,570px);align-items:center;justify-content:center;gap:20px;width:min(930px,100%)}
+.creation-menu-messenger{display:block;width:100%;height:290px;object-fit:contain;filter:drop-shadow(0 0 12px #8c5bd077)}
+.creation-menu-message{position:relative;width:100%;height:185px}
+.creation-menu-message img{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none;user-select:none}
+.creation-menu-message p{position:absolute;inset:32% 13% 17%;margin:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-size:24px;font-weight:900;line-height:1.2;text-shadow:0 2px 6px #000}
+.creation-menu-options{display:flex;justify-content:center;align-items:center;gap:35px;flex-wrap:wrap;width:100%}
 .choice-bubble{width:190px;aspect-ratio:1;border-radius:50%;border:3px solid #bc9357;background:radial-gradient(circle at 35% 30%,#1d5262,#0c1c2b 72%);color:#eaf9ff;box-shadow:0 0 18px #00eaff18;font-size:16px;font-weight:900;letter-spacing:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .choice-bubble:hover,.choice-bubble:focus-visible{border-color:#00eaff;box-shadow:0 0 20px #00eaff66;outline:none}
 /* MINT introduction uses the existing Vcontainer.png game-screen frame. */
@@ -334,15 +341,24 @@ button:disabled{opacity:.5;cursor:default}
   <h1>VHOUSE — VCARD CREATION</h1>
 
   <section class="entry-choice" id="entryMenu">
-    <button class="choice-bubble" id="chooseMintButton" type="button" disabled>
-      <span class="bubble-symbol">✦</span><span>MINT VCARD</span>
-    </button>
-    <button class="choice-bubble" id="chooseLoadButton" type="button" disabled>
-      <span class="bubble-symbol">◇</span><span>LOAD NFT</span>
-    </button>
-    <button class="choice-bubble" id="chooseBurnButton" type="button" disabled>
-      <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
-    </button>
+    <div class="creation-menu-guide">
+      <img class="creation-menu-messenger" src="assets/Messengertalk.png" alt="VHouse Messenger speaking" draggable="false">
+      <div class="creation-menu-message">
+        <img src="assets/Message Frame.png" alt="" draggable="false">
+        <p>Choose how to create a VCard.</p>
+      </div>
+    </div>
+    <div class="creation-menu-options">
+      <button class="choice-bubble" id="chooseMintButton" type="button" disabled>
+        <span class="bubble-symbol">✦</span><span>MINT VCARD</span>
+      </button>
+      <button class="choice-bubble" id="chooseLoadButton" type="button" disabled>
+        <span class="bubble-symbol">◇</span><span>LOAD NFT</span>
+      </button>
+      <button class="choice-bubble" id="chooseBurnButton" type="button" disabled>
+        <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
+      </button>
+    </div>
   </section>
 
   <section class="mint-intro" id="mintIntroPanel" aria-label="Introduction to minting VCards" hidden>
