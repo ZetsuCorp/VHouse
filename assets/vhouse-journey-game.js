@@ -1455,6 +1455,7 @@ function renderComplete(){
     confirmed
       ?"RECEIPT CONFIRMED · VCARD AVAILABLE"
       :"REWARDS ACQUIRED · CONFIRMATION REQUIRED";
+  showScrapTransferNotice(mission.scrapTransferNotice||"",mission.scrapTransferSignature||"");
 
   // Always enable CONFIRM for a new unconfirmed receipt.
   $("confirmButton").disabled=confirmed;
@@ -1479,43 +1480,24 @@ function renderComplete(){
   });
 }
 
-/* TEMPORARY TEST POPUP: Remove this helper and its two calls after testing. */
-async function tempScrapWalletCheck(missionId){
-  try{
-    const client=window.VHouseAuth?.getClient?.();
-    if(!client||!window.VHouseAuth?.getUser?.())throw Error("SIGN_IN_REQUIRED");
-    const {data,error}=await client.functions.invoke("vhouse-scrap-wallet-check",{
-      body:{missionId:String(missionId)}
-    });
-    if(error){
-      let reason=error.message||"WALLET_CHECK_FAILED";
-      try{
-        const detail=await error.context?.json?.();
-        reason=detail?.error||reason;
-      }catch{}
-      throw Error(reason);
-    }
-    if(!data||!["READY","NOT ENOUGH","NO BAGS","CHECK FAILED"].includes(data.status))
-      throw Error(data?.error||"WALLET_CHECK_UNAVAILABLE");
-    const sol=typeof data.solAvailableLamports==="number"&&
-      Number.isSafeInteger(data.solAvailableLamports)
-      ?(BigInt(data.solAvailableLamports)/1000000000n).toString()+
-        "."+(BigInt(data.solAvailableLamports)%1000000000n).toString()
-          .padStart(9,"0").replace(/0+$/,"")
-      :null;
-    const solText=sol?.endsWith(".")?sol.slice(0,-1):sol;
-    return [
-      "SCRAP WALLET CHECK: "+data.status,
-      "BAGS EARNED: "+data.bags,
-      "VHOUSE WALLET BALANCE:",
-      (solText??"—")+" SOL",
-      (data.scrapTokensAvailable??"—")+" SCRAPS",
-      "REQUIRED: "+(data.scrapTokensRequired??"—")+" SCRAPS",
-      ...(data.reason?["REASON: "+data.reason]:[])
-    ].join("\n");
-  }catch(error){
-    return "SCRAP WALLET CHECK FAILED\n"+(error?.message||"UNKNOWN ERROR");
+/* Scrap transfer notice on the existing confirmation page. */
+function showScrapTransferNotice(message,signature){
+  const notice=$("scrapTransferNotice");
+  if(!notice)return;
+  notice.replaceChildren();
+  if(!message){notice.hidden=true;return;}
+  const label=document.createElement("span");
+  label.textContent=message;
+  notice.append(label);
+  if(signature&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)){
+    const link=document.createElement("a");
+    link.href="https://solscan.io/tx/"+encodeURIComponent(signature);
+    link.target="_blank";
+    link.rel="noopener noreferrer";
+    link.textContent="VIEW TRANSACTION ON SOLSCAN";
+    notice.append(link);
   }
+  notice.hidden=false;
 }
 
 /* RECEIPT CONFIRMATION */
@@ -1527,11 +1509,8 @@ async function confirmReceipt(){
   // CONFIRM is the payout event. Supabase credits IGM once when
   // this receipt changes from RESULTS_READY to CONFIRMED.
   $("confirmButton").disabled=true;
-  // TEMP TEST: keep the read-only wallet popup for checking the balance.
-  const scrapWalletPopup=await tempScrapWalletCheck(mission.id);
-  // Pay real SCRAPS before confirming rewards; a pending/failed transfer
-  // leaves this receipt intact and CONFIRM available for a safe retry.
-  let payoutPopup=scrapWalletPopup;
+  // The transfer result appears in the existing receipt results panel.
+  // A pending/failed transfer leaves the receipt ready for retry.
   if(Number(mission.rewardBatches?.SCRAP||0)>0){
     try{
       const client=window.VHouseAuth?.getClient?.();
@@ -1545,24 +1524,26 @@ async function confirmReceipt(){
         throw Error(reason);
       }
       if(data?.status!=="TRANSFERRED"){
-        payoutPopup=[scrapWalletPopup,"TRANSFER: "+(data?.status||"FAILED"),
-          ...(data?.reason?["REASON: "+data.reason]:[]),
-          ...(data?.signature?["TRANSACTION: "+data.signature]:[])
-        ].join("\n");
+        const transferNotice="SCRAP TRANSFER: "+(data?.status||"FAILED")+
+          (data?.reason?" · "+data.reason:"");
+        mission.scrapTransferNotice=transferNotice;
+        mission.scrapTransferSignature=data?.signature||"";
+        showScrapTransferNotice(transferNotice,mission.scrapTransferSignature);
         $("resultState").textContent=data?.status==="NOT ENOUGH"
           ?"NOT ENOUGH · SCRAP TRANSFER NOT SENT"
           :"SCRAP TRANSFER PENDING · TRY CONFIRM AGAIN";
         $("confirmButton").disabled=false;
-        window.alert(payoutPopup);
         return;
       }
-      payoutPopup=[scrapWalletPopup,"TRANSFER: CONFIRMED",
-        "SENT: "+data.scrapTokens+" SCRAPS",
-        "TRANSACTION: "+data.signature].join("\n");
+      mission.scrapTransferNotice="SCRAP TRANSFER: "+data.scrapTokens+" SCRAPS SENT";
+      mission.scrapTransferSignature=data.signature||"";
+      showScrapTransferNotice(mission.scrapTransferNotice,mission.scrapTransferSignature);
     }catch(error){
       $("resultState").textContent="SCRAP TRANSFER FAILED · TRY AGAIN";
       $("confirmButton").disabled=false;
-      window.alert([scrapWalletPopup,"TRANSFER FAILED: "+(error?.message||"UNKNOWN ERROR")].join("\n"));
+      mission.scrapTransferNotice="SCRAP TRANSFER FAILED: "+(error?.message||"UNKNOWN ERROR");
+      mission.scrapTransferSignature="";
+      showScrapTransferNotice(mission.scrapTransferNotice,"");
       return;
     }
   }
@@ -1596,15 +1577,17 @@ async function confirmReceipt(){
     state.events=previousEvents;
     $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
     $("confirmButton").disabled=false;
-    window.alert(payoutPopup);
     return;
   }
 
   window.dispatchEvent(new Event("vhouse:cash-updated"));
   emit("journey-confirmed",event);
-  // Confirmation finishes this Journey and returns to stage selection.
-  newJourney();
-  window.alert(payoutPopup);
+  // Keep the actual transaction receipt visible for its Solscan view.
+  if(mission.scrapTransferSignature){
+    renderComplete();
+  }else{
+    newJourney();
+  }
 }
 
 /* NEW JOURNEY */
