@@ -72,6 +72,14 @@ button:disabled{opacity:.5;cursor:default}
 .actions{display:flex;gap:9px;padding:12px 16px}
 .action{flex:1;padding:12px 5px;background:linear-gradient(100deg,#164b55,#0e263b);border:2px solid #00eaff;border-radius:7px;color:#fff;font-size:13px;font-weight:900}
 .action:hover:not(:disabled){background:#197687}
+/* LOAD's explanation appears only when preparing an outside NFT for MINT. */
+.load-explainer{display:none;margin:0 16px 12px;padding:12px;border:1px solid #355066;border-radius:7px;background:#0b1723;color:#b8cbd6;font-size:12px;line-height:1.4}
+.workspace.load-setup .load-explainer{display:block}
+.load-explainer h2{margin:0 0 6px;color:#e4c58f;font-size:13px;letter-spacing:.3px}
+.load-explainer h3{margin:9px 0 5px;color:#e4c58f;font-size:12px}
+.load-explainer p{margin:0 0 7px}
+.load-explainer ol{margin:0 0 9px;padding-left:20px}
+.load-explainer li{margin:0 0 3px}
 .preview-top{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin:4px 0 10px;font-size:11px;font-weight:900;color:#a3b7c3}
 .live{color:#6be5b4;font-size:9px}
 .card-stand{padding:8px;border:1px solid #294355;border-radius:12px;background:radial-gradient(circle,#19364a,#080e15 75%)}
@@ -413,6 +421,19 @@ button:disabled{opacity:.5;cursor:default}
           MINT · <span class="tag-fee">0.001 SOL</span>
         </button>
       </div>
+      <section class="load-explainer" aria-label="How VHouse LOAD works">
+        <h2>BRING YOUR NFTs TO LIFE IN VHOUSE</h2>
+        <p><strong>Turn your existing NFTs into playable, earning VCards!</strong></p>
+        <p>VHouse LOAD allows you to bring NFTs you already own from Metaplex Core or Token-2022 into the game. Transform static digital collectibles into active in-game characters that can participate in VHouse activities and earn real-money rewards.</p>
+        <h3>HOW IT WORKS</h3>
+        <ol>
+          <li>LOAD an NFT from your connected Phantom wallet.</li>
+          <li>Choose its VHouse TEAM and position its artwork.</li>
+          <li>MINT your new VCard to bring it into VHouse.</li>
+          <li>Use your VCard in VHouse activities to pursue rewards and grow its in-game value.</li>
+        </ol>
+        <p><strong>Your original NFT remains yours and is never modified.</strong> Your new VCard gives it a separate playable identity within VHouse.</p>
+      </section>
     </section>
 
     <section class="preview-wrap">
