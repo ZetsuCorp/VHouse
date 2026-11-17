@@ -1623,24 +1623,32 @@ function renderComplete(){
   });
 }
 
-/* Scrap transfer notice on the existing confirmation page. */
+/* All payouts share the existing Scrap receipt notice; no new overlay. */
 function showScrapTransferNotice(message,signature){
   const notice=$("scrapTransferNotice");
   if(!notice)return;
   notice.replaceChildren();
-  if(!message){notice.hidden=true;return;}
-  const label=document.createElement("span");
-  label.textContent=message;
-  notice.append(label);
-  if(signature&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)){
-    const link=document.createElement("a");
-    link.href="https://solscan.io/tx/"+encodeURIComponent(signature);
-    link.target="_blank";
-    link.rel="noopener noreferrer";
-    link.textContent="VIEW TRANSACTION ON SOLSCAN";
-    notice.append(link);
+  const mission=state.mission;
+  const entries=[];
+  if(message)entries.push({message,signature});
+  for(const symbol of ["SOL","AWT"]){
+    const payout=mission?.cryptoTransfers?.[symbol];
+    if(payout?.message)entries.push(payout);
   }
-  notice.hidden=false;
+  for(const entry of entries){
+    const line=document.createElement("span");
+    line.textContent=entry.message;
+    if(entry.signature&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(entry.signature)){
+      const link=document.createElement("a");
+      link.href="https://solscan.io/tx/"+encodeURIComponent(entry.signature);
+      link.target="_blank";
+      link.rel="noopener noreferrer";
+      link.textContent="VIEW TRANSACTION ON SOLSCAN";
+      line.append(document.createTextNode(" · "),link);
+    }
+    notice.append(line);
+  }
+  notice.hidden=!entries.length;
 }
 
 /* RECEIPT CONFIRMATION */
@@ -1690,6 +1698,55 @@ async function confirmReceipt(){
       return;
     }
   }
+
+  // Same CONFIRM payout lifecycle as Scraps. The server verifies each
+  // earned bag and its SOL/AWT assignment from the Journey record.
+  const owedCrypto=["SOL","AWT"].filter(symbol=>
+    (mission.results||[]).some(result=>result.won&&
+      (result.rewards||[]).some(bag=>
+        bag?.item==="CRYPTO"&&bag?.token===symbol&&Number(bag.batches??1)>0
+      )
+    )
+  );
+  mission.cryptoTransfers||={};
+  for(const symbol of owedCrypto){
+    try{
+      const client=window.VHouseAuth?.getClient?.();
+      if(!client||!window.VHouseAuth?.getUser?.())throw Error("SIGN_IN_REQUIRED");
+      const {data,error}=await client.functions.invoke("vhouse-crypto-transfer",{
+        body:{missionId:String(mission.id),token:symbol}
+      });
+      if(error){
+        let reason=error.message||"CRYPTO_TRANSFER_FAILED";
+        try{const details=await error.context?.json?.();reason=details?.error||reason;}catch{}
+        throw Error(reason);
+      }
+      const signature=data?.signature||"";
+      const payout={
+        signature,
+        message:symbol+" TRANSFER: "+(data?.status==="TRANSFERRED"
+          ?data.tokenAmount+" "+symbol+" SENT"
+          :(data?.status||"FAILED")+(data?.reason?" · "+data.reason:""))
+      };
+      mission.cryptoTransfers[symbol]=payout;
+      showScrapTransferNotice(mission.scrapTransferNotice||"",mission.scrapTransferSignature||"");
+      if(data?.status!=="TRANSFERRED"){
+        $("resultState").textContent=symbol+" TRANSFER "+
+          (data?.status==="NOT ENOUGH"?"NOT SENT":"PENDING · TRY CONFIRM AGAIN");
+        $("confirmButton").disabled=false;
+        return;
+      }
+    }catch(error){
+      mission.cryptoTransfers[symbol]={
+        message:symbol+" TRANSFER FAILED: "+(error?.message||"UNKNOWN ERROR"),signature:""
+      };
+      showScrapTransferNotice(mission.scrapTransferNotice||"",mission.scrapTransferSignature||"");
+      $("resultState").textContent=symbol+" TRANSFER FAILED · TRY AGAIN";
+      $("confirmButton").disabled=false;
+      return;
+    }
+  }
+
   const previousReceipts=state.receipts.slice();
   const previousEvents=state.events.slice();
   mission.status="confirmed";
@@ -1729,7 +1786,8 @@ async function confirmReceipt(){
   }
   emit("journey-confirmed",event);
   // Keep the actual transaction receipt visible for its Solscan view.
-  if(mission.scrapTransferSignature){
+  if(mission.scrapTransferSignature||
+     Object.values(mission.cryptoTransfers||{}).some(payout=>payout.signature)){
     renderComplete();
   }else{
     newJourney();
