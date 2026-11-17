@@ -289,6 +289,22 @@ function renderUseItems(){
 }
 let startingJourney=false;
 let pendingEntryPayment=null;
+function journeyPaymentStatus(message){
+  const host=$("setupStatus");
+  if(!host)return;
+  host.replaceChildren();
+  host.append(document.createTextNode(message));
+  const signature=pendingEntryPayment?.signature;
+  if(signature&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)){
+    const link=document.createElement("a");
+    link.href="https://solscan.io/tx/"+encodeURIComponent(signature);
+    link.target="_blank";
+    link.rel="noopener noreferrer";
+    link.textContent="VIEW TRANSACTION ON SOLSCAN";
+    link.style.cssText="display:inline-block;margin-left:8px;color:#f5d59a;text-decoration:underline;font-weight:700";
+    host.append(document.createTextNode(" · "),link);
+  }
+}
 const JOURNEY_ENTRY_LAMPORTS=1_000_000;
 const JOURNEY_TREASURY="CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK";
 const JOURNEY_MEMO_PROGRAM="MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
@@ -919,7 +935,6 @@ async function payJourneyEntry(mission){
       await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
     const rpcEndpoints=[
       "https://solana-rpc.publicnode.com",
-      "https://rpc.solanatracker.io/public",
       "https://api.mainnet-beta.solana.com"
     ];
     let latest=null;
@@ -954,22 +969,42 @@ async function payJourneyEntry(mission){
     pendingEntryPayment={mission:structuredClone(mission),signature};
   }
   const signature=pendingEntryPayment.signature;
-  $("setupStatus").textContent="Verifying 0.001 SOL Journey payment on Solana.";
-  for(let attempt=0;attempt<12;attempt++){
-    const {data,error}=await client.functions.invoke("vhouse-journey-entry-verify",{
-      body:{missionId:mission.id,signature}
-    });
-    if(error){
-      let reason=error.message||"PAYMENT_VERIFICATION_FAILED";
-      try{const detail=await error.context?.json?.();reason=detail?.error||reason;}catch{}
-      throw Error(reason);
+  journeyPaymentStatus("Verifying your Journey payment on Solana.");
+  // A submitted payment is verified automatically. Never request another
+  // Phantom approval and never make the player press START to check it.
+  let unavailable=0;
+  while(pendingEntryPayment?.signature===signature){
+    try{
+      const {data,error}=await client.functions.invoke("vhouse-journey-entry-verify",{
+        body:{missionId:mission.id,signature}
+      });
+      if(error){
+        let reason=error.message||"PAYMENT_VERIFICATION_FAILED";
+        try{const detail=await error.context?.json?.();reason=detail?.error||reason;}catch{}
+        throw Error(reason);
+      }
+      if(data?.verified===true){
+        journeyPaymentStatus("Journey payment verified.");
+        return signature;
+      }
+      if(data?.error!=="PAYMENT_CONFIRMATION_PENDING")
+        throw Error(data?.error||"PAYMENT_VERIFICATION_FAILED");
+      unavailable=0;
+      journeyPaymentStatus("Payment submitted. Checking blockchain confirmation.");
+    }catch(error){
+      const message=error?.message||"PAYMENT_VERIFICATION_UNAVAILABLE";
+      if(!["PAYMENT_VERIFICATION_UNAVAILABLE","SOLANA_RPC_UNAVAILABLE",
+            "PAYMENT_LOOKUP_FAILED","PAYMENT_RECORD_FAILED","Failed to send a request to the Edge Function",
+            "Failed to fetch","PAYMENT_CONFIRMATION_PENDING"].includes(message)){
+        journeyPaymentStatus("Payment verification needs attention: "+message+".");
+        throw error;
+      }
+      unavailable++;
+      journeyPaymentStatus("Payment submitted. Blockchain verification is temporarily unavailable; checking automatically.");
     }
-    if(data?.verified===true)return signature;
-    if(data?.error!=="PAYMENT_CONFIRMATION_PENDING")
-      throw Error(data?.error||"PAYMENT_VERIFICATION_FAILED");
-    await new Promise(resolve=>setTimeout(resolve,1100));
+    await new Promise(resolve=>setTimeout(resolve,unavailable?Math.min(10000,1800+unavailable*1000):1800));
   }
-  throw Error("Payment is still confirming. Press START JOURNEY again to verify this same transaction.");
+  throw Error("Payment verification was interrupted.");
 }
 
 /* START JOURNEY */
@@ -1084,8 +1119,8 @@ async function startJourney(){
     delete state.missions[String(card.id)];
     state.mission=null;
     startingJourney=false;
-    $("setupStatus").textContent="Journey could not start: "+(error.message||"save failed");
-    $("startButton").disabled=false;
+    journeyPaymentStatus("Journey could not start: "+(error.message||"save failed"));
+    $("startButton").disabled=!!pendingEntryPayment;
     return;
   }
   startingJourney=false;
