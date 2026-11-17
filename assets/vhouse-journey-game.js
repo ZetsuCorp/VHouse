@@ -282,14 +282,16 @@ function renderUseItems(){
   itemControl("bootsOwned").textContent=String(bootsOwned);
   itemControl("ticketOwned").textContent=String(ticketsOwned);
   boots.disabled=!!locked||bootsOwned<1||startingJourney;
-  // Stage fees are not configured in the existing Stage data.
-  // Don't consume a ticket to skip a fee that does not exist.
-  ticket.disabled=true;
-  ticket.title="Stage entry fee is not configured";
+  ticket.disabled=!!locked||ticketsOwned<1||startingJourney;
+  ticket.title=ticket.disabled&&ticketsOwned<1?"No Stage Tickets available":"Use 1 Stage Ticket for this entry";
   if(boots.disabled)boots.checked=false;
-  ticket.checked=false;
+  if(ticket.disabled)ticket.checked=false;
 }
 let startingJourney=false;
+let pendingEntryPayment=null;
+const JOURNEY_ENTRY_LAMPORTS=1_000_000;
+const JOURNEY_TREASURY="CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK";
+const JOURNEY_MEMO_PROGRAM="MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const managedPending=new Set();
 window.addEventListener("vhouse:journey-inventory-refreshed",()=>{
   if(currentScreen==="setup")renderStageInfo();
@@ -743,7 +745,9 @@ function renderStageInfo(){
         :"";
   $("startButton").textContent=pending
     ?(mission.status==="ready"?"VIEW RESULTS":"VIEW JOURNEY")
-    :"START JOURNEY";
+    :(itemControl("useStageTicket")?.checked
+      ?"START JOURNEY · STAGE TICKET"
+      :"START JOURNEY · 0.001 SOL");
   $("startButton").disabled=!pending&&(!validStage(stage)||!!locked||
     (!!store&&!assigned));
 }
@@ -888,6 +892,86 @@ function earnedBags(result){
   return result?.reward?[result.reward]:[];
 }
 
+/* The same Phantom-signature payment approach as VCard mint.
+   Its server verifier binds one confirmed transfer to one Journey. */
+async function payJourneyEntry(mission){
+  const auth=window.VHouseAuth;
+  const client=auth?.getClient?.();
+  if(!client||!auth?.getUser?.())throw Error("SIGN_IN_REQUIRED");
+
+  if(pendingEntryPayment){
+    if(pendingEntryPayment.mission.id!==mission.id){
+      throw Error("Complete the previous paid Journey entry before another payment.");
+    }
+  }else{
+    const phantom=window.phantom?.solana||window.solana;
+    if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)
+      throw Error("Connect Phantom to pay the Journey entry.");
+    const connection=await phantom.connect();
+    const address=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
+    if(!address)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
+    const {data:account,error:linkedError}=await client.from("vhouse_accounts")
+      .select("wallet_address").eq("id",auth.getUser().id).maybeSingle();
+    if(linkedError||account?.wallet_address!==address)
+      throw Error("Connect the Phantom wallet linked to your VHouse account.");
+
+    const {Connection,PublicKey,Transaction,SystemProgram,TransactionInstruction}=
+      await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+    const rpcEndpoints=[
+      "https://solana-rpc.publicnode.com",
+      "https://rpc.solanatracker.io/public",
+      "https://api.mainnet-beta.solana.com"
+    ];
+    let latest=null;
+    for(const endpoint of rpcEndpoints){
+      try{
+        const rpc=new Connection(endpoint,"confirmed");
+        latest=await rpc.getLatestBlockhash("confirmed");
+        if(latest)break;
+      }catch(error){console.warn("Journey blockhash lookup:",endpoint,error);}
+    }
+    if(!latest)throw Error("Solana RPC unavailable for Journey payment.");
+    const owner=new PublicKey(address);
+    const tx=new Transaction();
+    tx.add(SystemProgram.transfer({
+      fromPubkey:owner,
+      toPubkey:new PublicKey(JOURNEY_TREASURY),
+      lamports:JOURNEY_ENTRY_LAMPORTS
+    }));
+    tx.add(new TransactionInstruction({
+      programId:new PublicKey(JOURNEY_MEMO_PROGRAM),
+      keys:[],
+      data:new TextEncoder().encode("VHOUSE:JOURNEY:"+mission.id)
+    }));
+    tx.feePayer=owner;
+    tx.recentBlockhash=latest.blockhash;
+    $("setupStatus").textContent="Approve 0.001 SOL Journey entry in Phantom.";
+    const receipt=await phantom.signAndSendTransaction(tx,{
+      skipPreflight:false,preflightCommitment:"confirmed"
+    });
+    const signature=typeof receipt==="string"?receipt:receipt?.signature;
+    if(!signature)throw Error("Phantom did not return the payment transaction.");
+    pendingEntryPayment={mission:structuredClone(mission),signature};
+  }
+  const signature=pendingEntryPayment.signature;
+  $("setupStatus").textContent="Verifying 0.001 SOL Journey payment on Solana.";
+  for(let attempt=0;attempt<12;attempt++){
+    const {data,error}=await client.functions.invoke("vhouse-journey-entry-verify",{
+      body:{missionId:mission.id,signature}
+    });
+    if(error){
+      let reason=error.message||"PAYMENT_VERIFICATION_FAILED";
+      try{const detail=await error.context?.json?.();reason=detail?.error||reason;}catch{}
+      throw Error(reason);
+    }
+    if(data?.verified===true)return signature;
+    if(data?.error!=="PAYMENT_CONFIRMATION_PENDING")
+      throw Error(data?.error||"PAYMENT_VERIFICATION_FAILED");
+    await new Promise(resolve=>setTimeout(resolve,1100));
+  }
+  throw Error("Payment is still confirming. Press START JOURNEY again to verify this same transaction.");
+}
+
 /* START JOURNEY */
 
 async function startJourney(){
@@ -916,6 +1000,7 @@ async function startJourney(){
   if(startingJourney)return;
   // Preserve the player's choice before inventory refresh re-renders USE ITEMS.
   const useBoots=!!itemControl("useSwiftBoots")?.checked;
+  const useTicket=!!itemControl("useStageTicket")?.checked;
   startingJourney=true;
   $("startButton").disabled=true;
   const now=Date.now();
@@ -943,6 +1028,14 @@ async function startJourney(){
   const luck=luckStat();
   card.luck=luck;
 
+  if(pendingEntryPayment&&!useTicket&&
+     (pendingEntryPayment.mission.stageId!==stage.id ||
+      String(pendingEntryPayment.mission.card.id)!==String(card.id))){
+    startingJourney=false;
+    $("setupStatus").textContent="Complete the previous paid Journey entry using its original Stage and VCard.";
+    $("startButton").disabled=false;
+    return;
+  }
   state.mission={
     id:"JR-"+now.toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,8).toUpperCase(),
     stageId:stage.id,
@@ -971,13 +1064,18 @@ async function startJourney(){
 
   try{
     if(window.VHouseJourneyStore && auth?.getUser?.()){
-      const useTicket=!!itemControl("useStageTicket")?.checked;
+      if(!useTicket){
+        if(pendingEntryPayment)state.mission=structuredClone(pendingEntryPayment.mission);
+        const signature=await payJourneyEntry(state.mission);
+        state.mission.entryPaymentSignature=signature;
+      }
       const {data,error}=await auth.getClient().rpc("vhouse_start_item_journey",{
         p_mission:state.mission,p_use_boots:useBoots,p_use_ticket:useTicket
       });
       if(error)throw error;
       state.mission=data;
       state.missions[String(card.id)]=data;
+      pendingEntryPayment=null;
       window.dispatchEvent(new Event("vhouse:inventory-updated"));
     }else{
       await save();
@@ -1637,6 +1735,8 @@ function returnJourney(){
 }
 
 /* BUTTON EVENTS */
+
+itemControl("useStageTicket")?.addEventListener("change",renderStageInfo);
 
 $("startButton").onclick=()=>{
   const mission=state.mission;
