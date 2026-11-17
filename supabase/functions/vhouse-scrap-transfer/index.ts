@@ -47,23 +47,28 @@ function display(value: bigint, decimals: number) {
     ? digits.slice(0, -decimals) + "." + digits.slice(-decimals)
     : digits;
 }
+// Same public live price as the read-only wallet checker.
 async function scrapPriceUsd() {
-  const key = Deno.env.get("SOLSCAN_API_KEY");
-  if (!key) throw Error("SOLSCAN_NOT_CONFIGURED");
-  const url = new URL("https://pro-api.solscan.io/v2.0/token/price/latest");
-  url.searchParams.append("address[]", SCRAP_MINT);
-  const result = await fetch(url, {
-    headers: { accept: "application/json", token: key },
-    signal: AbortSignal.timeout(8500),
-  });
-  if (!result.ok) throw Error("SOLSCAN_HTTP_" + result.status);
-  const payload = await result.json();
-  if (payload.success !== true || !Array.isArray(payload.data)) {
+  const res = await fetch(
+    "https://api.dexscreener.com/token-pairs/v1/solana/" + SCRAP_MINT,
+    { headers: { accept: "application/json" }, cache: "no-store",
+      signal: AbortSignal.timeout(8500) },
+  );
+  if (!res.ok) throw Error("SCRAP_MARKET_UNAVAILABLE");
+  const pairs = await res.json();
+  if (!Array.isArray(pairs)) throw Error("SCRAP_MARKET_UNAVAILABLE");
+  const priced = pairs.filter(pair =>
+    pair?.chainId === "solana" &&
+    pair?.baseToken?.address === SCRAP_MINT &&
+    Number.isFinite(Number(pair?.priceUsd)) && Number(pair.priceUsd) > 0
+  );
+  priced.sort((x, y) =>
+    Number(y?.liquidity?.usd || 0) - Number(x?.liquidity?.usd || 0)
+  );
+  const price = Number(priced[0]?.priceUsd);
+  if (!Number.isFinite(price) || price <= 0) {
     throw Error("SCRAP_MARKET_UNAVAILABLE");
   }
-  const quote = payload.data.find(item => item?.address === SCRAP_MINT);
-  const price = Number(quote?.price);
-  if (!Number.isFinite(price) || price <= 0) throw Error("SCRAP_MARKET_UNAVAILABLE");
   return price;
 }
 function tokensForBags(bags: number, price: number, decimals: number) {
