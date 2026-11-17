@@ -294,6 +294,41 @@ html, body {
 #journeyUseItems .use-item-option small{display:block;margin-top:1px;font-size:9px;color:#cba5ed}
 #journeyUseItems .use-item-option input{accent-color:#bd91f3;width:15px;height:15px;flex-shrink:0}
 #journeyUseItems .use-item-option input:disabled{opacity:.4}
+/* Connected wallet uses only the empty space beside USE ITEMS. */
+#journeyConnectedWallet{
+  position:absolute;
+  left:41%;
+  right:2%;
+  top:89%;
+  z-index:8;
+  min-width:0;
+  min-height:27px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:4px 9px;
+  border:1px solid #bc9357;
+  border-radius:6px;
+  background:#21142def;
+  color:#f5e9d7;
+  box-shadow:0 2px 8px #0009;
+}
+#journeyConnectedWallet[hidden]{display:none!important}
+#journeyConnectedWallet .wallet-label{
+  flex-shrink:0;
+  color:#f7d797;
+  font-size:10px;
+  font-weight:900;
+  white-space:nowrap;
+}
+#journeyWalletAddress{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font:11px monospace;
+  color:#e8cfff;
+}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
@@ -397,6 +432,10 @@ html, body {
           <div class="use-item-option"><label><span>🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="bootsOwned">0</b></small></span><input type="checkbox" id="useSwiftBoots" disabled></label></div>
           <div class="use-item-option"><label><span>🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="ticketOwned">0</b></small></span><input type="checkbox" id="useStageTicket" disabled></label></div>
         </details>
+        <div id="journeyConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden>
+          <span class="wallet-label">CONNECTED WALLET</span>
+          <span id="journeyWalletAddress"></span>
+        </div>
       </div>
     </div>
 
@@ -430,8 +469,44 @@ sparkleLayer.appendChild(sparkleFragment);
 const journeyButton = document.getElementById("journeyButton");
 const journeyOverlay = document.getElementById("journeyOverlay");
 const journeyWindow = journeyOverlay.querySelector(".journey-window");
+const journeyWalletPanel = document.getElementById("journeyConnectedWallet");
+const journeyWalletAddress = document.getElementById("journeyWalletAddress");
+
+async function updateJourneyWallet(){
+  const auth=window.VHouseAuth;
+  if(!auth){journeyWalletPanel.hidden=true;return;}
+  try{
+    await auth.ready;
+    const user=auth.getUser?.();
+    if(!user){journeyWalletPanel.hidden=true;return;}
+    // The wallet linked to this VHouse account persists across page navigation.
+    const {data,error}=await auth.getClient().from("vhouse_accounts")
+      .select("wallet_address").eq("id",user.id).maybeSingle();
+    if(error)throw error;
+    if(auth.getUser?.()?.id!==user.id)return;
+    const wallet=String(data?.wallet_address||"");
+    journeyWalletAddress.textContent=wallet;
+    journeyWalletAddress.title=wallet;
+    journeyWalletPanel.hidden=!wallet;
+  }catch(error){
+    console.warn("Journey connected wallet:",error);
+    journeyWalletPanel.hidden=true;
+  }
+}
+
+window.addEventListener("load",()=>{
+  void updateJourneyWallet();
+  window.VHouseAuth?.subscribe?.(()=>void updateJourneyWallet());
+  const phantom=window.phantom?.solana||window.solana;
+  if(phantom?.isPhantom && typeof phantom.on==="function"){
+    for(const event of ["connect","disconnect","accountChanged"]){
+      phantom.on(event,()=>void updateJourneyWallet());
+    }
+  }
+});
 
 journeyButton.addEventListener("click", () => {
+  void updateJourneyWallet();
   journeyOverlay.hidden = false;
   // Keep one Journey instance alive when the menu is closed and reopened.
   void VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
