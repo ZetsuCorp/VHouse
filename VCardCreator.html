@@ -153,6 +153,19 @@ button:disabled{opacity:.5;cursor:default}
 .entry-choice{display:flex;justify-content:center;align-items:center;gap:35px;padding:28px 10px 34px;flex-wrap:wrap}
 .choice-bubble{width:190px;aspect-ratio:1;border-radius:50%;border:3px solid #bc9357;background:radial-gradient(circle at 35% 30%,#1d5262,#0c1c2b 72%);color:#eaf9ff;box-shadow:0 0 18px #00eaff18;font-size:16px;font-weight:900;letter-spacing:1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .choice-bubble:hover,.choice-bubble:focus-visible{border-color:#00eaff;box-shadow:0 0 20px #00eaff66;outline:none}
+/* MINT introduction uses the existing Vcontainer.png game-screen frame. */
+.mint-intro{width:100%;min-height:715px;margin:12px auto;padding:22px 28px;border:1px solid #bc9357;border-radius:10px;background:#0b1826;display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);align-items:center;gap:30px;text-align:left}
+.mint-intro-figure{display:flex;align-items:center;justify-content:center;min-width:0}
+.mint-intro-figure img{display:block;width:100%;max-height:565px;object-fit:contain;filter:drop-shadow(0 0 18px #9c61d077)}
+.mint-intro-copy{min-width:0}
+.mint-intro-copy h2{font-size:25px;line-height:1.2;color:#e4c58f;margin:0 0 12px}
+.mint-intro-copy h3{font-size:18px;letter-spacing:.4px;color:#e4c58f;margin:16px 0 8px}
+.mint-intro-copy p{font-size:17px;line-height:1.4;margin:0 0 12px;color:#eaf9ff}
+.mint-intro-copy ol{font-size:17px;line-height:1.4;margin:0 0 15px;padding-left:25px}
+.mint-intro-copy li{margin:0 0 5px}
+.mint-intro-actions{display:flex;justify-content:flex-start;gap:12px;margin-top:16px}
+.mint-intro-actions button{font-size:16px;padding:12px 22px}
+.mint-intro-actions .action{flex:none;min-width:230px}
 .choice-bubble .bubble-symbol{font-size:39px;color:#e4c58f}
 .load-panel{max-width:550px;margin:18px auto 14px;padding:20px;border:1px solid #bc9357;border-radius:10px;background:#0b1826;text-align:center}
 .load-panel h2{font-size:15px;color:#e4c58f;margin:0 0 12px;letter-spacing:1px}
@@ -312,6 +325,29 @@ button:disabled{opacity:.5;cursor:default}
     <button class="choice-bubble" id="chooseBurnButton" type="button" disabled>
       <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
     </button>
+  </section>
+
+  <section class="mint-intro" id="mintIntroPanel" aria-label="Introduction to minting VCards" hidden>
+    <div class="mint-intro-figure">
+      <img src="assets/Messenger.png" alt="VHouse Messenger" draggable="false">
+    </div>
+    <div class="mint-intro-copy">
+      <h2>BRING YOUR CHARACTER TO LIFE IN VHOUSE</h2>
+      <p><strong>Create your own VCard and take it into the game!</strong></p>
+      <p>MINT turns the character you create into a new Token-2022 VCard NFT connected to your wallet and VHouse. Your VCard becomes a playable character you can manage in your Closet and use in Journeys and other VHouse activities, with opportunities to earn rewards.</p>
+      <h3>HOW IT WORKS</h3>
+      <ol>
+        <li>Choose your VHouse TEAM: STONE, WIND, or BLADE.</li>
+        <li>Name your VCard, choose or upload its artwork, and position or crop the image.</li>
+        <li>Add a character description and review your VCard preview.</li>
+        <li>Press MINT and approve the transaction in Phantom.</li>
+        <li>After verification, view your receipt and find your new VCard in your VHouse Closet.</li>
+      </ol>
+      <div class="mint-intro-actions">
+        <button class="nav-back" id="mintIntroBackButton" type="button">BACK</button>
+        <button class="action" id="mintIntroContinueButton" type="button">CREATE VCARD</button>
+      </div>
+    </div>
   </section>
 
   <section class="load-panel" id="loadPanel" hidden>
@@ -845,6 +881,7 @@ let pendingOperation = null;
 function showScreen(screen) {
   if (screen !== "workspace") closeCropEditor();
   $("entryMenu").hidden = screen !== "menu";
+  $("mintIntroPanel").hidden = screen !== "mint-intro";
   $("loadPanel").hidden = screen !== "load";
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
@@ -906,6 +943,10 @@ $("chooseMintButton").onclick = () => {
     message("A submitted transaction must be verified before starting another VCard.");
     return;
   }
+  showScreen("mint-intro");
+};
+$("mintIntroBackButton").onclick = () => showScreen("menu");
+$("mintIntroContinueButton").onclick = () => {
   resetForMint();
   showScreen("workspace");
 };
