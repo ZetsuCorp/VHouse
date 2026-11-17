@@ -8,6 +8,7 @@ let cards=[], activeId=null,activeSnapshot=null, loadedPlayerId=null;
 let journeyStates=new Map();
 let request=0, loadPromise=Promise.resolve(), assignmentQueue=Promise.resolve();
 const copy=value=>value?{...value}:null;
+const gameStats=card=>window.VHouseScrapStats?.apply?.(card)||copy(card);
 const auth=()=>window.VHouseAuth;
 const playerId=()=>auth()?.getUser()?.id||null;
 const key=id=>String(id??"");
@@ -19,10 +20,10 @@ function clear(){
 function getCards(){
   const all=cards.map(copy);
   if(activeSnapshot?.external&&!all.some(c=>c.id===activeSnapshot.id))all.push(copy(activeSnapshot));
-  return all;
+  return all.map(gameStats);
 }
 function getActive(){
-  return copy(cards.find(c=>c.id===activeId)||
+  return gameStats(cards.find(c=>c.id===activeId)||
     (activeSnapshot?.id===activeId?activeSnapshot:null));
 }
 function getStatus(cardId){
@@ -93,7 +94,8 @@ async function setActive(cardId){
     await loadPromise.catch(()=>{});
     const account=playerId();
     if(!account)throw Error("Sign in to assign a VCard.");
-    const card=getCards().find(c=>key(c.id)===id);
+    const card=cards.find(c=>key(c.id)===id)||
+      (activeSnapshot?.id===id?activeSnapshot:null);
     if(!card)throw Error("This VCard is not in your Closet.");
     await auth().syncActiveVCard(card);
     if(playerId()!==account)throw Error("VHouse account changed during assignment.");
@@ -194,6 +196,7 @@ const api={
   }
 };
 window.VHouseCardStore=api;
+window.addEventListener("vhouse:scrap-stats-updated",notify);
 for(const [event,status] of [
   ["vhouse:journey-started","ON_JOURNEY"],
   ["vhouse:journey-completed","RESULTS_READY"],
