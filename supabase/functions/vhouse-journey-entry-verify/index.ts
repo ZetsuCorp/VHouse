@@ -19,9 +19,9 @@ async function readConfirmedTransaction(signature: string) {
   // Reuse VHouse's existing Solana RPC strategy; no Solscan dependency.
   const urls = [...new Set([
     Deno.env.get("SOLANA_RPC_URL"),
-    "https://solana-rpc.publicnode.com",
-    "https://rpc.solanatracker.io/public",
     "https://api.mainnet-beta.solana.com",
+    "https://api.mainnet.solana.com",
+    "https://solana-rpc.publicnode.com",
   ].filter(Boolean))] as string[];
   let reachable = false;
   for (const url of urls) {
