@@ -1479,6 +1479,45 @@ function renderComplete(){
   });
 }
 
+/* TEMPORARY TEST POPUP: Remove this helper and its two calls after testing. */
+async function tempScrapWalletCheck(missionId){
+  try{
+    const client=window.VHouseAuth?.getClient?.();
+    if(!client||!window.VHouseAuth?.getUser?.())throw Error("SIGN_IN_REQUIRED");
+    const {data,error}=await client.functions.invoke("vhouse-scrap-wallet-check",{
+      body:{missionId:String(missionId)}
+    });
+    if(error){
+      let reason=error.message||"WALLET_CHECK_FAILED";
+      try{
+        const detail=await error.context?.json?.();
+        reason=detail?.error||reason;
+      }catch{}
+      throw Error(reason);
+    }
+    if(!data||!["READY","NOT ENOUGH"].includes(data.status))
+      throw Error(data?.error||"WALLET_CHECK_UNAVAILABLE");
+    const sol=typeof data.solAvailableLamports==="number"&&
+      Number.isSafeInteger(data.solAvailableLamports)
+      ?(BigInt(data.solAvailableLamports)/1000000000n).toString()+
+        "."+(BigInt(data.solAvailableLamports)%1000000000n).toString()
+          .padStart(9,"0").replace(/0+$/,"")
+      :null;
+    const solText=sol?.endsWith(".")?sol.slice(0,-1):sol;
+    return [
+      "SCRAP WALLET CHECK: "+data.status,
+      "BAGS EARNED: "+data.bags,
+      "VHOUSE WALLET BALANCE:",
+      (solText??"—")+" SOL",
+      (data.scrapTokensAvailable??"—")+" SCRAPS",
+      "REQUIRED: "+(data.scrapTokensRequired??"—")+" SCRAPS",
+      ...(data.reason?["REASON: "+data.reason]:[])
+    ].join("\n");
+  }catch(error){
+    return "SCRAP WALLET CHECK FAILED\n"+(error?.message||"UNKNOWN ERROR");
+  }
+}
+
 /* RECEIPT CONFIRMATION */
 
 async function confirmReceipt(){
@@ -1488,6 +1527,8 @@ async function confirmReceipt(){
   // CONFIRM is the payout event. Supabase credits IGM once when
   // this receipt changes from RESULTS_READY to CONFIRMED.
   $("confirmButton").disabled=true;
+  // TEMP TEST: read the pending receipt before the existing confirmation changes its status.
+  const scrapWalletPopup=await tempScrapWalletCheck(mission.id);
   const previousReceipts=state.receipts.slice();
   const previousEvents=state.events.slice();
   mission.status="confirmed";
@@ -1518,6 +1559,7 @@ async function confirmReceipt(){
     state.events=previousEvents;
     $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
     $("confirmButton").disabled=false;
+    window.alert(scrapWalletPopup);
     return;
   }
 
@@ -1525,6 +1567,7 @@ async function confirmReceipt(){
   emit("journey-confirmed",event);
   // Confirmation finishes this Journey and returns to stage selection.
   newJourney();
+  window.alert(scrapWalletPopup);
 }
 
 /* NEW JOURNEY */
