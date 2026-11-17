@@ -272,9 +272,6 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 204, headers: CORS });
   }
   if (req.method !== "POST") return response({ error: "METHOD_NOT_ALLOWED" }, 405);
-  if (Deno.env.get("VHOUSE_SCRAP_TRANSFERS_ENABLED") !== "true") {
-    return response({ status: "DISABLED", error: "SCRAP_TRANSFERS_NOT_ENABLED" }, 503);
-  }
   try {
     const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return response({ error: "SIGN_IN_REQUIRED" }, 401);
