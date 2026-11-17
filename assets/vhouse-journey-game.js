@@ -1126,6 +1126,15 @@ function renderTravel(){
     (mission.stage.hunts||0)+" HUNTS · "+
     (mission.stage.fights||0)+" FIGHTS"+
     (mission.stage.bosses?" · "+mission.stage.bosses+" TOTEM BOSS":"");
+  if(/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(mission.entryPaymentSignature||"")){
+    const link=document.createElement("a");
+    link.href="https://solscan.io/tx/"+encodeURIComponent(mission.entryPaymentSignature);
+    link.target="_blank";
+    link.rel="noopener noreferrer";
+    link.textContent=" · VIEW PAYMENT ON SOLSCAN";
+    link.style.color="#ffe0a5";
+    $("travelDescription").append(link);
+  }
 
   const travelCard=$("travelVCard").parentElement;
   const missionSeconds=(mission.endsAt-mission.startedAt)/1000;
