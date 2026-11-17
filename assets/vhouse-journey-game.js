@@ -1527,8 +1527,45 @@ async function confirmReceipt(){
   // CONFIRM is the payout event. Supabase credits IGM once when
   // this receipt changes from RESULTS_READY to CONFIRMED.
   $("confirmButton").disabled=true;
-  // TEMP TEST: read the pending receipt before the existing confirmation changes its status.
+  // TEMP TEST: keep the read-only wallet popup for checking the balance.
   const scrapWalletPopup=await tempScrapWalletCheck(mission.id);
+  // Pay real SCRAPS before confirming rewards; a pending/failed transfer
+  // leaves this receipt intact and CONFIRM available for a safe retry.
+  let payoutPopup=scrapWalletPopup;
+  if(Number(mission.rewardBatches?.SCRAP||0)>0){
+    try{
+      const client=window.VHouseAuth?.getClient?.();
+      if(!client||!window.VHouseAuth?.getUser?.())throw Error("SIGN_IN_REQUIRED");
+      const {data,error}=await client.functions.invoke("vhouse-scrap-transfer",{
+        body:{missionId:String(mission.id)}
+      });
+      if(error){
+        let reason=error.message||"SCRAP_TRANSFER_FAILED";
+        try{const details=await error.context?.json?.();reason=details?.error||reason;}catch{}
+        throw Error(reason);
+      }
+      if(data?.status!=="TRANSFERRED"){
+        payoutPopup=[scrapWalletPopup,"TRANSFER: "+(data?.status||"FAILED"),
+          ...(data?.reason?["REASON: "+data.reason]:[]),
+          ...(data?.signature?["TRANSACTION: "+data.signature]:[])
+        ].join("\n");
+        $("resultState").textContent=data?.status==="NOT ENOUGH"
+          ?"NOT ENOUGH · SCRAP TRANSFER NOT SENT"
+          :"SCRAP TRANSFER PENDING · TRY CONFIRM AGAIN";
+        $("confirmButton").disabled=false;
+        window.alert(payoutPopup);
+        return;
+      }
+      payoutPopup=[scrapWalletPopup,"TRANSFER: CONFIRMED",
+        "SENT: "+data.scrapTokens+" SCRAPS",
+        "TRANSACTION: "+data.signature].join("\n");
+    }catch(error){
+      $("resultState").textContent="SCRAP TRANSFER FAILED · TRY AGAIN";
+      $("confirmButton").disabled=false;
+      window.alert([scrapWalletPopup,"TRANSFER FAILED: "+(error?.message||"UNKNOWN ERROR")].join("\n"));
+      return;
+    }
+  }
   const previousReceipts=state.receipts.slice();
   const previousEvents=state.events.slice();
   mission.status="confirmed";
@@ -1559,7 +1596,7 @@ async function confirmReceipt(){
     state.events=previousEvents;
     $("resultState").textContent="CONFIRMATION FAILED · TRY AGAIN";
     $("confirmButton").disabled=false;
-    window.alert(scrapWalletPopup);
+    window.alert(payoutPopup);
     return;
   }
 
@@ -1567,7 +1604,7 @@ async function confirmReceipt(){
   emit("journey-confirmed",event);
   // Confirmation finishes this Journey and returns to stage selection.
   newJourney();
-  window.alert(scrapWalletPopup);
+  window.alert(payoutPopup);
 }
 
 /* NEW JOURNEY */
