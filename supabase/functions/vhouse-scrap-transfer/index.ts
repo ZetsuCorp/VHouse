@@ -50,18 +50,19 @@ function display(value: bigint, decimals: number) {
 async function scrapPriceUsd() {
   const key = Deno.env.get("SOLSCAN_API_KEY");
   if (!key) throw Error("SOLSCAN_NOT_CONFIGURED");
-  const url = new URL("https://pro-api.solscan.io/v2.0/token/meta");
-  url.searchParams.set("address", SCRAP_MINT);
+  const url = new URL("https://pro-api.solscan.io/v2.0/token/price/latest");
+  url.searchParams.append("address[]", SCRAP_MINT);
   const result = await fetch(url, {
     headers: { accept: "application/json", token: key },
     signal: AbortSignal.timeout(8500),
   });
   if (!result.ok) throw Error("SOLSCAN_HTTP_" + result.status);
   const payload = await result.json();
-  if (payload.success !== true || payload.data?.address !== SCRAP_MINT) {
+  if (payload.success !== true || !Array.isArray(payload.data)) {
     throw Error("SCRAP_MARKET_UNAVAILABLE");
   }
-  const price = Number(payload.data.price);
+  const quote = payload.data.find(item => item?.address === SCRAP_MINT);
+  const price = Number(quote?.price);
   if (!Number.isFinite(price) || price <= 0) throw Error("SCRAP_MARKET_UNAVAILABLE");
   return price;
 }
