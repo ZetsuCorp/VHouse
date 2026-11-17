@@ -1495,7 +1495,7 @@ async function tempScrapWalletCheck(missionId){
       }catch{}
       throw Error(reason);
     }
-    if(!data||!["READY","NOT ENOUGH"].includes(data.status))
+    if(!data||!["READY","NOT ENOUGH","NO BAGS","CHECK FAILED"].includes(data.status))
       throw Error(data?.error||"WALLET_CHECK_UNAVAILABLE");
     const sol=typeof data.solAvailableLamports==="number"&&
       Number.isSafeInteger(data.solAvailableLamports)
