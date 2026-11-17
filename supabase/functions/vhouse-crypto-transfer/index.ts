@@ -11,7 +11,7 @@ import {
 /* Same signed-before-sending, one-receipt payout lifecycle as vhouse-scrap-transfer.
    The authoritative Journey encounter results determine both bag count and token.
    SOL and AWT can be owed by the same Journey; each has a separate durable record. */
-const WSOL_MINT = "So11111111111111111111111111111111111111112";
+const AWT_MINT = "ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump";
 const CORS = {
   "Access-Control-Allow-Origin": "https://zetsucorp.github.io",
   "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
@@ -184,8 +184,7 @@ async function prepareSignedTransfer(
 ) {
   const recipient = new PublicKey(wallet);
   const isSol = symbol === "SOL";
-  const mintAddress = isSol ? null : Deno.env.get("VHOUSE_AWT_MINT");
-  if (!isSol && !mintAddress) throw Error("AWT_MINT_NOT_CONFIGURED");
+  const mintAddress = isSol ? null : AWT_MINT;
   const tokenMint = mintAddress ? new PublicKey(mintAddress) : null;
   let decimals = 9;
   let tokenProgram = TOKEN_PROGRAM_ID;
@@ -329,7 +328,7 @@ Deno.serve(async (req: Request) => {
     const allowed = new Set([
       "PAYOUT_RECORD_UNAVAILABLE", "PAYOUT_STATUS_SAVE_FAILED",
       "VHOUSE_WALLET_NOT_CONFIGURED", "VHOUSE_WALLET_KEY_INVALID",
-      "AWT_MINT_NOT_CONFIGURED", "AWT_MINT_UNAVAILABLE",
+      "AWT_MINT_UNAVAILABLE",
       "AWT_DECIMALS_UNAVAILABLE", "CRYPTO_MARKET_UNAVAILABLE",
       "NETWORK_FEE_UNAVAILABLE", "INVALID_CRYPTO_BAGS",
       "INVALID_JOURNEY_RESULTS", "SUPABASE_NOT_CONFIGURED",
