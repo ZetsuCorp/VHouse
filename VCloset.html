@@ -774,7 +774,12 @@ html, body {
     if (event.key === "ArrowRight") move(1);
   });
   store.subscribe(() => {
-    if(statsCard&&statsPanel&& !statsOverlay.hidden)fillCardStats(statsCard);
+    if(statsCard&&statsPanel&&!statsOverlay.hidden){
+      statsCard=store.getCards().find(card=>card?.id===statsCard.id)||statsCard;
+      fillCardStats(statsCard);
+      const preview=statsPanel.querySelector(".record-vcard-preview");
+      if(preview)VHouseVCard.render(preview,statsCard);
+    }
     // On the first Supabase load, show the active card in the center.
     // After that, browsing must never be overridden by an active-card update.
     refreshItems();
