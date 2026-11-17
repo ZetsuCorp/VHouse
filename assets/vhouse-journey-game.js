@@ -417,6 +417,7 @@ function background(stageId){
 
 function renderCard(host,card){
 
+  card=window.VHouseScrapStats?.apply?.(card)||card;
   if(window.VHouseVCard?.render){
     window.VHouseVCard.render(host,card);
     return;
@@ -1723,6 +1724,9 @@ async function confirmReceipt(){
   }
 
   window.dispatchEvent(new Event("vhouse:cash-updated"));
+  if(mission.scrapTransferSignature){
+    window.dispatchEvent(new Event("vhouse:scrap-transfer-confirmed"));
+  }
   emit("journey-confirmed",event);
   // Keep the actual transaction receipt visible for its Solscan view.
   if(mission.scrapTransferSignature){
@@ -1820,6 +1824,15 @@ setInterval(()=>{
     renderSetup();
   }
 },200);
+
+/* Repaint displayed VCards when verified player Scrap stats change. */
+window.addEventListener("vhouse:scrap-stats-updated",()=>{
+  if(currentScreen==="setup")renderCard($("setupVCard"),activeCard());
+  else if(currentScreen==="travel"&&state.mission)
+    renderCard($("travelVCard"),state.mission.card);
+  else if(currentScreen==="complete"&&state.mission)
+    renderCard($("completeVCard"),state.mission.card);
+});
 
 /* INITIALIZATION */
 
