@@ -215,6 +215,24 @@ button:disabled{opacity:.5;cursor:default}
 #creationUnit #burnPanel .burn-steps li:last-child{margin-bottom:0}
 #creationUnit #burnPanel .burn-steps li::marker{color:#e4c58f;font-weight:900}
 #creationUnit #burnPanel .burn-steps strong{color:#e4c58f}
+/* Keep LOAD and BURN in the same Messenger + instructions format as MINT. */
+#creationUnit > #loadPanel, #creationUnit > #burnPanel{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);align-items:center;gap:30px;text-align:left}
+#creationUnit > #loadPanel .mint-intro-copy > h2,
+#creationUnit > #burnPanel .mint-intro-copy > h2{font-size:25px;line-height:1.2;margin:0 0 12px}
+#creationUnit > #loadPanel .mint-load,
+#creationUnit > #burnPanel .mint-load{margin:12px 0}
+#creationUnit > #loadPanel .load-explainer{margin:16px 0 0;padding:0;border:0;background:transparent}
+#creationUnit > #loadPanel .load-explainer h2{font-size:20px;margin:0 0 10px}
+#creationUnit > #loadPanel .load-explainer h3{font-size:18px}
+#creationUnit > #loadPanel .load-explainer p,
+#creationUnit > #loadPanel .load-explainer ol{font-size:17px;line-height:1.4}
+#creationUnit > #burnPanel .burn-steps{margin:8px 0 0;padding:0 0 0 25px;border:0;background:transparent;font-size:17px;line-height:1.4}
+#creationUnit > #burnPanel .burn-steps li{margin:0 0 8px}
+#creationUnit > #burnPanel .mint-intro-copy h3{font-size:18px;color:#e4c58f;margin:14px 0 8px}
+#creationUnit > #burnPanel:has(#burnReview:not([hidden])){align-items:start}
+#creationUnit > #burnPanel:has(#burnReview:not([hidden])) .mint-intro-figure img{max-height:420px}
+#creationUnit > #burnPanel:has(#burnReview:not([hidden])) .mint-intro-copy{font-size:14px}
+#creationUnit > #burnPanel:has(#burnReview:not([hidden])) .burn-steps{font-size:14px;line-height:1.3}
 
 
 
@@ -350,53 +368,64 @@ button:disabled{opacity:.5;cursor:default}
     </div>
   </section>
 
-  <section class="load-panel" id="loadPanel" hidden>
-    <h2>LOAD EXISTING NFT</h2>
-    <div class="mint-load">
-      <input id="mintAddressInput" placeholder="NFT mint address" aria-label="NFT mint address">
-      <button id="loadMintButton" type="button">LOAD NFT</button>
+  <section class="mint-intro" id="loadPanel" hidden>
+    <div class="mint-intro-figure">
+      <img src="assets/Messenger.png" alt="VHouse Messenger" draggable="false">
     </div>
-    <button class="nav-back" id="loadBackButton" type="button">BACK</button>
-    <div class="wallet-check" id="connectedWalletInfo" hidden></div>
-    <div class="status" id="loadStatus" hidden></div>
-    <section class="load-explainer" aria-label="How VHouse LOAD works">
-      <h2>BRING YOUR NFTs TO LIFE IN VHOUSE</h2>
-      <p><strong>Turn your existing NFTs into playable, earning VCards!</strong></p>
-      <p>VHouse LOAD allows you to bring NFTs you already own from Metaplex Core or Token-2022 into the game. Transform static digital collectibles into active in-game characters that can participate in VHouse activities and earn real-money rewards.</p>
-      <h3>HOW IT WORKS</h3>
-      <ol>
-        <li>LOAD an NFT from your connected Phantom wallet.</li>
-        <li>Choose its VHouse TEAM and position its artwork.</li>
-        <li>MINT your new VCard to bring it into VHouse.</li>
-        <li>Use your VCard in VHouse activities to pursue rewards and grow its in-game value.</li>
-      </ol>
-      <p><strong>Your original NFT remains yours and is never modified.</strong> Your new VCard gives it a separate playable identity within VHouse.</p>
-    </section>
+    <div class="mint-intro-copy">
+      <h2>LOAD EXISTING NFT</h2>
+      <div class="mint-load">
+        <input id="mintAddressInput" placeholder="NFT mint address" aria-label="NFT mint address">
+        <button id="loadMintButton" type="button">LOAD NFT</button>
+      </div>
+      <button class="nav-back" id="loadBackButton" type="button">BACK</button>
+      <div class="wallet-check" id="connectedWalletInfo" hidden></div>
+      <div class="status" id="loadStatus" hidden></div>
+      <section class="load-explainer" aria-label="How VHouse LOAD works">
+        <h2>BRING YOUR NFTs TO LIFE IN VHOUSE</h2>
+        <p><strong>Turn your existing NFTs into playable, earning VCards!</strong></p>
+        <p>VHouse LOAD allows you to bring NFTs you already own from Metaplex Core or Token-2022 into the game. Transform static digital collectibles into active in-game characters that can participate in VHouse activities and earn real-money rewards.</p>
+        <h3>HOW IT WORKS</h3>
+        <ol>
+          <li>LOAD an NFT from your connected Phantom wallet.</li>
+          <li>Choose its VHouse TEAM and position its artwork.</li>
+          <li>MINT your new VCard to bring it into VHouse.</li>
+          <li>Use your VCard in VHouse activities to pursue rewards and grow its in-game value.</li>
+        </ol>
+        <p><strong>Your original NFT remains yours and is never modified.</strong> Your new VCard gives it a separate playable identity within VHouse.</p>
+      </section>
+    </div>
   </section>
 
-  <section class="load-panel" id="burnPanel" hidden>
-    <h2>BURN VCARD — RECLAIM SOL</h2>
-    <div class="mint-load">
-      <input id="burnMintInput" placeholder="VCard mint address" aria-label="VCard mint address">
-      <button id="burnCheckButton" type="button">CHECK VCARD</button>
+  <section class="mint-intro" id="burnPanel" hidden>
+    <div class="mint-intro-figure">
+      <img src="assets/Messenger.png" alt="VHouse Messenger" draggable="false">
     </div>
-    <div id="burnReview" hidden>
-      <img id="burnNFTImage" class="nft-image-preview" alt="NFT artwork" hidden>
-      <div class="wallet-check" id="burnWallet"></div>
-      <div class="status" id="burnInfo"></div>
-      <div class="status" id="burnPrice"></div>
-      <button class="action" id="burnSubmitButton" type="button" style="width:100%;margin-top:12px">BURN VCARD</button>
+    <div class="mint-intro-copy">
+      <h2>BURN VCARD — RECLAIM SOL</h2>
+      <div class="mint-load">
+        <input id="burnMintInput" placeholder="VCard mint address" aria-label="VCard mint address">
+        <button id="burnCheckButton" type="button">CHECK VCARD</button>
+      </div>
+      <div id="burnReview" hidden>
+        <img id="burnNFTImage" class="nft-image-preview" alt="NFT artwork" hidden>
+        <div class="wallet-check" id="burnWallet"></div>
+        <div class="status" id="burnInfo"></div>
+        <div class="status" id="burnPrice"></div>
+        <button class="action" id="burnSubmitButton" type="button" style="width:100%;margin-top:12px">BURN VCARD</button>
+      </div>
+      <div class="status" id="burnStatus" hidden></div>
+      <a id="burnReceiptLink" href="#" target="_blank" rel="noopener noreferrer" hidden style="display:block;margin:12px 0;color:#61e9ff;overflow-wrap:anywhere">VIEW SOLANA TRANSACTION</a>
+      <button class="nav-back" id="burnBackButton" type="button">BACK</button>
+      <h3>HOW IT WORKS</h3>
+      <ol class="burn-steps">
+        <li><strong>PAY SERVICE FEE</strong> — $3 worth of SOL transfers from your Phantom wallet to the VHouse treasury.</li>
+        <li><strong>BURN NFT</strong> — BURN only destroys the new Token-2022 VCard created by VHouse.</li>
+        <li><strong>CLOSE TOKEN ACCOUNT</strong> — The SOL remaining in the NFT's token account returns to your Phantom wallet.</li>
+        <li><strong>CLOSE MINT ACCOUNT</strong> — The SOL stored in the NFT's mint account, including recoverable deposits from UPDATE/CUSTOMIZE, returns to your Phantom wallet.</li>
+        <li><strong>TRANSACTION COMPLETES</strong> — The wallet's net balance reflects the service fee, recovered SOL, and network fee.</li>
+      </ol>
     </div>
-    <div class="status" id="burnStatus" hidden></div>
-    <a id="burnReceiptLink" href="#" target="_blank" rel="noopener noreferrer" hidden style="display:block;margin:12px 0;color:#61e9ff;overflow-wrap:anywhere">VIEW SOLANA TRANSACTION</a>
-    <button class="nav-back" id="burnBackButton" type="button">BACK</button>
-    <ol class="burn-steps">
-      <li><strong>PAY SERVICE FEE</strong> — $3 worth of SOL transfers from your Phantom wallet to the VHouse treasury.</li>
-      <li><strong>BURN NFT</strong> — BURN only destroys the new Token-2022 VCard created by VHouse.</li>
-      <li><strong>CLOSE TOKEN ACCOUNT</strong> — The SOL remaining in the NFT's token account returns to your Phantom wallet.</li>
-      <li><strong>CLOSE MINT ACCOUNT</strong> — The SOL stored in the NFT's mint account, including recoverable deposits from UPDATE/CUSTOMIZE, returns to your Phantom wallet.</li>
-      <li><strong>TRANSACTION COMPLETES</strong> — The wallet's net balance reflects the service fee, recovered SOL, and network fee.</li>
-    </ol>
   </section>
 
   <div class="workspace" id="workspace" hidden>
