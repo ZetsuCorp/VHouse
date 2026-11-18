@@ -12,7 +12,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 .game-container { width:100vw; height:100dvh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .map-container { position:relative; width:min(100vw, 200dvh); aspect-ratio:2/1; flex-shrink:0; background:#120d20; border:2px solid #bc9357; }
 .info-image { width:100%; height:100%; object-fit:contain; display:block; }
-.image-placeholder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#bc9357; font-size:clamp(14px,2vw,26px); }
+.raid-back-button { position:absolute; left:3%; bottom:5%; z-index:2; }
 .continue-button { position:absolute; left:50%; bottom:5%; transform:translateX(-50%); padding:1% 4%; background:#160d27; color:white; border:2px solid #ffb62d; border-radius:6px; font-weight:900; font-size:clamp(12px,1.3vw,20px); cursor:pointer; box-shadow:0 0 12px #ff9d2966; z-index:2; }
 .continue-button:hover { background:#36204e; box-shadow:0 0 18px #ffb62d99; }
 </style>
@@ -20,8 +20,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 <body>
 <main class="game-container">
   <div class="map-container">
-    <!-- Replace this placeholder with the information-page image when supplied. -->
-    <div class="image-placeholder">TOWER RAID INFORMATION IMAGE</div>
+    <img class="info-image" src="assets/TOWERBOSS.png" alt="Tower Boss Raid information and maximum rewards" draggable="false">
+    <a class="back-button raid-back-button" href="./index.html">BACK</a>
     <button class="continue-button" type="button" onclick="window.location.href='./RaidBoss.html'">CONTINUE</button>
   </div>
 </main>
