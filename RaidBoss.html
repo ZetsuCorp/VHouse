@@ -587,6 +587,8 @@ td { background:#1c1428 }
 .raid-roster-tile {
   display:flex;
   flex-direction:column;
+  align-items:center;
+  justify-content:center;
   gap:2px;
   min-width:0;
   min-height:0;
@@ -599,6 +601,7 @@ td { background:#1c1428 }
   color:#f7e9cf;
   cursor:pointer;
   text-align:center;
+  container-type:size;
   transition:border-color .15s,box-shadow .15s,transform .15s;
 }
 .raid-roster-tile:hover,.raid-roster-tile:focus-visible {
@@ -612,30 +615,28 @@ td { background:#1c1428 }
   transform:translateY(-2px);
 }
 .raid-roster-tile:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-.raid-roster-art {
-  display:grid;
-  place-items:center;
-  width:100%;
-  flex:1;
-  min-height:0;
-  overflow:hidden;
-  border:1px solid #826b9f;
-  border-radius:4px;
-  background:radial-gradient(circle,#45345b,#141021);
-  color:#dab8f5;
-  font-size:30px;
+/* The VCard is rendered by the shared VHouse renderer, at a smaller size. */
+.raid-roster-tile .raid-roster-vcard {
+  width:min(100%,58cqh);
+  flex:0 0 auto;
 }
-.raid-roster-art img { display:block; width:100%; height:100%; object-fit:contain; }
-/* Colored backdrops behind actual VCards; empty slots remain unchanged. */
-.raid-roster-tile:not(.raid-empty-slot) .raid-roster-art { padding:3px; }
-.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+1) .raid-roster-art { background:linear-gradient(145deg,#7f326d,#271346); }
-.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+2) .raid-roster-art { background:linear-gradient(145deg,#28598a,#142b50); }
-.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+3) .raid-roster-art { background:linear-gradient(145deg,#9c6825,#392313); }
-.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+4) .raid-roster-art { background:linear-gradient(145deg,#307b62,#143b39); }
-.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+5) .raid-roster-art { background:linear-gradient(145deg,#853b48,#39142e); }
-.raid-roster-tile:not(.raid-empty-slot):nth-child(6n) .raid-roster-art { background:linear-gradient(145deg,#5e4c9d,#23173f); }
-.raid-roster-name { font-size:11px; font-weight:900; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.raid-roster-label { color:#d5adf3; font-size:9px; font-weight:800; white-space:nowrap; }
+/* Colors belong to selection slots — never to the VCards or NFT artwork. */
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+1) { background:linear-gradient(145deg,#7f326d,#271346); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+2) { background:linear-gradient(145deg,#28598a,#142b50); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+3) { background:linear-gradient(145deg,#9c6825,#392313); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+4) { background:linear-gradient(145deg,#307b62,#143b39); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+5) { background:linear-gradient(145deg,#853b48,#39142e); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n) { background:linear-gradient(145deg,#5e4c9d,#23173f); }
+.raid-roster-status {
+  flex:0 0 auto;
+  max-width:100%;
+  color:#f7e9cf;
+  font-size:clamp(7px,.7vw,10px);
+  font-weight:800;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .raid-empty-slot {
   cursor:default;
   border-style:dashed;
@@ -686,7 +687,6 @@ td { background:#1c1428 }
   .raid-select-layout {grid-template-columns:minmax(0,1.5fr) minmax(155px,.85fr);gap:8px}
   .raid-roster-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;grid-auto-rows:calc((100% - 12px)/4)}
   .raid-roster-tile {padding:2px;gap:1px}
-  .raid-roster-name {font-size:9px}
   .raid-choice-preview .vhouse-vcard-host {width:min(100%,130px,25dvh)}
 }
 @media(prefers-reduced-motion:reduce){
@@ -1051,25 +1051,16 @@ function renderRaidRoster(){
     tile.setAttribute("aria-pressed",String(card.id)===String(rosterSelectedId));
     tile.setAttribute("aria-label",String(card.name||"VCard")+(isLocked?", unavailable":""));
     tile.disabled=isLocked;
-    const art=document.createElement("div");
-    art.className="raid-roster-art";
-    if(validVCardImage(card.image)){
-      const image=document.createElement("img");
-      image.src=card.image;
-      image.alt="";
-      image.loading="lazy";
-      art.append(image);
-    }else{
-      art.textContent="◆";
+    const cardHost=document.createElement("div");
+    cardHost.className="raid-roster-vcard";
+    window.VHouseVCard.render(cardHost,card);
+    tile.append(cardHost);
+    if(isLocked){
+      const stateLabel=document.createElement("span");
+      stateLabel.className="raid-roster-status";
+      stateLabel.textContent=raidStore.getStatus(card.id).status.replaceAll("_"," ");
+      tile.append(stateLabel);
     }
-    const name=document.createElement("span");
-    name.className="raid-roster-name";
-    name.textContent=card.name||"VCard";
-    const meta=document.createElement("span");
-    meta.className="raid-roster-label";
-    const state=raidStore.getStatus(card.id).status;
-    meta.textContent=isLocked ? state.replaceAll("_"," ") : "LEVEL "+(card.level??1);
-    tile.append(art,name,meta);
     tile.addEventListener("click",()=>{
       rosterSelectedId=String(card.id);
       renderRaidRoster();
