@@ -1517,6 +1517,13 @@ function renderComplete(){
     rewardHost.append(tile);
   }
 
+  // The USD total includes only earned SCRAP and CRYPTO bags.
+  // IGM stays separate because it has no assigned USD conversion.
+  const scrapBags=Number(mission.rewardBatches?.SCRAP||0);
+  const cryptoBags=Number(mission.rewardBatches?.CRYPTO||0);
+  const totalCents=25*scrapBags+10*cryptoBags;
+  $("receiptTotalEarned").textContent="$"+(totalCents/100).toFixed(2)+" USD";
+
   /*
     RESULTS CHART
 
