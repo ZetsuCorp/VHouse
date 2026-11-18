@@ -14,7 +14,6 @@
     const host=root.querySelector("[data-inventory]");
     const name=root.querySelector("[data-name]");
     const description=root.querySelector("[data-description]");
-    const cash=root.querySelector("[data-igm]");
     let request=0;
     function updateVCard(){
       const store=window.VHouseCardStore;
@@ -70,8 +69,7 @@
     async function refresh(){
       const id=++request;
       const auth=window.VHouseAuth;
-      cash.textContent="—";
-            showMessage("Inventory","Loading inventory…");
+      showMessage("Inventory","Loading inventory…");
       try{
         await auth.ready;
         const player=await auth.loadPlayerData();
@@ -80,9 +78,7 @@
           showMessage("Inventory","Sign in to view inventory.");
           return;
         }
-        const balance=Number(player.account?.igm_balance);
-        cash.textContent=Number.isFinite(balance)?balance.toLocaleString():"—";
-                const owned=player.inventory.filter(item=>item.type==="Item"&&Number(item.quantity)>0)
+        const owned=player.inventory.filter(item=>item.type==="Item"&&Number(item.quantity)>0)
           .sort((a,b)=>a.thing.localeCompare(b.thing));
         renderInventory(owned);
       }catch(error){
