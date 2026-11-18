@@ -255,6 +255,7 @@ html, body {
   let historyLoading=false;
   let statsClient=null;
   let statsPlayerId=null;
+  let earningsRefreshTimer=null;
 
   function statField(id,value){
     const el=statsPanel?.querySelector('[data-stat-field="'+id+'"]');
@@ -287,6 +288,56 @@ html, body {
   function displayCount(value){
     return Number(value||0).toLocaleString(undefined,{maximumFractionDigits:2});
   }
+  // USD equivalents use only the existing Journey bag values.
+  function earnedBags(value){
+    const count=Number(value);
+    return Number.isSafeInteger(count)&&count>0?count:0;
+  }
+  function earningsCents(scraps,crypto){
+    return 25*earnedBags(scraps)+10*earnedBags(crypto);
+  }
+  function earningsUsd(cents){
+    return "$"+(cents/100).toFixed(2)+" USD";
+  }
+  function recordEarningsCents(record){
+    // Completed/ready Journeys already carry the authoritative reward bag tally.
+    const batches=record.snapshot?.rewardBatches;
+    if(record.status!=="ON_JOURNEY"&&batches&&typeof batches==="object"&&
+       Object.keys(batches).length){
+      return earningsCents(batches.SCRAP,batches.CRYPTO);
+    }
+    // While travelling, only completed winning encounters have earned rewards.
+    const results=Array.isArray(record.encounter_results)?record.encounter_results:
+      Array.isArray(record.snapshot?.results)?record.snapshot.results:[];
+    let scraps=0,crypto=0;
+    for(const result of results){
+      if(result?.won!==true)continue;
+      const rewards=Array.isArray(result.rewards)?result.rewards:
+        result.reward&&typeof result.reward==="object"?[result.reward]:[];
+      for(const reward of rewards){
+        const bags=earnedBags(reward?.batches??1);
+        if(reward?.item==="SCRAP")scraps+=bags;
+        else if(reward?.item==="CRYPTO"&&["SOL","AWT"].includes(reward.token))
+          crypto+=bags;
+      }
+    }
+    return earningsCents(scraps,crypto);
+  }
+  async function loadCurrentEarnings(ticket=statsLoadSequence){
+    if(!statsClient||!statsCard||ticket!==statsLoadSequence)return;
+    const {data,error}=await statsClient.from("vhouse_journey_records")
+      .select("status,encounter_results,snapshot")
+      .eq("player_id",statsPlayerId).eq("card_id",String(statsCard.id))
+      .in("status",["ON_JOURNEY","RESULTS_READY"])
+      .order("started_at",{ascending:false}).limit(1).maybeSingle();
+    if(ticket!==statsLoadSequence)return;
+    if(error){
+      statField("currentEarned","—");
+      console.warn("Current Journey earnings unavailable:",error);
+      return;
+    }
+    statField("currentEarned",earningsUsd(data?recordEarningsCents(data):0));
+  }
   function showSummary(summary){
     statField("journeys",displayCount(summary.journeys));
     statField("completed",displayCount(summary.completed));
@@ -304,6 +355,8 @@ html, body {
       }
     }
     const loot=summary.loot||{};
+    statField("totalEarned",summary.loot
+      ?earningsUsd(earningsCents(loot.SCRAP,loot.CRYPTO)):"—");
     for(const item of ["IGM","SCRAP","CRYPTO"]){
       const el=statsPanel.querySelector('[data-loot="'+item+'"]');
       if(el)el.textContent=displayCount(loot[item]);
@@ -313,7 +366,7 @@ html, body {
     const host=statsPanel.querySelector("#journeyHistoryRows");
     host.replaceChildren();
     const row=document.createElement("tr"),cell=document.createElement("td");
-    cell.colSpan=5;cell.textContent=message;row.append(cell);host.append(row);
+    cell.colSpan=6;cell.textContent=message;row.append(cell);host.append(row);
   }
   function updateHistoryPager(){
     const pages=Math.max(1,Math.ceil(historyCount/HISTORY_PAGE_SIZE));
@@ -354,7 +407,8 @@ html, body {
           record.status==="CONFIRMED"
             ?Object.entries(loot).filter(([,value])=>Number(value)>0)
               .map(([item,value])=>displayCount(value)+" "+(item==="IGM"?"IGM BAG":item)).join(" · ")||"—"
-            :"PENDING"
+            :"PENDING",
+          earningsUsd(recordEarningsCents(record))
         ];
         for(const [index,value] of values.entries()){
           const cell=document.createElement("td");
@@ -370,6 +424,7 @@ html, body {
             if(index===1)cell.className="history-stage";
             if(index===2)cell.className="history-time";
             if(index===4)cell.className=record.status==="CONFIRMED"?"history-loot":"history-pending";
+            if(index===5)cell.className="history-earned";
           }
           row.append(cell);
         }
@@ -471,8 +526,15 @@ html, body {
       #billboard .history-pager button:disabled{opacity:.35;cursor:default}
       #billboard .activity table{table-layout:fixed}
       #billboard .activity th,#billboard .activity td{overflow-wrap:anywhere}
-      #billboard .activity th:nth-child(5),#billboard .activity td:nth-child(5){width:30%}
+      #billboard .activity th:nth-child(5),#billboard .activity td:nth-child(5){width:26%}
+      #billboard .activity th:nth-child(6),#billboard .activity td:nth-child(6){width:16%}
       #billboard .right{min-width:0}
+      #billboard .earnings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:0 0 5px}
+      #billboard .earnings-box{min-width:0;border:1px solid #8b6e46;background:#211525;padding:5px 7px}
+      #billboard .earnings-box small{display:block;font-size:9px;color:#c3a7bc;font-weight:800}
+      #billboard .earnings-box strong{display:block;font-size:16px;color:#ffe2ac;margin-top:2px;white-space:nowrap}
+      #billboard .earnings-note{font-size:9px;line-height:1.3;color:#d4bd91;margin:0 0 4px}
+      #billboard .activity .history-earned{color:#e4c58f;font-weight:900;white-space:nowrap}
       #billboard .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
       #billboard .art .minted-vcard-image{width:100%;height:100%;object-fit:contain}
       #billboard .art .record-vcard-preview{width:100%;height:100%;overflow:hidden}
@@ -546,6 +608,11 @@ html, body {
               <div class="metric"><small>ENCOUNTER LOSSES</small><strong data-stat-field="losses">0</strong></div>
               <div class="metric"><small>LOOT BATCHES</small><strong id="totalLootBatches">0</strong></div>
             </div>
+            <div class="earnings-grid">
+              <div class="earnings-box"><small>TOTAL EARNED</small><strong data-stat-field="totalEarned">—</strong></div>
+              <div class="earnings-box"><small>CURRENT JOURNEY</small><strong data-stat-field="currentEarned">—</strong></div>
+            </div>
+            <p class="earnings-note">Total USD value earned by this VCard through Journey encounters, including Scrap rewards ($0.25 per bag) and SOL or $AWT rewards ($0.10 per CRYPTO bag).</p>
           </section>
           <section class="chartbox"><div class="sect">TIME ON EACH STAGE</div>
             <div class="stage-grid">${Array.from({length:10},(_,i)=>'<div class="stage-tile" data-stage="'+(i+1)+'"><span>STAGE '+(i+1)+'</span><strong>0m 00s</strong><small>0 JOURNEYS</small></div>').join("")}</div>
@@ -561,8 +628,8 @@ html, body {
       </div>
       <section class="activity" id="activity">
         <div class="sect">VCARD JOURNEY HISTORY</div>
-        <div class="history-table-wrap"><table><thead><tr><th>DATE</th><th>STAGE</th><th>TIME</th><th>RESULT</th><th>LOOT</th></tr></thead>
-        <tbody id="journeyHistoryRows"><tr><td colspan="5">LOADING JOURNEY HISTORY</td></tr></tbody></table></div>
+        <div class="history-table-wrap"><table><thead><tr><th>DATE</th><th>STAGE</th><th>TIME</th><th>RESULT</th><th>LOOT</th><th>USD EARNED</th></tr></thead>
+        <tbody id="journeyHistoryRows"><tr><td colspan="6">LOADING JOURNEY HISTORY</td></tr></tbody></table></div>
         <div class="history-pager"><button type="button" id="historyPrev">◀ PREV</button><span id="historyPageLabel">PAGE 1 / 1</span><button type="button" id="historyNext">NEXT ▶</button></div>
       </section>
     `;
@@ -595,9 +662,15 @@ html, body {
     });
     statsPanel=panel;
   }
-  function closeCardStats(){statsOverlay.hidden=true;statsCard=null;statsClient=null;++statsLoadSequence;}
+  function closeCardStats(){
+    if(earningsRefreshTimer!==null)clearInterval(earningsRefreshTimer);
+    earningsRefreshTimer=null;
+    statsOverlay.hidden=true;statsCard=null;statsClient=null;++statsLoadSequence;
+  }
   async function openCardStats(card){
     if(!card)return;
+    if(earningsRefreshTimer!==null)clearInterval(earningsRefreshTimer);
+    earningsRefreshTimer=null;
     statsCard=card;statsOverlay.hidden=false;
     const ticket=++statsLoadSequence;
     historyPage=0;historyCount=0;historyLoading=false;
@@ -622,6 +695,12 @@ html, body {
       const loot=data?.loot||{};
       statsPanel.querySelector("#totalLootBatches").textContent=
         displayCount(Number(loot.IGM||0)+Number(loot.SCRAP||0)+Number(loot.CRYPTO||0));
+      await loadCurrentEarnings(ticket);
+      if(ticket!==statsLoadSequence)return;
+      earningsRefreshTimer=setInterval(()=>{
+        if(!document.hidden&&ticket===statsLoadSequence)
+          void loadCurrentEarnings(ticket);
+      },10000);
       await loadHistoryPage(ticket);
       if(ticket!==statsLoadSequence)return;
       fillCardStats(card);
