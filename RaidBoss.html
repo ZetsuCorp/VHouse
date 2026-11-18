@@ -1,21 +1,832 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VHouse — Tower Boss Raid Demo</title>
+
+<style>
+:root {
+  --gold:#bc9357;
+  --light:#f4d79f;
+  --purple:#241331;
+  --green:#70e5b2;
+  --red:#f58b8b;
+  --muted:#b8a9c8;
+}
+
+* { box-sizing:border-box }
+[hidden] { display:none!important }
+
+body {
+  margin:0;
+  height:100dvh;
+  padding:12px;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  background:radial-gradient(circle,#372247,#080711 80%);
+  color:#f5e8f5;
+  font:13px Arial,sans-serif;
+}
+
+.game {
+  width:min(1000px,100%);
+  height:min(700px,calc(100dvh - 24px));
+  min-height:0;
+  border:2px solid var(--gold);
+  border-radius:12px;
+  background:linear-gradient(145deg,#291a3c,#0c0a18);
+  box-shadow:0 15px 55px #0009;
+  overflow:hidden;
+}
+
+main {
+  width:100%;
+  height:100%;
+  padding:18px;
+}
+
+section {
+  height:100%;
+  min-height:0;
+}
+
+h1,h2,h3 {
+  color:var(--light);
+  margin:0 0 10px;
+}
+
+h1 { font:700 24px Georgia,serif }
+h2 { font-size:19px }
+h3 { font-size:13px }
+
+small,.muted { color:var(--muted) }
+
+button,select { font:inherit }
+
+button {
+  border:1px solid var(--gold);
+  border-radius:6px;
+  background:#30203d;
+  color:#ffe3ad;
+  font-weight:900;
+  cursor:pointer;
+  padding:11px 15px;
+}
+
+button:hover { background:#50305c }
+
+.primary {
+  background:var(--gold);
+  color:#111;
+}
+
+.primary:hover { background:#eac58d }
+
+select {
+  width:100%;
+  padding:11px;
+  border:1px solid var(--gold);
+  border-radius:6px;
+  background:#130f21;
+  color:#ffe3ad;
+}
+
+.panel {
+  border:1px solid #755b8d;
+  border-radius:9px;
+  background:#160f25;
+  padding:15px;
+}
+
+.metric-row {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+
+.metric {
+  padding:10px 4px;
+  border:1px solid #69517b;
+  border-radius:6px;
+  background:#251631;
+  text-align:center;
+}
+
+.metric b {
+  display:block;
+  color:#fff;
+  font-size:23px;
+  margin-bottom:4px;
+}
+
+.metric small { font-size:10px }
+
+.actions {
+  display:flex;
+  gap:9px;
+  justify-content:center;
+}
+
+.actions button { min-width:145px }
+
+/* SCREEN 1 — RAID SELECTION */
+
+.setup-layout {
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:15px;
+  height:100%;
+}
+
+.world {
+  position:relative;
+  border:1px solid var(--gold);
+  border-radius:9px;
+  overflow:hidden;
+  background:
+    radial-gradient(
+      ellipse at 50% 5%,
+      #70507c77,
+      transparent 60%
+    ),
+    linear-gradient(
+      #241933,
+      #100c20 60%,
+      #08070e
+    );
+}
+
+.tower {
+  position:absolute;
+  left:50%;
+  top:8%;
+  transform:translateX(-50%);
+  height:82%;
+  width:46%;
+  opacity:.7;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 37px,
+      #be9a6744 38px 40px
+    ),
+    linear-gradient(
+      90deg,
+      #1d1729,
+      #4c3657,
+      #1b1529
+    );
+  border:2px solid #9e7c56;
+  clip-path:polygon(
+    25% 0,
+    75% 0,
+    75% 12%,
+    90% 12%,
+    90% 100%,
+    10% 100%,
+    10% 12%,
+    25% 12%
+  );
+}
+
+.tower:after {
+  content:"";
+  position:absolute;
+  bottom:0;
+  left:35%;
+  width:30%;
+  height:30%;
+  background:#080711;
+  border:2px solid #b89a71;
+  border-radius:45% 45% 0 0;
+}
+
+.world-content {
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+}
+
+.vcard {
+  width:185px;
+  max-width:65%;
+  min-height:265px;
+  border:3px solid #bf9b5e;
+  border-radius:9px;
+  background:linear-gradient(155deg,#3e2851,#100d20);
+  box-shadow:
+    0 0 25px #000b,
+    0 0 12px #bf9b5e55;
+  padding:12px;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+.vcard small {
+  font-size:10px;
+  color:#dfc48f;
+}
+
+.vcard strong {
+  color:#fff;
+  overflow-wrap:anywhere;
+}
+
+.card-art {
+  height:110px;
+  display:grid;
+  place-items:center;
+  background:radial-gradient(circle,#48365d,#141022);
+  border:1px solid #876c9a;
+  border-radius:5px;
+  font-size:60px;
+}
+
+.card-stats {
+  display:flex;
+  justify-content:space-around;
+  border-top:1px solid #846a53;
+  padding-top:9px;
+}
+
+.card-stats b {
+  display:block;
+  color:#ffe0a6;
+  font-size:18px;
+}
+
+.setup-panel {
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  min-height:0;
+  gap:9px;
+}
+
+.setup-fields {
+  display:flex;
+  flex-direction:column;
+  gap:13px;
+  min-height:0;
+}
+
+.setup-fields label {
+  display:block;
+  font-weight:800;
+  color:var(--light);
+  margin-bottom:6px;
+}
+
+.start-button {
+  width:100%;
+  padding:14px;
+}
+
+/* SCREEN 2 — RAID BATTLE */
+
+.raid-screen {
+  display:grid;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:13px;
+}
+
+.battle-world {
+  min-height:0;
+  position:relative;
+}
+
+.battle-world .tower {
+  width:26%;
+  height:90%;
+  opacity:.5;
+}
+
+.fighter {
+  position:absolute;
+  bottom:18%;
+  width:90px;
+  height:100px;
+  display:grid;
+  place-items:center;
+  border:2px solid var(--gold);
+  border-radius:10px 10px 5px 5px;
+  background:linear-gradient(#4f3270,#171125);
+  box-shadow:0 0 15px #000a;
+  font-size:45px;
+  z-index:2;
+}
+
+.fighter.player {
+  left:18%;
+  animation:playerMove 1.2s ease-in-out infinite alternate;
+}
+
+.fighter.boss {
+  right:18%;
+  background:linear-gradient(#692733,#220f18);
+  animation:bossMove 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes playerMove {
+  from { transform:translateX(0) }
+  to { transform:translateX(55px) }
+}
+
+@keyframes bossMove {
+  from { transform:translateX(0) }
+  to { transform:translateX(-55px) }
+}
+
+.battle-caption {
+  position:absolute;
+  top:14px;
+  left:0;
+  right:0;
+  z-index:3;
+  text-align:center;
+  color:var(--light);
+  font-size:15px;
+  font-weight:900;
+  text-shadow:0 2px 5px #000;
+}
+
+.battle-score {
+  position:absolute;
+  bottom:12px;
+  left:0;
+  right:0;
+  display:flex;
+  justify-content:center;
+  gap:25px;
+  font-weight:900;
+  z-index:3;
+}
+
+.battle-score span {
+  background:#0d0a19df;
+  padding:7px 12px;
+  border:1px solid #795f55;
+  border-radius:5px;
+}
+
+.raid-bottom {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.clock {
+  font-size:27px;
+  font-weight:900;
+  color:var(--light);
+}
+
+.track {
+  width:100%;
+  height:12px;
+  border:1px solid #a08458;
+  border-radius:9px;
+  background:#100c1b;
+  overflow:hidden;
+  margin:10px 0;
+}
+
+.fill {
+  height:100%;
+  width:100%;
+  background:linear-gradient(90deg,#8e5ccc,#dfb76b);
+  transition:width .25s;
+}
+
+.boss-grid {
+  display:grid;
+  grid-template-columns:repeat(10,minmax(0,1fr));
+  gap:4px;
+  margin:12px 0;
+}
+
+.boss-dot {
+  text-align:center;
+  padding:7px 0;
+  border:1px solid #6b5279;
+  border-radius:4px;
+  color:#cfbadb;
+  font-size:10px;
+}
+
+.boss-dot.win {
+  border-color:var(--green);
+  color:var(--green);
+}
+
+.boss-dot.loss {
+  border-color:var(--red);
+  color:var(--red);
+}
+
+.boss-dot.current {
+  border-color:var(--light);
+  color:var(--light);
+}
+
+/* SCREEN 3 — RAID RECEIPT */
+
+.complete-screen {
+  display:grid;
+  grid-template-columns:270px minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr);
+  gap:12px;
+}
+
+.complete-title {
+  grid-column:1/-1;
+  text-align:center;
+}
+
+.receipt {
+  border:3px solid var(--gold);
+  border-radius:9px;
+  background:linear-gradient(155deg,#342048,#100e1c);
+  padding:15px;
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  text-align:center;
+}
+
+.receipt h2 {
+  font-size:19px;
+  border-bottom:1px solid #8e744d;
+  padding-bottom:12px;
+}
+
+.receipt .big {
+  color:#fff;
+  font-size:23px;
+  font-weight:900;
+}
+
+.receipt .line {
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  border-bottom:1px solid #6f557844;
+  padding-bottom:8px;
+}
+
+.confirm {
+  margin-top:auto;
+  background:var(--gold);
+  color:#111;
+}
+
+.result-panel {
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+
+.result-table-wrap {
+  min-height:0;
+  overflow:auto;
+  scrollbar-width:thin;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:11px;
+}
+
+th,td {
+  padding:9px 5px;
+  border:1px solid #624f76;
+  text-align:center;
+}
+
+th {
+  color:var(--light);
+  background:#30213c;
+}
+
+td { background:#1c1428 }
+
+.win-text {
+  color:var(--green);
+  font-weight:900;
+}
+
+.loss-text {
+  color:var(--red);
+  font-weight:900;
+}
+
+@media(max-width:700px) {
+  main {padding:9px}
+  .setup-layout {gap:8px}
+  .setup-panel,.panel {padding:9px}
+  .vcard {width:135px;min-height:215px}
+  .card-art {height:75px;font-size:42px}
+  .metric b {font-size:16px}
+  .metric small {font-size:8px}
+  .fighter {width:65px;height:75px;font-size:35px}
+  .complete-screen {
+    grid-template-columns:215px minmax(0,1fr);
+  }
+  .receipt {padding:9px}
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .fighter {animation:none}
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+<main>
+
+<!-- SCREEN 1 — RAID SETUP -->
+
+<section id="setupScreen">
+  <div class="setup-layout">
+
+    <div class="world">
+      <div class="tower"></div>
+
+      <div class="world-content">
+        <div class="vcard">
+          <small>VHOUSE VCARD</small>
+
+          <strong id="previewName">
+            EXAMPLE VCARD
+          </strong>
+
+          <div class="card-art">◆</div>
+
+          <div class="card-stats">
+            <div>
+              <small>ATK</small>
+              <b id="previewAtk">2</b>
+            </div>
+
+            <div>
+              <small>DEF</small>
+              <b id="previewDef">2</b>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="panel setup-panel">
+
+      <div class="setup-fields">
+        <h1>TOWER BOSS RAID</h1>
+
+        <div>
+          <label for="raidLevel">
+            SELECT RAID LEVEL
+          </label>
+
+          <select id="raidLevel">
+            <option value="1">LEVEL 1 — 5×</option>
+            <option value="2">LEVEL 2 — 10×</option>
+            <option value="3">LEVEL 3 — 15×</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="vcardSelect">
+            SELECT VCARD
+          </label>
+
+          <select id="vcardSelect">
+            <option value="example">
+              EXAMPLE VCARD — 2 ATK / 2 DEF
+            </option>
+          </select>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric">
+            <b>10</b>
+            <small>BOSSES</small>
+          </div>
+
+          <div class="metric">
+            <b id="setupMultiplier">5×</b>
+            <small>MULTIPLIER</small>
+          </div>
+
+          <div class="metric">
+            <b id="setupEggHp">20</b>
+            <small>RAID EGG HP</small>
+          </div>
+        </div>
+
+        <p class="muted" id="setupDescription">
+          Win Boss fights to attack the RAID EGG.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="primary start-button"
+        id="startButton">
+        START RAID
+      </button>
+
+    </div>
+  </div>
+</section>
+
+<!-- SCREEN 2 — RAID RUNNING -->
+
+<section id="travelScreen" class="raid-screen" hidden>
+
+  <div class="world battle-world">
+    <div class="tower"></div>
+
+    <div class="battle-caption" id="battleCaption">
+      BOSS 1
+    </div>
+
+    <div class="fighter player">◆</div>
+    <div class="fighter boss">♛</div>
+
+    <div class="battle-score">
+      <span>
+        VCARD:
+        <b id="playerHits">0</b> / 3
+      </span>
+
+      <span>
+        BOSS:
+        <b id="bossHits">0</b> / 3
+      </span>
+    </div>
+  </div>
+
+  <div class="raid-bottom">
+
+    <div class="panel">
+      <h2>RAID IN PROGRESS</h2>
+
+      <div class="muted">
+        VCard locked during raid
+      </div>
+
+      <div class="clock" id="timer">
+        00:00
+      </div>
+
+      <h3>RAID EGG</h3>
+
+      <div class="track">
+        <div class="fill" id="eggFill"></div>
+      </div>
+
+      <strong id="eggHealth">
+        20 / 20 HP
+      </strong>
+    </div>
+
+    <div class="panel">
+      <h2>TOWER BATTLES</h2>
+
+      <div class="boss-grid" id="bossGrid"></div>
+
+      <p class="muted" id="battleLog">
+        Entering tower…
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- SCREEN 3 — RAID RESULTS -->
+
+<section id="completeScreen" class="complete-screen" hidden>
+
+  <div class="complete-title">
+    <h2>RAID RESULTS</h2>
+    <span class="muted" id="resultDescription"></span>
+  </div>
+
+  <div class="receipt">
+    <small>VHOUSE · TOWER BOSS RAID</small>
+
+    <h2>RESULTS RECEIPT</h2>
+
+    <div class="big" id="receiptLevel">
+      LEVEL 1
+    </div>
+
+    <div class="line">
+      <span>BOSSES DEFEATED</span>
+      <strong id="receiptWins">0</strong>
+    </div>
+
+    <div class="line">
+      <span>RAID EGG DAMAGE</span>
+      <strong id="receiptDamage">0</strong>
+    </div>
+
+    <div class="line">
+      <span>RAID EGG HP</span>
+      <strong id="receiptEggHp">20</strong>
+    </div>
+
+    <div class="line">
+      <span>REWARDS</span>
+      <strong>—</strong>
+    </div>
+
+    <button
+      type="button"
+      class="confirm"
+      id="confirmButton">
+      CONFIRM
+    </button>
+  </div>
+
+  <div class="panel result-panel">
+    <h3>BOSS BATTLE RESULTS</h3>
+
+    <div class="result-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ENCOUNTER</th>
+            <th>RESULT</th>
+            <th>EGG DAMAGE</th>
+            <th>EGG HP</th>
+          </tr>
+        </thead>
+
+        <tbody id="resultRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+</main>
+</div>
+
+<script>
 "use strict";
 
 /*
-  TOWER BOSS RAID — LOCAL DEMO
+  TOWER BOSS RAID — DEMO
 
-  Secure coin flips:
-  - Fresh 256-bit random value for every attempt.
-  - SHA-256 hashes that value.
-  - One hash bit determines HEADS or TAILS.
-  - No Math.random().
-  - Requires HTTPS or localhost.
+  Levels:
+    1 = 5× (ATK + DEF)
+    2 = 10× (ATK + DEF)
+    3 = 15× (ATK + DEF)
 
-  Battle rules remain unchanged.
+  10 Boss encounters.
+
+  Zetsu Counter Blitz:
+    Player and Boss alternate attempts.
+    Heads = 1 hit.
+    Tails = miss.
+    First to 3 hits wins.
+
+  Player victory:
+    ATK damage applied to RAID EGG.
+    Advance to next Boss.
+
+  Boss victory:
+    VCard defeated.
+
+  CRYPTOGRAPHIC RANDOMNESS:
+    Fresh 256-bit random seed each flip.
+    SHA-256 hash of seed.
+    One hash bit determines result.
+
+  Local demo only:
+    No blockchain transactions.
+    No live rewards.
+    No Supabase writes.
 */
 
 const $ = id => document.getElementById(id);
-const multipliers = {1:5, 2:10, 3:15};
+
+const multipliers = {
+  1:5,
+  2:10,
+  3:15
+};
 
 const demoCard = {
   id:"example",
@@ -32,28 +843,54 @@ let playerHits = 0;
 let bossHits = 0;
 let flipInProgress = false;
 
+/* SCREEN CONTROL */
+
 function showScreen(name) {
-  for(const id of ["setupScreen","travelScreen","completeScreen"]) {
+  for(const id of [
+    "setupScreen",
+    "travelScreen",
+    "completeScreen"
+  ]) {
     $(id).hidden = id !== name;
   }
 }
 
+/* RAID EGG CALCULATION */
+
 function calculateEggHp(level,card) {
-  return (card.atk + card.def) * multipliers[level];
+  return (
+    card.atk + card.def
+  ) * multipliers[level];
 }
 
 function updateSetup() {
   const level = Number($("raidLevel").value);
-  $("setupMultiplier").textContent = multipliers[level] + "×";
-  $("setupEggHp").textContent = calculateEggHp(level,demoCard);
-  $("previewName").textContent = demoCard.name;
-  $("previewAtk").textContent = demoCard.atk;
-  $("previewDef").textContent = demoCard.def;
+
+  $("setupMultiplier").textContent =
+    multipliers[level] + "×";
+
+  $("setupEggHp").textContent =
+    calculateEggHp(level,demoCard);
+
+  $("previewName").textContent =
+    demoCard.name;
+
+  $("previewAtk").textContent =
+    demoCard.atk;
+
+  $("previewDef").textContent =
+    demoCard.def;
 }
 
 function formatTime(value) {
-  const minutes = String(Math.floor(value/60)).padStart(2,"0");
-  const secs = String(value%60).padStart(2,"0");
+  const minutes = String(
+    Math.floor(value / 60)
+  ).padStart(2,"0");
+
+  const secs = String(
+    value % 60
+  ).padStart(2,"0");
+
   return minutes + ":" + secs;
 }
 
@@ -61,8 +898,11 @@ function formatTime(value) {
 
 async function secureCoinFlip() {
   const randomBytes = new Uint8Array(32);
+
+  // New cryptographically secure random value.
   crypto.getRandomValues(randomBytes);
 
+  // Hash the random value using SHA-256.
   const digest = await crypto.subtle.digest(
     "SHA-256",
     randomBytes
@@ -70,19 +910,29 @@ async function secureCoinFlip() {
 
   const hash = new Uint8Array(digest);
 
-  // One unbiased binary outcome per SHA-256 hash.
+  // One hash bit determines the outcome.
+  // TRUE = HEADS, FALSE = TAILS.
   return (hash[0] & 1) === 1;
 }
+
+/* RAID EGG DISPLAY */
 
 function renderEgg() {
   const percent = raid.eggMax > 0
     ? (raid.eggHp / raid.eggMax) * 100
     : 0;
 
-  $("eggFill").style.width = percent + "%";
+  $("eggFill").style.width =
+    percent + "%";
+
   $("eggHealth").textContent =
-    raid.eggHp + " / " + raid.eggMax + " HP";
+    raid.eggHp +
+    " / " +
+    raid.eggMax +
+    " HP";
 }
+
+/* BOSS GRID */
 
 function renderBossGrid() {
   const grid = $("bossGrid");
@@ -90,13 +940,21 @@ function renderBossGrid() {
 
   for(let i=1;i<=10;i++) {
     const dot = document.createElement("div");
+
     dot.className = "boss-dot";
     dot.textContent = i;
 
-    const result = raid.results.find(r=>r.boss===i);
+    const result = raid.results.find(
+      r => r.boss === i
+    );
 
-    if(result) dot.classList.add(result.win?"win":"loss");
-    else if(i===raid.boss) dot.classList.add("current");
+    if(result) {
+      dot.classList.add(
+        result.win ? "win" : "loss"
+      );
+    } else if(i===raid.boss) {
+      dot.classList.add("current");
+    }
 
     grid.append(dot);
   }
@@ -107,18 +965,28 @@ function updateHits() {
   $("bossHits").textContent = bossHits;
 }
 
+/* START RAID */
+
 function startRaid() {
-  if(!window.crypto?.getRandomValues ||
-     !window.crypto?.subtle?.digest) {
+  if(
+    !window.crypto?.getRandomValues ||
+    !window.crypto?.subtle?.digest
+  ) {
     $("setupDescription").textContent =
-      "Secure SHA-256 coin flips require HTTPS or localhost.";
+      "Secure SHA-256 requires HTTPS or localhost.";
     return;
   }
 
   clearInterval(raidInterval);
 
-  const level = Number($("raidLevel").value);
-  const eggMax = calculateEggHp(level,demoCard);
+  const level = Number(
+    $("raidLevel").value
+  );
+
+  const eggMax = calculateEggHp(
+    level,
+    demoCard
+  );
 
   raid = {
     level,
@@ -131,23 +999,30 @@ function startRaid() {
     defeated:false
   };
 
-  seconds=0;
-  playerHits=0;
-  bossHits=0;
-  currentTurn="player";
-  flipInProgress=false;
+  seconds = 0;
+  playerHits = 0;
+  bossHits = 0;
+  currentTurn = "player";
+  flipInProgress = false;
 
-  $("timer").textContent="00:00";
-  $("battleLog").textContent="Entering tower…";
+  $("timer").textContent = "00:00";
+  $("battleCaption").textContent = "BOSS 1";
+  $("battleLog").textContent = "Entering tower…";
 
   showScreen("travelScreen");
+
   renderEgg();
   renderBossGrid();
   updateHits();
 
-  raidInterval=setInterval(()=>{
+  raidInterval = setInterval(() => {
     seconds++;
-    $("timer").textContent=formatTime(Math.floor(seconds/4));
+
+    // Demo clock, not final raid duration.
+    $("timer").textContent = formatTime(
+      Math.floor(seconds / 4)
+    );
+
     void performTurn();
   },250);
 }
@@ -155,9 +1030,13 @@ function startRaid() {
 /* ZETSU COUNTER BLITZ */
 
 async function performTurn() {
-  if(!raid || raid.completed || flipInProgress) return;
+  if(
+    !raid ||
+    raid.completed ||
+    flipInProgress
+  ) return;
 
-  flipInProgress=true;
+  flipInProgress = true;
 
   try {
     const heads = await secureCoinFlip();
@@ -167,19 +1046,27 @@ async function performTurn() {
     const actor = currentTurn;
 
     if(heads) {
-      if(actor==="player") playerHits++;
-      else bossHits++;
+      if(actor==="player") {
+        playerHits++;
+      } else {
+        bossHits++;
+      }
     }
 
     $("battleCaption").textContent =
-      "BOSS " + raid.boss + " — " + actor.toUpperCase();
+      "BOSS " +
+      raid.boss +
+      " — " +
+      actor.toUpperCase();
 
     $("battleLog").textContent =
       (actor==="player"?"VCARD":"BOSS") +
-      " FLIPPED " + (heads?"HEADS — HIT":"TAILS — MISS");
+      " FLIPPED " +
+      (heads?"HEADS — HIT":"TAILS — MISS");
 
     updateHits();
 
+    // First to three hits wins.
     if(playerHits===3) {
       finishBoss(true);
       return;
@@ -190,24 +1077,36 @@ async function performTurn() {
       return;
     }
 
-    currentTurn=actor==="player"?"boss":"player";
+    // Alternate player and Boss.
+    currentTurn =
+      actor==="player" ? "boss" : "player";
 
   } catch(error) {
     clearInterval(raidInterval);
-    console.error("Secure coin flip failed:",error);
+
+    console.error(
+      "Secure coin flip failed:",
+      error
+    );
+
     $("battleLog").textContent =
       "SECURE RANDOMNESS UNAVAILABLE";
+
   } finally {
-    flipInProgress=false;
+    flipInProgress = false;
   }
 }
+
+/* BOSS RESULT */
 
 function finishBoss(won) {
   const damage = won
     ? Math.min(raid.card.atk,raid.eggHp)
     : 0;
 
-  if(won) raid.eggHp-=damage;
+  if(won) {
+    raid.eggHp -= damage;
+  }
 
   raid.results.push({
     boss:raid.boss,
@@ -216,69 +1115,94 @@ function finishBoss(won) {
     eggHp:raid.eggHp
   });
 
-  $("battleLog").textContent=won
-    ? "BOSS DEFEATED — RAID EGG HIT FOR " + damage
+  $("battleLog").textContent = won
+    ? "BOSS DEFEATED — RAID EGG HIT FOR " +
+      damage
     : "VCARD DEFEATED";
 
   renderEgg();
   renderBossGrid();
 
   if(!won) {
-    raid.defeated=true;
+    raid.defeated = true;
     finishRaid();
     return;
   }
 
-  if(raid.boss>=10 || raid.eggHp<=0) {
+  if(
+    raid.boss>=10 ||
+    raid.eggHp<=0
+  ) {
     finishRaid();
     return;
   }
 
   raid.boss++;
-  playerHits=0;
-  bossHits=0;
-  currentTurn="player";
+
+  playerHits = 0;
+  bossHits = 0;
+  currentTurn = "player";
 
   updateHits();
   renderBossGrid();
 }
 
+/* FINISH RAID */
+
 function finishRaid() {
   clearInterval(raidInterval);
-  raid.completed=true;
 
-  const wins=raid.results.filter(r=>r.win).length;
-  const damage=raid.eggMax-raid.eggHp;
+  raid.completed = true;
 
-  $("receiptLevel").textContent="LEVEL " + raid.level;
-  $("receiptWins").textContent=wins + " / 10";
-  $("receiptDamage").textContent=damage;
-  $("receiptEggHp").textContent=
-    raid.eggHp + " / " + raid.eggMax;
+  const wins = raid.results.filter(
+    r => r.win
+  ).length;
 
-  $("resultDescription").textContent=raid.defeated
-    ? "VCARD DEFEATED"
-    : "RAID RUN FINISHED";
+  const damage =
+    raid.eggMax - raid.eggHp;
 
-  const rows=$("resultRows");
+  $("receiptLevel").textContent =
+    "LEVEL " + raid.level;
+
+  $("receiptWins").textContent =
+    wins + " / 10";
+
+  $("receiptDamage").textContent =
+    damage;
+
+  $("receiptEggHp").textContent =
+    raid.eggHp +
+    " / " +
+    raid.eggMax;
+
+  $("resultDescription").textContent =
+    raid.defeated
+      ? "VCARD DEFEATED"
+      : "RAID RUN FINISHED";
+
+  const rows = $("resultRows");
   rows.replaceChildren();
 
-  raid.results.forEach(result=>{
-    const tr=document.createElement("tr");
-    const values=[
+  raid.results.forEach(result => {
+    const tr = document.createElement("tr");
+
+    const values = [
       result.boss,
       "BOSS " + result.boss,
-      result.win?"WIN":"LOSS",
+      result.win ? "WIN" : "LOSS",
       result.damage,
       result.eggHp
     ];
 
-    values.forEach((value,index)=>{
-      const td=document.createElement("td");
-      td.textContent=value;
+    values.forEach((value,index) => {
+      const td = document.createElement("td");
+      td.textContent = value;
 
       if(index===2) {
-        td.className=result.win?"win-text":"loss-text";
+        td.className =
+          result.win
+            ? "win-text"
+            : "loss-text";
       }
 
       tr.append(td);
@@ -290,11 +1214,28 @@ function finishRaid() {
   showScreen("completeScreen");
 }
 
-$("raidLevel").addEventListener("change",updateSetup);
-$("startButton").addEventListener("click",startRaid);
-$("confirmButton").addEventListener("click",()=>{
-  raid=null;
-  showScreen("setupScreen");
-});
+/* BUTTONS */
+
+$("raidLevel").addEventListener(
+  "change",
+  updateSetup
+);
+
+$("startButton").addEventListener(
+  "click",
+  startRaid
+);
+
+$("confirmButton").addEventListener(
+  "click",
+  () => {
+    raid = null;
+    showScreen("setupScreen");
+  }
+);
 
 updateSetup();
+</script>
+
+</body>
+</html>
