@@ -213,7 +213,7 @@ select {
   place-items:center;
 }
 
-.vcard {
+.setup-layout .vcard {
   width:185px;
   max-width:65%;
   min-height:265px;
@@ -230,17 +230,17 @@ select {
   justify-content:space-between;
 }
 
-.vcard small {
+.setup-layout .vcard small {
   font-size:10px;
   color:#dfc48f;
 }
 
-.vcard strong {
+.setup-layout .vcard strong {
   color:#fff;
   overflow-wrap:anywhere;
 }
 
-.card-art {
+.setup-layout .card-art {
   height:110px;
   display:grid;
   place-items:center;
@@ -250,14 +250,14 @@ select {
   font-size:60px;
 }
 
-.card-stats {
+.setup-layout .card-stats {
   display:flex;
   justify-content:space-around;
   border-top:1px solid #846a53;
   padding-top:9px;
 }
 
-.card-stats b {
+.setup-layout .card-stats b {
   display:block;
   color:#ffe0a6;
   font-size:18px;
@@ -533,8 +533,8 @@ td { background:#1c1428 }
   main {padding:9px}
   .setup-layout {gap:8px}
   .setup-panel,.panel {padding:9px}
-  .vcard {width:135px;min-height:215px}
-  .card-art {height:75px;font-size:42px}
+  .setup-layout .vcard {width:135px;min-height:215px}
+  .setup-layout .card-art {height:75px;font-size:42px}
   .metric b {font-size:16px}
   .metric small {font-size:8px}
   .fighter {width:65px;height:75px;font-size:35px}
@@ -632,14 +632,8 @@ td { background:#1c1428 }
   align-items:center;
   justify-content:center;
 }
-.raid-choice-preview .vhouse-vcard-host { width:min(100%,205px); }
-.raid-choice-preview .vhouse-vcard-host .vcard {
-  display:block;
-  min-height:0;
-  max-width:none;
-  padding:0;
-  text-align:initial;
-}
+/* Use the normal shared VHouse VCard appearance without local overrides. */
+.raid-choice-preview .vhouse-vcard-host { width:min(100%,205px,34dvh); }
 .raid-choice-name {
   min-height:20px;
   text-align:center;
@@ -663,7 +657,7 @@ td { background:#1c1428 }
   .raid-roster-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
   .raid-roster-tile {padding:3px}
   .raid-roster-name {font-size:9px}
-  .raid-choice-preview .vhouse-vcard-host {width:min(100%,155px)}
+  .raid-choice-preview .vhouse-vcard-host {width:min(100%,155px,34dvh)}
 }
 @media(prefers-reduced-motion:reduce){
   .raid-roster-tile {transition:none}
