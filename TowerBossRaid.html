@@ -70,6 +70,7 @@
       <li>Player selects Tower Boss Raid.</li>
       <li>Player selects a Raid Level.</li>
       <li>Player selects a VCard.</li>
+      <li>Player pays the $0.75 raid entry fee.</li>
       <li>The VCard is locked during the raid timer,
           similar to the Journey system.</li>
       <li>The raid runs using its own movement animation.</li>
@@ -81,11 +82,11 @@
   <section>
     <h2>4. Raid Side</h2>
     <ol>
-      <li>The selected Raid Level determines the tower.</li>
-      <li>The VCard enters the tower.</li>
+      <li>Each Raid Level is one stage with 10 Boss encounters.</li>
+      <li>The VCard enters the selected Raid Level.</li>
       <li>Boss encounters use Zetsu Counter Blitz rules.</li>
-      <li>Winning allows movement to the next tower stage.</li>
-      <li>Losing results in the player's defeat.</li>
+      <li>Winning allows movement to the next Boss encounter.</li>
+      <li>Losing ends that raid attempt.</li>
     </ol>
   </section>
 
@@ -93,8 +94,9 @@
     <h2>5. Zetsu Counter Blitz Battle Rules</h2>
     <ul>
       <li>Player and Boss alternate turns.</li>
-      <li>Each turn uses a coin flip.</li>
-      <li>HEADS = 1 successful hit.</li>
+      <li>Each turn uses a coin flip generated from secure random bytes
+          hashed with SHA-256.</li>
+      <li>HEADS = 1 successful hit; TAILS = miss.</li>
       <li>First participant to score 3 hits wins.</li>
       <li>Winning a Boss fight permits the VCard
           to attack the RAID EGG.</li>
@@ -131,7 +133,7 @@
     <h2>7. RAID EGG</h2>
     <p>
       The RAID EGG is one shared health bar covering
-      all 10 stages of the raid.
+      all 10 Boss encounters in the selected Raid Level.
     </p>
     <ul>
       <li>Each successful Boss fight permits one
@@ -140,7 +142,13 @@
           remaining RAID EGG health.</li>
       <li>RAID EGG health is based on the player's
           combined ATK and DEF.</li>
-      <li>Raid Level 1 uses a multiplier of 5.</li>
+    </ul>
+
+    <h3>Raid Levels</h3>
+    <ul>
+      <li>Level 1: RAID EGG HP = (ATK + DEF) × 5</li>
+      <li>Level 2: RAID EGG HP = (ATK + DEF) × 10</li>
+      <li>Level 3: RAID EGG HP = (ATK + DEF) × 15</li>
     </ul>
 
     <h3>Raid Level 1 Calculation</h3>
@@ -185,7 +193,19 @@
   </section>
 
   <section>
-    <h2>9. Raid Presentation</h2>
+    <h2>9. Entry Fees, Retries, and Rewards</h2>
+    <ul>
+      <li>Raid entry fee: $0.75.</li>
+      <li>The initial attempt is included with entry.</li>
+      <li>One retry after defeat is free.</li>
+      <li>Each additional retry costs $0.50.</li>
+      <li>Each defeated Boss earns $0.15–$0.25.</li>
+      <li>A Raid Level has 10 Boss encounters per attempt.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>10. Raid Presentation</h2>
     <ul>
       <li>Timed raid using the existing VHouse
           Journey-style locking approach.</li>
