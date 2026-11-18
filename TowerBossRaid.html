@@ -15,11 +15,8 @@
     font-family: Arial, sans-serif;
     line-height: 1.6;
   }
-  main {
-    max-width: 850px;
-    margin: auto;
-  }
-  h1, h2 { color: #f3cd82; }
+  main { max-width: 850px; margin: auto; }
+  h1, h2, h3 { color: #f3cd82; }
   h1 { text-align: center; }
   section {
     background: #21182e;
@@ -28,9 +25,15 @@
     padding: 18px;
     margin: 16px 0;
   }
-  ul { padding-left: 22px; }
+  ul, ol { padding-left: 22px; }
   li { margin: 7px 0; }
-  .pending { color: #c7b5d8; }
+  .example {
+    background: #171123;
+    border-left: 3px solid #b58aff;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  strong { color: #ffe2ac; }
 </style>
 </head>
 <body>
@@ -42,48 +45,157 @@
   <section>
     <h2>1. Concept</h2>
     <p>
-      Tower Boss Raid is a new VHouse battle mode
-      inspired by Mortal Kombat's tower battles,
-      using a simplified survival system.
+      Tower Boss Raid is a VHouse battle mode inspired by
+      Mortal Kombat's tower battles, using a simplified,
+      automated survival system.
+    </p>
+    <p>
+      Players send VCards into timed raids to challenge
+      bosses, attack the RAID EGG, and earn rewards.
     </p>
   </section>
 
   <section>
     <h2>2. Index Integration</h2>
     <ul>
-      <li>A new Tower Boss Raid button appears
-          in the background of the Index map.</li>
+      <li>A Tower Boss Raid button appears in the
+          background of the Index map.</li>
       <li>The button opens a dedicated Tower Boss Raid page.</li>
     </ul>
   </section>
 
   <section>
-    <h2>3. VCard Entry</h2>
-    <ul>
-      <li>Players select a VCard to enter the tower.</li>
-      <li>The battle uses the VCard's existing ATK and DEF stats.</li>
-    </ul>
+    <h2>3. Player Side</h2>
+    <ol>
+      <li>Player selects Tower Boss Raid.</li>
+      <li>Player selects a Raid Level.</li>
+      <li>Player selects a VCard.</li>
+      <li>The VCard is locked during the raid timer,
+          similar to the Journey system.</li>
+      <li>The raid runs using its own movement animation.</li>
+      <li>When the timer ends, the VCard returns with
+          its raid results and applicable rewards.</li>
+    </ol>
   </section>
 
   <section>
-    <h2>4. Battle System</h2>
-    <ul>
-      <li>Simple survival-based battle loop.</li>
-      <li>Battle mechanics will use ATK and DEF.</li>
-      <li class="pending">Exact combat calculations: To be defined.</li>
-      <li class="pending">Survival rules: To be defined.</li>
-    </ul>
+    <h2>4. Raid Side</h2>
+    <ol>
+      <li>The selected Raid Level determines the tower.</li>
+      <li>The VCard enters the tower.</li>
+      <li>Boss encounters use Zetsu Counter Blitz rules.</li>
+      <li>Winning allows movement to the next tower stage.</li>
+      <li>Losing results in the player's defeat.</li>
+    </ol>
   </section>
 
   <section>
-    <h2>5. Pending Design Decisions</h2>
+    <h2>5. Zetsu Counter Blitz Battle Rules</h2>
     <ul>
-      <li>ATK and DEF battle calculations.</li>
-      <li>Survival loop mechanics.</li>
-      <li>Battle progression.</li>
-      <li>Win and loss conditions.</li>
+      <li>Player and Boss alternate turns.</li>
+      <li>Each turn uses a coin flip.</li>
+      <li>HEADS = 1 successful hit.</li>
+      <li>First participant to score 3 hits wins.</li>
+      <li>Winning a Boss fight permits the VCard
+          to attack the RAID EGG.</li>
+    </ul>
+    <p>
+      These calculations happen automatically in the
+      background. Combat is presented through a small
+      movement animation rather than manual controls.
+    </p>
+  </section>
+
+  <section>
+    <h2>6. VCard ATK and DEF</h2>
+    <p>
+      ATK and DEF derive from the player's total
+      Scrap holdings.
+    </p>
+    <ul>
+      <li>ATK = Total Scraps / 2</li>
+      <li>DEF = Total Scraps / 2</li>
+      <li>ATK + DEF = Total Scrap balance</li>
+    </ul>
+    <p>
+      The combined ATK and DEF determine the balance
+      used to calculate RAID EGG health.
+    </p>
+    <p>
+      ATK is also the amount of damage dealt to
+      the RAID EGG after a successful Boss battle.
+    </p>
+  </section>
+
+  <section>
+    <h2>7. RAID EGG</h2>
+    <p>
+      The RAID EGG is one shared health bar covering
+      all 10 stages of the raid.
+    </p>
+    <ul>
+      <li>Each successful Boss fight permits one
+          attack against the RAID EGG.</li>
+      <li>The VCard's ATK is subtracted from the
+          remaining RAID EGG health.</li>
+      <li>RAID EGG health is based on the player's
+          combined ATK and DEF.</li>
+      <li>Raid Level 1 uses a multiplier of 5.</li>
+    </ul>
+
+    <h3>Raid Level 1 Calculation</h3>
+    <p>
+      RAID EGG HP = (ATK + DEF) × 5
+    </p>
+
+    <div class="example">
+      <strong>Example</strong>
+      <p>
+        VCard ATK: 2<br>
+        VCard DEF: 2<br>
+        Total Scrap balance: 4<br>
+        Raid Level: 1<br>
+        RAID EGG HP: (2 + 2) × 5 = 20
+      </p>
+      <p>
+        After winning a Boss fight:<br>
+        VCard attacks RAID EGG for 2 damage.<br>
+        Remaining RAID EGG HP: 18
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>8. Difficulty and Rewards</h2>
+    <p>
+      Tower Boss Raid difficulty scales with
+      the player's Scrap holdings.
+    </p>
+    <ul>
+      <li>More Scraps means higher ATK and DEF.</li>
+      <li>Higher combined stats increase RAID EGG health.</li>
+      <li>Higher RAID EGG health increases the challenge.</li>
+      <li>Greater difficulty provides greater rewards.</li>
+    </ul>
+    <p>
+      The purpose is to reward players for holding
+      more Scraps while requiring greater raid
+      performance to earn those rewards.
+    </p>
+  </section>
+
+  <section>
+    <h2>9. Raid Presentation</h2>
+    <ul>
+      <li>Timed raid using the existing VHouse
+          Journey-style locking approach.</li>
+      <li>Separate movement animation for Tower Boss Raid.</li>
+      <li>Boss encounters, coin flips, hit counts,
+          and RAID EGG damage run as background calculations.</li>
+      <li>VCard returns when the raid timer finishes.</li>
     </ul>
   </section>
+
 </main>
 </body>
 </html>
