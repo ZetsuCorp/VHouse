@@ -633,7 +633,7 @@ td { background:#1c1428 }
   justify-content:center;
 }
 /* Use the normal shared VHouse VCard appearance without local overrides. */
-.raid-choice-preview .vhouse-vcard-host { width:min(100%,205px,34dvh); }
+.raid-choice-preview .vhouse-vcard-host { width:min(100%,165px,25dvh); flex:0 0 auto; }
 .raid-choice-name {
   min-height:20px;
   text-align:center;
@@ -657,7 +657,7 @@ td { background:#1c1428 }
   .raid-roster-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
   .raid-roster-tile {padding:3px}
   .raid-roster-name {font-size:9px}
-  .raid-choice-preview .vhouse-vcard-host {width:min(100%,155px,34dvh)}
+  .raid-choice-preview .vhouse-vcard-host {width:min(100%,130px,25dvh)}
 }
 @media(prefers-reduced-motion:reduce){
   .raid-roster-tile {transition:none}
@@ -1053,7 +1053,12 @@ function renderRaidRoster(){
   const card=rosterCard();
   const preview=$("raidCardPreview");
   if(card){
-    window.VHouseVCard.render(preview,card);
+    let cardHost=preview.querySelector(".vhouse-vcard-host");
+    if(!cardHost){
+      cardHost=document.createElement("div");
+      preview.replaceChildren(cardHost);
+    }
+    window.VHouseVCard.render(cardHost,card);
   }else{
     preview.replaceChildren();
   }
