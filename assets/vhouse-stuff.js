@@ -16,10 +16,19 @@
     const description=root.querySelector("[data-description]");
     let request=0;
     function updateVCard(){
-      const store=window.VHouseCardStore;
-      const active=store?.getActive?.();
-      root.querySelector("[data-vcard-name]").textContent=active?.name||"—";
-      root.querySelector("[data-cards-owned]").textContent=String(store?.getCards?.().length||0);
+      const list=root.querySelector("[data-vcard-list]");
+      const cards=window.VHouseCardStore?.getCards?.()||[];
+      list.replaceChildren();
+      for(const card of cards){
+        const entry=document.createElement("div");
+        entry.className="vcard-name";
+        const heading=document.createElement("small");
+        heading.textContent="VCARD NAME";
+        const value=document.createElement("strong");
+        value.textContent=card.name||"VCard";
+        entry.append(heading,value);
+        list.append(entry);
+      }
     }
     function showMessage(heading,message){
       host.replaceChildren();
