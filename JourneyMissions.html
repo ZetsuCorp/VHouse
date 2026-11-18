@@ -668,6 +668,22 @@ button.journey-away-dot:focus-visible{
   font-size:21px;
   color:#ffe3aa;
 }
+.loot-total{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+  margin-top:7px;
+  padding:6px 2px 0;
+  border-top:1px solid #8b6e46;
+  color:#ffe3aa;
+  font-size:11px;
+  font-weight:900;
+}
+.loot-total strong{
+  font-size:16px;
+  white-space:nowrap;
+}
 .claim-footer{
   margin-top:auto;
 }
@@ -1005,6 +1021,10 @@ td{
             </div>
 
             <div class="loot-values" id="receiptRewards"></div>
+            <div class="loot-total">
+              <span>TOTAL EARNED</span>
+              <strong id="receiptTotalEarned">$0.00 USD</strong>
+            </div>
 
             <div class="claim-footer">
               <button
