@@ -573,21 +573,26 @@ td { background:#1c1428 }
 .raid-roster-count { color:#e2c391; font-weight:800; }
 .raid-roster-grid {
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  grid-auto-rows:calc((100% - 18px)/4);
+  gap:6px;
   align-content:start;
   flex:1;
   min-height:0;
-  overflow:auto;
-  padding:5px;
+  overflow-x:hidden;
+  overflow-y:auto;
+  padding:3px;
   scrollbar-color:#9a70b6 #160f25;
 }
 .raid-roster-tile {
   display:flex;
   flex-direction:column;
-  gap:5px;
+  gap:2px;
   min-width:0;
-  padding:6px;
+  min-height:0;
+  height:100%;
+  overflow:hidden;
+  padding:4px;
   border:2px solid #67527a;
   border-radius:7px;
   background:#21152c;
@@ -611,7 +616,8 @@ td { background:#1c1428 }
   display:grid;
   place-items:center;
   width:100%;
-  aspect-ratio:4/3;
+  flex:1;
+  min-height:0;
   overflow:hidden;
   border:1px solid #826b9f;
   border-radius:4px;
@@ -620,8 +626,24 @@ td { background:#1c1428 }
   font-size:30px;
 }
 .raid-roster-art img { display:block; width:100%; height:100%; object-fit:cover; }
-.raid-roster-name { font-size:11px; font-weight:900; overflow-wrap:anywhere; }
-.raid-roster-label { color:#d5adf3; font-size:9px; font-weight:800; }
+.raid-roster-name { font-size:11px; font-weight:900; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.raid-roster-label { color:#d5adf3; font-size:9px; font-weight:800; white-space:nowrap; }
+.raid-empty-slot {
+  cursor:default;
+  border-style:dashed;
+  border-color:#493b58;
+  background:#170f20;
+  align-items:center;
+  justify-content:center;
+}
+.raid-empty-label {
+  color:#a998bd;
+  font-weight:800;
+  font-size:clamp(7px,.85vw,12px);
+  line-height:1.25;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
 .raid-roster-message { color:#b8a9c8; margin:4px; font-weight:700; }
 .raid-choice-panel h2 { text-align:center; margin:0; }
 .raid-choice-preview {
@@ -654,8 +676,8 @@ td { background:#1c1428 }
 #towerPreviewArt img { display:block; width:100%; height:100%; object-fit:cover; border-radius:4px; }
 @media(max-width:700px) {
   .raid-select-layout {grid-template-columns:minmax(0,1.5fr) minmax(155px,.85fr);gap:8px}
-  .raid-roster-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-  .raid-roster-tile {padding:3px}
+  .raid-roster-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;grid-auto-rows:calc((100% - 12px)/4)}
+  .raid-roster-tile {padding:2px;gap:1px}
   .raid-roster-name {font-size:9px}
   .raid-choice-preview .vhouse-vcard-host {width:min(100%,130px,25dvh)}
 }
@@ -1004,6 +1026,7 @@ function validVCardImage(src){
 }
 function renderRaidRoster(){
   const roster=$("raidRoster");
+  const previousScroll=roster.scrollTop;
   const cards=raidAuth?.getUser() ? raidStore.getCards() : [];
   const selectable=cards.filter(card=>!raidStore.isLocked(card.id));
   if(!selectable.some(card=>String(card.id)===String(rosterSelectedId))){
@@ -1045,6 +1068,17 @@ function renderRaidRoster(){
     });
     roster.append(tile);
   }
+  // Show 24 slots before the roster needs a scrollbar.
+  for(let i=cards.length;i<24;i++){
+    const blank=document.createElement("div");
+    blank.className="raid-roster-tile raid-empty-slot";
+    const label=document.createElement("span");
+    label.className="raid-empty-label";
+    label.textContent="CREATE A V CARD";
+    blank.append(label);
+    roster.append(blank);
+  }
+  roster.scrollTop=previousScroll;
   $("raidRosterCount").textContent=cards.length+" VCARD"+(cards.length===1?"":"S");
   $("raidRosterMessage").textContent=rosterLoadError ||
     (!raidAuth?.getUser()?"SIGN IN TO VHOUSE TO VIEW YOUR VCARDS":
