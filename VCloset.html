@@ -255,7 +255,6 @@ html, body {
   let historyLoading=false;
   let statsClient=null;
   let statsPlayerId=null;
-  let earningsRefreshTimer=null;
 
   function statField(id,value){
     const el=statsPanel?.querySelector('[data-stat-field="'+id+'"]');
@@ -322,21 +321,6 @@ html, body {
       }
     }
     return earningsCents(scraps,crypto);
-  }
-  async function loadCurrentEarnings(ticket=statsLoadSequence){
-    if(!statsClient||!statsCard||ticket!==statsLoadSequence)return;
-    const {data,error}=await statsClient.from("vhouse_journey_records")
-      .select("status,encounter_results,snapshot")
-      .eq("player_id",statsPlayerId).eq("card_id",String(statsCard.id))
-      .in("status",["ON_JOURNEY","RESULTS_READY"])
-      .order("started_at",{ascending:false}).limit(1).maybeSingle();
-    if(ticket!==statsLoadSequence)return;
-    if(error){
-      statField("currentEarned","—");
-      console.warn("Current Journey earnings unavailable:",error);
-      return;
-    }
-    statField("currentEarned",earningsUsd(data?recordEarningsCents(data):0));
   }
   function showSummary(summary){
     statField("journeys",displayCount(summary.journeys));
@@ -535,8 +519,7 @@ html, body {
       #billboard .activity th:nth-child(5),#billboard .activity td:nth-child(5){width:26%}
       #billboard .activity th:nth-child(6),#billboard .activity td:nth-child(6){width:16%}
       #billboard .right{min-width:0}
-      #billboard .earnings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0 0 3px}
-      #billboard .earnings-box{min-width:0;border:1px solid #8b6e46;background:#211525;padding:3px 5px}
+      #billboard .earnings-box{min-width:0;border:1px solid #8b6e46;background:#211525;padding:3px 5px;margin-top:5px}
       #billboard .earnings-box small{display:block;font-size:8px;color:#c3a7bc;font-weight:800}
       #billboard .earnings-box strong{display:block;font-size:13px;color:#4bea9b;margin-top:1px;white-space:nowrap}
       #billboard .earnings-note{font-size:8px;line-height:1.2;color:#d4bd91;margin:0}
@@ -614,11 +597,6 @@ html, body {
               <div class="metric"><small>ENCOUNTER LOSSES</small><strong data-stat-field="losses">0</strong></div>
               <div class="metric"><small>LOOT BATCHES</small><strong id="totalLootBatches">0</strong></div>
             </div>
-            <div class="earnings-grid">
-              <div class="earnings-box"><small>TOTAL EARNED</small><strong data-stat-field="totalEarned">—</strong></div>
-              <div class="earnings-box"><small>CURRENT JOURNEY</small><strong data-stat-field="currentEarned">—</strong></div>
-            </div>
-            <p class="earnings-note">Total USD value earned by this VCard through Journey encounters, including Scrap rewards ($0.25 per bag) and SOL or $AWT rewards ($0.10 per CRYPTO bag).</p>
           </section>
           <section class="chartbox"><div class="sect">TIME ON EACH STAGE</div>
             <div class="stage-grid">${Array.from({length:10},(_,i)=>'<div class="stage-tile" data-stage="'+(i+1)+'"><span>STAGE '+(i+1)+'</span><strong>0m 00s</strong><small>0 JOURNEYS</small></div>').join("")}</div>
@@ -629,6 +607,8 @@ html, body {
               <div class="loot-tile"><small>SCRAPS</small><strong data-loot="SCRAP">0</strong></div>
               <div class="loot-tile"><small>CRYPTO</small><strong data-loot="CRYPTO">0</strong></div>
             </div>
+            <div class="earnings-box"><small>TOTAL EARNED</small><strong data-stat-field="totalEarned">—</strong></div>
+            <p class="earnings-note">Total USD value earned by this VCard through Journey encounters, including Scrap rewards ($0.25 per bag) and SOL or $AWT rewards ($0.10 per CRYPTO bag).</p>
           </section>
         </div>
       </div>
@@ -669,14 +649,10 @@ html, body {
     statsPanel=panel;
   }
   function closeCardStats(){
-    if(earningsRefreshTimer!==null)clearInterval(earningsRefreshTimer);
-    earningsRefreshTimer=null;
     statsOverlay.hidden=true;statsCard=null;statsClient=null;++statsLoadSequence;
   }
   async function openCardStats(card){
     if(!card)return;
-    if(earningsRefreshTimer!==null)clearInterval(earningsRefreshTimer);
-    earningsRefreshTimer=null;
     statsCard=card;statsOverlay.hidden=false;
     const ticket=++statsLoadSequence;
     historyPage=0;historyCount=0;historyLoading=false;
@@ -701,12 +677,6 @@ html, body {
       const loot=data?.loot||{};
       statsPanel.querySelector("#totalLootBatches").textContent=
         displayCount(Number(loot.IGM||0)+Number(loot.SCRAP||0)+Number(loot.CRYPTO||0));
-      await loadCurrentEarnings(ticket);
-      if(ticket!==statsLoadSequence)return;
-      earningsRefreshTimer=setInterval(()=>{
-        if(!document.hidden&&ticket===statsLoadSequence)
-          void loadCurrentEarnings(ticket);
-      },10000);
       await loadHistoryPage(ticket);
       if(ticket!==statsLoadSequence)return;
       fillCardStats(card);
