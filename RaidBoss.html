@@ -625,7 +625,15 @@ td { background:#1c1428 }
   color:#dab8f5;
   font-size:30px;
 }
-.raid-roster-art img { display:block; width:100%; height:100%; object-fit:cover; }
+.raid-roster-art img { display:block; width:100%; height:100%; object-fit:contain; }
+/* Colored backdrops behind actual VCards; empty slots remain unchanged. */
+.raid-roster-tile:not(.raid-empty-slot) .raid-roster-art { padding:3px; }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+1) .raid-roster-art { background:linear-gradient(145deg,#7f326d,#271346); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+2) .raid-roster-art { background:linear-gradient(145deg,#28598a,#142b50); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+3) .raid-roster-art { background:linear-gradient(145deg,#9c6825,#392313); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+4) .raid-roster-art { background:linear-gradient(145deg,#307b62,#143b39); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n+5) .raid-roster-art { background:linear-gradient(145deg,#853b48,#39142e); }
+.raid-roster-tile:not(.raid-empty-slot):nth-child(6n) .raid-roster-art { background:linear-gradient(145deg,#5e4c9d,#23173f); }
 .raid-roster-name { font-size:11px; font-weight:900; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .raid-roster-label { color:#d5adf3; font-size:9px; font-weight:800; white-space:nowrap; }
 .raid-empty-slot {
