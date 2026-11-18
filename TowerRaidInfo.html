@@ -14,7 +14,12 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; font-fam
 .info-image { width:100%; height:100%; object-fit:contain; display:block; }
 .raid-back-button { position:absolute; left:3%; bottom:5%; z-index:2; }
 .continue-button { position:absolute; left:50%; bottom:5%; transform:translateX(-50%); padding:1% 4%; background:#160d27; color:white; border:2px solid #ffb62d; border-radius:6px; font-weight:900; font-size:clamp(12px,1.3vw,20px); cursor:pointer; box-shadow:0 0 12px #ff9d2966; z-index:2; }
-.continue-button:hover { background:#36204e; box-shadow:0 0 18px #ffb62d99; }
+.continue-button:hover { background:rgba(54,32,78,.72); box-shadow:0 0 18px #ffb62d99; }
+/* Semi-transparent navigation buttons preserve visibility of the background art. */
+.raid-back-button,
+.continue-button { background:rgba(22,13,39,.58); }
+.raid-back-button:hover,
+.raid-back-button:focus-visible { background:rgba(54,32,78,.72); }
 
 /* Index map's drifting white sparkles. */
 .map-mist {
