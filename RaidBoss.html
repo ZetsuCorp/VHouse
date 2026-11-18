@@ -1,0 +1,300 @@
+
+"use strict";
+
+/*
+  TOWER BOSS RAID — LOCAL DEMO
+
+  Secure coin flips:
+  - Fresh 256-bit random value for every attempt.
+  - SHA-256 hashes that value.
+  - One hash bit determines HEADS or TAILS.
+  - No Math.random().
+  - Requires HTTPS or localhost.
+
+  Battle rules remain unchanged.
+*/
+
+const $ = id => document.getElementById(id);
+const multipliers = {1:5, 2:10, 3:15};
+
+const demoCard = {
+  id:"example",
+  name:"EXAMPLE VCARD",
+  atk:2,
+  def:2
+};
+
+let raid = null;
+let raidInterval = null;
+let seconds = 0;
+let currentTurn = "player";
+let playerHits = 0;
+let bossHits = 0;
+let flipInProgress = false;
+
+function showScreen(name) {
+  for(const id of ["setupScreen","travelScreen","completeScreen"]) {
+    $(id).hidden = id !== name;
+  }
+}
+
+function calculateEggHp(level,card) {
+  return (card.atk + card.def) * multipliers[level];
+}
+
+function updateSetup() {
+  const level = Number($("raidLevel").value);
+  $("setupMultiplier").textContent = multipliers[level] + "×";
+  $("setupEggHp").textContent = calculateEggHp(level,demoCard);
+  $("previewName").textContent = demoCard.name;
+  $("previewAtk").textContent = demoCard.atk;
+  $("previewDef").textContent = demoCard.def;
+}
+
+function formatTime(value) {
+  const minutes = String(Math.floor(value/60)).padStart(2,"0");
+  const secs = String(value%60).padStart(2,"0");
+  return minutes + ":" + secs;
+}
+
+/* SECURE SHA-256 COIN FLIP */
+
+async function secureCoinFlip() {
+  const randomBytes = new Uint8Array(32);
+  crypto.getRandomValues(randomBytes);
+
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    randomBytes
+  );
+
+  const hash = new Uint8Array(digest);
+
+  // One unbiased binary outcome per SHA-256 hash.
+  return (hash[0] & 1) === 1;
+}
+
+function renderEgg() {
+  const percent = raid.eggMax > 0
+    ? (raid.eggHp / raid.eggMax) * 100
+    : 0;
+
+  $("eggFill").style.width = percent + "%";
+  $("eggHealth").textContent =
+    raid.eggHp + " / " + raid.eggMax + " HP";
+}
+
+function renderBossGrid() {
+  const grid = $("bossGrid");
+  grid.replaceChildren();
+
+  for(let i=1;i<=10;i++) {
+    const dot = document.createElement("div");
+    dot.className = "boss-dot";
+    dot.textContent = i;
+
+    const result = raid.results.find(r=>r.boss===i);
+
+    if(result) dot.classList.add(result.win?"win":"loss");
+    else if(i===raid.boss) dot.classList.add("current");
+
+    grid.append(dot);
+  }
+}
+
+function updateHits() {
+  $("playerHits").textContent = playerHits;
+  $("bossHits").textContent = bossHits;
+}
+
+function startRaid() {
+  if(!window.crypto?.getRandomValues ||
+     !window.crypto?.subtle?.digest) {
+    $("setupDescription").textContent =
+      "Secure SHA-256 coin flips require HTTPS or localhost.";
+    return;
+  }
+
+  clearInterval(raidInterval);
+
+  const level = Number($("raidLevel").value);
+  const eggMax = calculateEggHp(level,demoCard);
+
+  raid = {
+    level,
+    card:{...demoCard},
+    eggMax,
+    eggHp:eggMax,
+    boss:1,
+    results:[],
+    completed:false,
+    defeated:false
+  };
+
+  seconds=0;
+  playerHits=0;
+  bossHits=0;
+  currentTurn="player";
+  flipInProgress=false;
+
+  $("timer").textContent="00:00";
+  $("battleLog").textContent="Entering tower…";
+
+  showScreen("travelScreen");
+  renderEgg();
+  renderBossGrid();
+  updateHits();
+
+  raidInterval=setInterval(()=>{
+    seconds++;
+    $("timer").textContent=formatTime(Math.floor(seconds/4));
+    void performTurn();
+  },250);
+}
+
+/* ZETSU COUNTER BLITZ */
+
+async function performTurn() {
+  if(!raid || raid.completed || flipInProgress) return;
+
+  flipInProgress=true;
+
+  try {
+    const heads = await secureCoinFlip();
+
+    if(!raid || raid.completed) return;
+
+    const actor = currentTurn;
+
+    if(heads) {
+      if(actor==="player") playerHits++;
+      else bossHits++;
+    }
+
+    $("battleCaption").textContent =
+      "BOSS " + raid.boss + " — " + actor.toUpperCase();
+
+    $("battleLog").textContent =
+      (actor==="player"?"VCARD":"BOSS") +
+      " FLIPPED " + (heads?"HEADS — HIT":"TAILS — MISS");
+
+    updateHits();
+
+    if(playerHits===3) {
+      finishBoss(true);
+      return;
+    }
+
+    if(bossHits===3) {
+      finishBoss(false);
+      return;
+    }
+
+    currentTurn=actor==="player"?"boss":"player";
+
+  } catch(error) {
+    clearInterval(raidInterval);
+    console.error("Secure coin flip failed:",error);
+    $("battleLog").textContent =
+      "SECURE RANDOMNESS UNAVAILABLE";
+  } finally {
+    flipInProgress=false;
+  }
+}
+
+function finishBoss(won) {
+  const damage = won
+    ? Math.min(raid.card.atk,raid.eggHp)
+    : 0;
+
+  if(won) raid.eggHp-=damage;
+
+  raid.results.push({
+    boss:raid.boss,
+    win:won,
+    damage,
+    eggHp:raid.eggHp
+  });
+
+  $("battleLog").textContent=won
+    ? "BOSS DEFEATED — RAID EGG HIT FOR " + damage
+    : "VCARD DEFEATED";
+
+  renderEgg();
+  renderBossGrid();
+
+  if(!won) {
+    raid.defeated=true;
+    finishRaid();
+    return;
+  }
+
+  if(raid.boss>=10 || raid.eggHp<=0) {
+    finishRaid();
+    return;
+  }
+
+  raid.boss++;
+  playerHits=0;
+  bossHits=0;
+  currentTurn="player";
+
+  updateHits();
+  renderBossGrid();
+}
+
+function finishRaid() {
+  clearInterval(raidInterval);
+  raid.completed=true;
+
+  const wins=raid.results.filter(r=>r.win).length;
+  const damage=raid.eggMax-raid.eggHp;
+
+  $("receiptLevel").textContent="LEVEL " + raid.level;
+  $("receiptWins").textContent=wins + " / 10";
+  $("receiptDamage").textContent=damage;
+  $("receiptEggHp").textContent=
+    raid.eggHp + " / " + raid.eggMax;
+
+  $("resultDescription").textContent=raid.defeated
+    ? "VCARD DEFEATED"
+    : "RAID RUN FINISHED";
+
+  const rows=$("resultRows");
+  rows.replaceChildren();
+
+  raid.results.forEach(result=>{
+    const tr=document.createElement("tr");
+    const values=[
+      result.boss,
+      "BOSS " + result.boss,
+      result.win?"WIN":"LOSS",
+      result.damage,
+      result.eggHp
+    ];
+
+    values.forEach((value,index)=>{
+      const td=document.createElement("td");
+      td.textContent=value;
+
+      if(index===2) {
+        td.className=result.win?"win-text":"loss-text";
+      }
+
+      tr.append(td);
+    });
+
+    rows.append(tr);
+  });
+
+  showScreen("completeScreen");
+}
+
+$("raidLevel").addEventListener("change",updateSetup);
+$("startButton").addEventListener("click",startRaid);
+$("confirmButton").addEventListener("click",()=>{
+  raid=null;
+  showScreen("setupScreen");
+});
+
+updateSetup();
