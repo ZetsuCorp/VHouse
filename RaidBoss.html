@@ -1002,7 +1002,9 @@ const rosterCard = () => raidStore?.getCards().find(
 ) || null;
 function validVCardImage(src){
   return typeof src==="string" &&
-    /^(https?:\\/\\/|blob:|data:image\\/(?:svg\\+xml|jpeg|png|webp|gif))/i.test(src);
+    (src.startsWith("https://") || src.startsWith("http://") ||
+     src.startsWith("blob:") ||
+     /^data:image\/(?:svg\+xml|jpeg|png|webp|gif)/i.test(src));
 }
 function renderRaidRoster(){
   const roster=$("raidRoster");
