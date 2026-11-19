@@ -21,49 +21,78 @@
 
 body {
   margin:0;
-  width:100vw;
-  height:100dvh;
-  padding:0;
+  width:100%;
+  height:100%;
   overflow:hidden;
-  display:grid;
-  place-items:center;
   background:#000;
   color:#f5e8f5;
   font:13px Arial,sans-serif;
 }
 
-.game {
-  width:min(100vw,200dvh);
-  aspect-ratio:2 / 1;
-  height:auto;
-  min-height:0;
-  border:2px solid var(--gold);
-  border-radius:12px;
-  background:linear-gradient(145deg,#291a3c,#0c0a18);
-  box-shadow:0 15px 55px #0009;
+/* VHouse's existing game-container / map-container sizing. */
+.game-container {
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   overflow:hidden;
 }
-
-main {
+.map-container {
+  position:relative;
+  width:min(100vw,200dvh);
+  aspect-ratio:2 / 1;
+  flex-shrink:0;
+  container-type:inline-size;
+  overflow:hidden;
+  border:2px solid var(--gold);
+}
+.raid-stage-image {
+  position:absolute;
+  inset:0;
+  display:block;
   width:100%;
   height:100%;
-  padding:18px;
+  object-fit:contain;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
 }
-
-section {
+.raid-stage-content {
+  position:absolute;
+  inset:0;
+  z-index:1;
+  width:100%;
+  height:100%;
+  padding:clamp(6px,1cqw,14px);
+  overflow:hidden;
+}
+.raid-stage-content > section {
+  width:100%;
   height:100%;
   min-height:0;
+  overflow:hidden;
 }
-
-/* Same raid tower background on stages 2–5; stage 1 is unchanged. */
-#cardSelectScreen,
-#setupScreen,
-#travelScreen,
-#completeScreen {
-  background-image:url("assets/TOWERSELECT.png");
-  background-position:center;
-  background-size:cover;
-  background-repeat:no-repeat;
+.rotate-screen {
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:#000;
+  color:#fff;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:20px;
+  text-align:center;
+  padding:24px;
+}
+.rotate-screen h2 {font-size:24px;}
+.rotate-screen p {font-size:16px;color:#bbb;}
+@media (orientation:portrait) {
+  .rotate-screen {display:flex;}
+  .game-container {display:none!important;}
 }
 
 h1,h2,h3 {
@@ -110,8 +139,8 @@ select {
 .panel {
   border:1px solid #755b8d;
   border-radius:9px;
-  background:#160f25;
-  padding:15px;
+  background:rgba(22,15,37,.56);
+  padding:clamp(7px,1cqw,13px);
 }
 
 .metric-row {
@@ -327,6 +356,7 @@ select {
 .battle-world {
   min-height:0;
   position:relative;
+  background:rgba(16,12,32,.3);
 }
 
 .battle-world .tower {
@@ -467,9 +497,9 @@ select {
 
 .complete-screen {
   display:grid;
-  grid-template-columns:270px minmax(0,1fr);
+  grid-template-columns:minmax(160px,30%) minmax(0,1fr);
   grid-template-rows:auto minmax(0,1fr);
-  gap:12px;
+  gap:clamp(5px,1cqw,12px);
 }
 
 .complete-title {
@@ -480,7 +510,7 @@ select {
 .receipt {
   border:3px solid var(--gold);
   border-radius:9px;
-  background:linear-gradient(155deg,#342048,#100e1c);
+  background:linear-gradient(155deg,#342048b8,#100e1cb5);
   padding:15px;
   display:flex;
   flex-direction:column;
@@ -556,15 +586,15 @@ td { background:#1c1428 }
 }
 
 @media(max-width:700px) {
-  main {padding:9px}
-  .panel {padding:9px}
+  .raid-stage-content {padding:5px}
+  .panel {padding:6px}
   .metric b {font-size:16px}
   .metric small {font-size:8px}
   .fighter {width:65px;height:75px;font-size:35px}
-  .complete-screen {
-    grid-template-columns:215px minmax(0,1fr);
-  }
-  .receipt {padding:9px}
+  .complete-screen {grid-template-columns:minmax(120px,33%) minmax(0,1fr);}
+  .receipt {padding:6px}
+  .raid-screen {gap:5px}
+  .raid-bottom {gap:5px}
 }
 
 @media(prefers-reduced-motion:reduce) {
@@ -574,8 +604,8 @@ td { background:#1c1428 }
 /* STAGE 1 — PLAYER VCARD ROSTER */
 .raid-select-layout {
   display:grid;
-  grid-template-columns:minmax(0,1.55fr) minmax(230px,.8fr);
-  gap:14px;
+  grid-template-columns:minmax(0,1.55fr) minmax(180px,.8fr);
+  gap:clamp(5px,1cqw,12px);
   height:100%;
   min-height:0;
 }
@@ -794,8 +824,14 @@ td { background:#1c1428 }
 </head>
 
 <body>
-<div class="game">
-<main>
+<div class="rotate-screen">
+  <h2>Rotate Your Phone</h2>
+  <p>Please turn your device sideways to play.</p>
+</div>
+<main class="game-container">
+  <div class="map-container">
+    <img class="raid-stage-image" src="assets/TOWERSELECT.png" alt="" draggable="false">
+    <div class="raid-stage-content">
 
 <!-- STAGE 1 — SELECT PLAYER VCARD -->
 <section id="cardSelectScreen">
@@ -1052,8 +1088,9 @@ td { background:#1c1428 }
 
 </section>
 
+    </div>
+  </div>
 </main>
-</div>
 
 <script src="assets/vhouse-public-config.js"></script>
 <script src="assets/vhouse-auth.js"></script>
@@ -1117,6 +1154,9 @@ let currentTurn = "player";
 let playerHits = 0;
 let bossHits = 0;
 let flipInProgress = false;
+let towerTransitioning = false;
+let towerTransitionTimer = null;
+const TOWER_TRANSITION_MS = 800;
 
 /* SCREEN CONTROL */
 
@@ -1232,6 +1272,12 @@ $("confirmRaidCard").addEventListener("click",()=>{
   selectedRaidCard={...card};
   updateSetup();
   showScreen("setupScreen");
+  towerTransitioning=true;
+  clearTimeout(towerTransitionTimer);
+  towerTransitionTimer=setTimeout(()=>{
+    towerTransitioning=false;
+    if(selectedRaidCard && !raid)startRaid();
+  },TOWER_TRANSITION_MS);
 });
 raidStore.subscribe(renderRaidRoster);
 raidAuth.subscribe(user=>{
@@ -1261,7 +1307,8 @@ function positionTower(){
 
   const step=floorHeight+4;
   arena.style.setProperty("--floor-height",floorHeight+"px");
-  arena.style.setProperty("--vcard-width",Math.floor(floorHeight*.55)+"px");
+  arena.style.setProperty("--vcard-width",
+    Math.floor(Math.min(arena.clientWidth/2-12,floorHeight*.7))+"px");
 
   // Both columns have the same box dimensions; only the left VCard climbs.
   $("towerClimber").style.bottom=((towerCurrentLevel-1)*step)+"px";
@@ -1454,6 +1501,7 @@ async function performTurn() {
   if(
     !raid ||
     raid.completed ||
+    towerTransitioning ||
     flipInProgress
   ) return;
 
@@ -1559,7 +1607,6 @@ function finishBoss(won) {
   }
 
   raid.boss++;
-  renderTowerClimb(raid.boss);
 
   playerHits = 0;
   bossHits = 0;
@@ -1567,12 +1614,24 @@ function finishBoss(won) {
 
   updateHits();
   renderBossGrid();
+
+  // The VCard climbs only after the existing battle engine awards a victory.
+  towerTransitioning=true;
+  showScreen("setupScreen");
+  renderTowerClimb(raid.boss);
+  clearTimeout(towerTransitionTimer);
+  towerTransitionTimer=setTimeout(()=>{
+    towerTransitioning=false;
+    if(raid && !raid.completed)showScreen("travelScreen");
+  },TOWER_TRANSITION_MS);
 }
 
 /* FINISH RAID */
 
 function finishRaid() {
   clearInterval(raidInterval);
+  clearTimeout(towerTransitionTimer);
+  towerTransitioning=false;
 
   raid.completed = true;
 
@@ -1641,6 +1700,8 @@ function finishRaid() {
 $("confirmButton").addEventListener(
   "click",
   () => {
+    clearTimeout(towerTransitionTimer);
+    towerTransitioning=false;
     raid = null;
     selectedRaidCard=null;
     showScreen("cardSelectScreen");
