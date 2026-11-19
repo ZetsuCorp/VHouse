@@ -55,6 +55,17 @@ section {
   min-height:0;
 }
 
+/* Same raid tower background on stages 2–5; stage 1 is unchanged. */
+#cardSelectScreen,
+#setupScreen,
+#travelScreen,
+#completeScreen {
+  background-image:url("assets/TOWERSELECT.png");
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+
 h1,h2,h3 {
   color:var(--light);
   margin:0 0 10px;
@@ -139,8 +150,7 @@ select {
   height:100%;
   min-height:0;
   display:grid;
-  grid-template-rows:minmax(0,1fr) auto;
-  gap:6px;
+  grid-template-rows:minmax(0,1fr);
 }
 .tower-stage-arena {
   position:relative;
@@ -239,56 +249,8 @@ select {
   border-color:#4f9474;
   background:#193329;
 }
-.tower-stage-bar {
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  min-height:0;
-}
-.tower-stage-bar h1 {
-  margin:0 12px 0 0;
-  font-size:clamp(14px,2dvh,20px);
-  line-height:1;
-}
-.tower-stage-bar label {
-  font-weight:800;
-  color:var(--light);
-  white-space:nowrap;
-}
-.tower-stage-bar select {
-  width:auto;
-  min-width:160px;
-  max-width:220px;
-  padding:9px 12px;
-}
-.tower-stage-stat {
-  font-weight:900;
-  color:#e7ceac;
-  white-space:nowrap;
-}
-.tower-stage-bar .start-button {
-  width:auto;
-  min-width:125px;
-  padding:10px 15px;
-}
-#setupDescription {
-  flex-basis:100%;
-  text-align:center;
-  margin:0;
-  font-size:11px;
-  line-height:1;
-}
 @media(max-width:700px) {
   .tower-enemy-number {top:4px;left:5px;font-size:12px}
-  .tower-stage-bar {gap:4px}
-  .tower-stage-bar h1 {font-size:12px;margin-right:4px}
-  .tower-stage-bar label {font-size:10px}
-  .tower-stage-bar select {min-width:100px;padding:4px;font-size:10px}
-  .tower-stage-stat {font-size:9px}
-  .tower-stage-bar .start-button {min-width:95px;padding:6px;font-size:10px}
-  #setupDescription {font-size:9px}
 }
 
 .world {
@@ -955,18 +917,6 @@ td { background:#1c1428 }
         </div>
       </div>
     </div>
-    <div class="tower-stage-bar">
-      <h1>SELECT TOWER</h1>
-      <label for="raidLevel">RAID LEVEL</label>
-      <select id="raidLevel">
-        <option value="1">LEVEL 1 — 5×</option>
-        <option value="2">LEVEL 2 — 10×</option>
-        <option value="3">LEVEL 3 — 15×</option>
-      </select>
-      <span class="tower-stage-stat"><span id="setupMultiplier">5×</span> · EGG HP <span id="setupEggHp">20</span></span>
-      <button type="button" class="primary start-button" id="startButton">START RAID</button>
-      <p class="muted" id="setupDescription"></p>
-    </div>
   </div>
 </section>
 
@@ -1322,11 +1272,7 @@ function positionTower(){
 }
 
 function updateSetup() {
-  const card=selectedRaidCard;
-  const level=Number($("raidLevel").value);
-  $("setupMultiplier").textContent=multipliers[level]+"×";
-  $("setupEggHp").textContent=card ? calculateEggHp(level,card) : "—";
-  window.VHouseVCard.render($("towerCardPreview"),card);
+  window.VHouseVCard.render($("towerCardPreview"),selectedRaidCard);
   renderTowerClimb(1);
 }
 
@@ -1449,16 +1395,13 @@ function startRaid() {
     !window.crypto?.getRandomValues ||
     !window.crypto?.subtle?.digest
   ) {
-    $("setupDescription").textContent =
-      "Secure SHA-256 requires HTTPS or localhost.";
+    console.error("Secure SHA-256 requires HTTPS or localhost.");
     return;
   }
 
   clearInterval(raidInterval);
 
-  const level = Number(
-    $("raidLevel").value
-  );
+  const level = 1;
 
   const eggMax = calculateEggHp(
     level,
@@ -1694,16 +1637,6 @@ function finishRaid() {
 }
 
 /* BUTTONS */
-
-$("raidLevel").addEventListener(
-  "change",
-  updateSetup
-);
-
-$("startButton").addEventListener(
-  "click",
-  startRaid
-);
 
 $("confirmButton").addEventListener(
   "click",
