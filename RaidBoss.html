@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VHouse — Tower Boss Raid Demo</title>
+<link rel="stylesheet" href="assets/vhouse-buttons.css">
 
 <style>
 :root {
@@ -59,32 +60,13 @@ body {
   user-select:none;
   -webkit-user-drag:none;
 }
-.raid-town-back {
-  position:absolute;
-  left:1.2%;
-  top:70%;
-  transform:translateY(-50%);
-  z-index:10;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:8%;
-  padding:clamp(4px,0.5cqw,8px) clamp(3px,0.4cqw,7px);
-  border:1px solid var(--gold);
-  border-radius:6px;
-  background:#160d27e8;
-  color:#ffe3ad;
-  font-size:clamp(8px,0.8cqw,13px);
-  line-height:1.25;
-  text-align:center;
-  font-weight:900;
-  text-decoration:none;
+.shop-back-button {
+  position: absolute;
+  left: 5.56%;
+  top: 70%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
 }
-.raid-town-back:hover,.raid-town-back:focus-visible {
-  background:#50305c;
-  outline:1px solid #f4d79f;
-}
-
 .raid-stage-content {
   position:absolute;
   inset:0;
@@ -1167,7 +1149,7 @@ td { background:#1c1428 }
 </section>
 
     </div>
-    <a class="raid-town-back" href="./index.html">BACK TO V TOWN</a>
+    <a class="vhouse-btn back-button shop-back-button" href="./index.html">← BACK</a>
   </div>
 </main>
 
