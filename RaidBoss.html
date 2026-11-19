@@ -661,7 +661,8 @@ td { background:#1c1428 }
 .raid-roster-message { color:#b8a9c8; margin:4px; font-weight:700; }
 .raid-choice-panel h2 { text-align:center; margin:0; }
 .raid-choice-preview {
-  flex:1;
+  flex:0 1 auto;
+  height:min(34dvh,250px);
   min-height:0;
   overflow:hidden;
   display:flex;
@@ -677,7 +678,65 @@ td { background:#1c1428 }
   font-weight:900;
   overflow-wrap:anywhere;
 }
-#confirmRaidCard { width:100%; }
+.raid-choice-panel {gap:6px;}
+.raid-records {
+  min-height:0;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+  overflow:hidden;
+}
+.raid-records-title {
+  margin:0;
+  color:var(--light);
+  font-size:clamp(10px,1.45dvh,14px);
+  font-weight:900;
+  text-align:center;
+}
+.raid-records-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;
+}
+.raid-record-metric {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  padding:5px 2px;
+  border:1px solid #6d527f;
+  border-radius:5px;
+  background:#24182e;
+}
+.raid-record-value {
+  color:#ffe0a6;
+  font-size:clamp(13px,2.2dvh,19px);
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+}
+.raid-record-label {
+  color:#d7bde8;
+  font-size:clamp(8px,1.15dvh,10px);
+  font-weight:800;
+  text-align:center;
+}
+.raid-earnings {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:5px;
+}
+.raid-earnings .raid-record-metric {padding:4px 2px;}
+.raid-earnings-total {
+  grid-column:1/-1;
+  text-align:center;
+  font-size:clamp(15px,2.5dvh,23px);
+  font-weight:900;
+  color:#ffe0a6;
+}
+#confirmRaidCard { width:100%; flex:0 0 auto; }
 #confirmRaidCard:disabled { cursor:not-allowed; opacity:.45; }
 .raid-selected-name {
   border:1px solid var(--gold);
@@ -720,6 +779,23 @@ td { background:#1c1428 }
       <h2>SELECTED VCARD</h2>
       <div class="raid-choice-preview" id="raidCardPreview"></div>
       <div class="raid-choice-name" id="raidChoiceName">CHOOSE A VCARD</div>
+      <div class="raid-records" aria-label="Selected VCard Tower Boss Raid records">
+        <h3 class="raid-records-title">TOWER BOSS RECORD</h3>
+        <div class="raid-records-grid">
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatBattles">0</span><span class="raid-record-label">BATTLES</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatWins">0</span><span class="raid-record-label">WINS</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatLosses">0</span><span class="raid-record-label">LOSSES</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatRaids">0</span><span class="raid-record-label">RAIDS</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatBosses">0</span><span class="raid-record-label">BOSSES DEFEATED</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatEggs">0</span><span class="raid-record-label">EGGS BROKEN</span></div>
+        </div>
+        <h3 class="raid-records-title">INDIVIDUAL VCARD EARNINGS</h3>
+        <div class="raid-earnings">
+          <div class="raid-earnings-total" id="raidEarnedTotal">$0.00</div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidEarnedBoss">$0.00</span><span class="raid-record-label">BOSS REWARDS</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidEarnedEgg">$0.00</span><span class="raid-record-label">EGG REWARDS</span></div>
+        </div>
+      </div>
       <button class="primary" type="button" id="confirmRaidCard" disabled>CONFIRM VCARD</button>
     </div>
   </div>
@@ -1101,6 +1177,13 @@ function renderRaidRoster(){
     preview.replaceChildren();
   }
   $("raidChoiceName").textContent=card?.name||"CHOOSE A VCARD";
+  // Raid results are not persisted yet: never show estimated rewards as earnings.
+  for(const id of ["raidStatBattles","raidStatWins","raidStatLosses","raidStatRaids","raidStatBosses","raidStatEggs"]){
+    $(id).textContent=card?"0":"—";
+  }
+  for(const id of ["raidEarnedTotal","raidEarnedBoss","raidEarnedEgg"]){
+    $(id).textContent=card?"$0.00":"—";
+  }
   $("confirmRaidCard").disabled=!card||raidStore.isLocked(card.id);
 }
 async function loadRaidRoster(){
