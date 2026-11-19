@@ -59,6 +59,27 @@ body {
   user-select:none;
   -webkit-user-drag:none;
 }
+.raid-town-back {
+  position:absolute;
+  left:2%;
+  bottom:3%;
+  z-index:10;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:clamp(7px,0.9cqw,12px) clamp(12px,1.4cqw,18px);
+  border:1px solid var(--gold);
+  border-radius:6px;
+  background:#160d27e8;
+  color:#ffe3ad;
+  font-weight:900;
+  text-decoration:none;
+}
+.raid-town-back:hover,.raid-town-back:focus-visible {
+  background:#50305c;
+  outline:1px solid #f4d79f;
+}
+
 .raid-stage-content {
   position:absolute;
   inset:0;
@@ -1094,6 +1115,7 @@ td { background:#1c1428 }
 </section>
 
     </div>
+    <a class="raid-town-back" href="./index.html">BACK TO V TOWN</a>
   </div>
 </main>
 
