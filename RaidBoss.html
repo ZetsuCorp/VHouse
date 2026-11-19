@@ -213,54 +213,9 @@ select {
   place-items:center;
 }
 
-.setup-layout .vcard {
-  width:185px;
-  max-width:65%;
-  min-height:265px;
-  border:3px solid #bf9b5e;
-  border-radius:9px;
-  background:linear-gradient(155deg,#3e2851,#100d20);
-  box-shadow:
-    0 0 25px #000b,
-    0 0 12px #bf9b5e55;
-  padding:12px;
-  text-align:center;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-}
-
-.setup-layout .vcard small {
-  font-size:10px;
-  color:#dfc48f;
-}
-
-.setup-layout .vcard strong {
-  color:#fff;
-  overflow-wrap:anywhere;
-}
-
-.setup-layout .card-art {
-  height:110px;
-  display:grid;
-  place-items:center;
-  background:radial-gradient(circle,#48365d,#141022);
-  border:1px solid #876c9a;
-  border-radius:5px;
-  font-size:60px;
-}
-
-.setup-layout .card-stats {
-  display:flex;
-  justify-content:space-around;
-  border-top:1px solid #846a53;
-  padding-top:9px;
-}
-
-.setup-layout .card-stats b {
-  display:block;
-  color:#ffe0a6;
-  font-size:18px;
+.setup-layout .world-content .vhouse-vcard-host {
+  /* Show the existing complete VCard without modifying its appearance. */
+  width:min(72%,270px,34dvh);
 }
 
 .setup-panel {
@@ -533,8 +488,6 @@ td { background:#1c1428 }
   main {padding:9px}
   .setup-layout {gap:8px}
   .setup-panel,.panel {padding:9px}
-  .setup-layout .vcard {width:135px;min-height:215px}
-  .setup-layout .card-art {height:75px;font-size:42px}
   .metric b {font-size:16px}
   .metric small {font-size:8px}
   .fighter {width:65px;height:75px;font-size:35px}
@@ -752,7 +705,6 @@ td { background:#1c1428 }
   color:#ffe3ad;
   font-weight:800;
 }
-#towerPreviewArt img { display:block; width:100%; height:100%; object-fit:cover; border-radius:4px; }
 @media(max-width:700px) {
   .raid-select-layout {grid-template-columns:minmax(0,1.5fr) minmax(155px,.85fr);gap:8px}
   .raid-roster-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;grid-auto-rows:calc((100% - 12px)/4)}
@@ -820,28 +772,7 @@ td { background:#1c1428 }
       <div class="tower"></div>
 
       <div class="world-content">
-        <div class="vcard">
-          <small>VHOUSE VCARD</small>
-
-          <strong id="previewName">
-            EXAMPLE VCARD
-          </strong>
-
-          <div class="card-art" id="towerPreviewArt">◆</div>
-
-          <div class="card-stats">
-            <div>
-              <small>ATK</small>
-              <b id="previewAtk">2</b>
-            </div>
-
-            <div>
-              <small>DEF</small>
-              <b id="previewDef">2</b>
-            </div>
-          </div>
-
-        </div>
+        <div id="towerCardPreview"></div>
       </div>
     </div>
 
@@ -1238,19 +1169,7 @@ function updateSetup() {
   $("setupMultiplier").textContent=multipliers[level]+"×";
   $("setupEggHp").textContent=card ? calculateEggHp(level,card) : "—";
   $("vcardSelect").textContent=card?.name||"—";
-  $("previewName").textContent=card?.name||"NO VCARD";
-  $("previewAtk").textContent=card?.atk??"—";
-  $("previewDef").textContent=card?.def??"—";
-  const art=$("towerPreviewArt");
-  art.replaceChildren();
-  if(card&&validVCardImage(card.image)){
-    const image=document.createElement("img");
-    image.src=card.image;
-    image.alt=card.name||"VCard";
-    art.append(image);
-  }else{
-    art.textContent="◆";
-  }
+  window.VHouseVCard.render($("towerCardPreview"),card);
 }
 
 function formatTime(value) {
