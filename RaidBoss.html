@@ -659,39 +659,56 @@ td { background:#1c1428 }
   overflow-wrap:anywhere;
 }
 .raid-roster-message { color:#b8a9c8; margin:4px; font-weight:700; }
-.raid-choice-panel h2 { text-align:center; margin:0; }
+/* Right side: keep the entire NFT visible and give every record room. */
+.raid-choice-panel {
+  gap:clamp(4px,.7dvh,8px);
+  padding:clamp(8px,1.3dvh,15px);
+}
+.raid-choice-panel h2 {
+  text-align:center;
+  margin:0;
+  flex:0 0 auto;
+  line-height:1.2;
+  font-size:clamp(15px,2.35dvh,20px);
+}
 .raid-choice-preview {
-  flex:0 1 auto;
-  height:min(34dvh,250px);
+  flex:0 0 auto;
+  height:min(215px,28dvh);
   min-height:0;
-  overflow:hidden;
   display:flex;
   align-items:center;
   justify-content:center;
+  overflow:visible;
 }
-/* Use the normal shared VHouse VCard appearance without local overrides. */
-.raid-choice-preview .vhouse-vcard-host { width:min(100%,165px,25dvh); flex:0 0 auto; }
+/* Size the VCard itself to fit naturally; do not crop or alter its internals. */
+.raid-choice-preview .vhouse-vcard-host {
+  width:min(100%,126px,17dvh);
+  flex:0 0 auto;
+}
 .raid-choice-name {
-  min-height:20px;
+  flex:0 0 auto;
+  min-height:0;
   text-align:center;
   color:#f4d79f;
+  font-size:clamp(12px,1.8dvh,15px);
+  line-height:1.15;
   font-weight:900;
   overflow-wrap:anywhere;
 }
-.raid-choice-panel {gap:6px;}
 .raid-records {
+  flex:1 1 auto;
   min-height:0;
-  flex:1;
   display:flex;
   flex-direction:column;
-  justify-content:center;
-  gap:6px;
-  overflow:hidden;
+  justify-content:space-evenly;
+  gap:clamp(3px,.65dvh,7px);
+  overflow:visible;
 }
 .raid-records-title {
   margin:0;
   color:var(--light);
-  font-size:clamp(10px,1.45dvh,14px);
+  font-size:clamp(10px,1.6dvh,14px);
+  line-height:1.15;
   font-weight:900;
   text-align:center;
 }
@@ -705,38 +722,47 @@ td { background:#1c1428 }
   flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:2px;
   min-width:0;
-  padding:5px 2px;
+  min-height:0;
+  padding:5px 3px;
   border:1px solid #6d527f;
   border-radius:5px;
   background:#24182e;
 }
 .raid-record-value {
   color:#ffe0a6;
-  font-size:clamp(13px,2.2dvh,19px);
+  font-size:clamp(14px,2.2dvh,19px);
   font-weight:900;
+  line-height:1.1;
   font-variant-numeric:tabular-nums;
 }
 .raid-record-label {
   color:#d7bde8;
-  font-size:clamp(8px,1.15dvh,10px);
+  font-size:clamp(8px,1.2dvh,11px);
   font-weight:800;
+  line-height:1.15;
   text-align:center;
 }
 .raid-earnings {
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:5px;
+  gap:6px;
 }
-.raid-earnings .raid-record-metric {padding:4px 2px;}
+.raid-earnings .raid-record-metric {padding:5px 3px;}
 .raid-earnings-total {
   grid-column:1/-1;
   text-align:center;
-  font-size:clamp(15px,2.5dvh,23px);
+  font-size:clamp(17px,2.5dvh,23px);
+  line-height:1.1;
   font-weight:900;
   color:#ffe0a6;
 }
-#confirmRaidCard { width:100%; flex:0 0 auto; }
+#confirmRaidCard {
+  width:100%;
+  flex:0 0 auto;
+  padding:clamp(9px,1.5dvh,14px) 10px;
+}
 #confirmRaidCard:disabled { cursor:not-allowed; opacity:.45; }
 .raid-selected-name {
   border:1px solid var(--gold);
@@ -751,7 +777,13 @@ td { background:#1c1428 }
   .raid-select-layout {grid-template-columns:minmax(0,1.5fr) minmax(155px,.85fr);gap:8px}
   .raid-roster-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;grid-auto-rows:calc((100% - 12px)/4)}
   .raid-roster-tile {padding:2px;gap:1px}
-  .raid-choice-preview .vhouse-vcard-host {width:min(100%,130px,25dvh)}
+  .raid-choice-panel {padding:5px;gap:3px}
+  .raid-choice-preview {height:min(140px,27dvh)}
+  .raid-choice-preview .vhouse-vcard-host {width:min(100%,80px,16dvh)}
+  .raid-records-grid,.raid-earnings {gap:2px}
+  .raid-record-metric {padding:2px 1px;gap:1px}
+  .raid-record-label {font-size:7px}
+  .raid-record-value {font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){
   .raid-roster-tile {transition:none}
