@@ -299,6 +299,52 @@ select {
   border-color:#4f9474;
   background:#193329;
 }
+/* Matchup and result stamps sit over the characters, not in extra panels. */
+.tower-stamp {
+  position:absolute;
+  z-index:6;
+  left:50%;
+  bottom:25%;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  white-space:nowrap;
+  font-weight:1000;
+  font-family:Arial,sans-serif;
+  line-height:1;
+  letter-spacing:-.05em;
+  transform:translate(-50%,50%) rotate(-11deg);
+  text-shadow:0 3px 8px #000,0 0 16px #000;
+}
+.tower-stamp.is-versus {
+  color:#ffdc82;
+  font-size:clamp(46px,7cqw,105px);
+  -webkit-text-stroke:2px #623b25;
+  animation:towerVsStamp .85s cubic-bezier(.19,1.18,.4,1) both;
+}
+.tower-stamp.is-loss {
+  color:#ff6269;
+  border:clamp(3px,.4cqw,6px) solid currentColor;
+  border-radius:5px;
+  padding:clamp(4px,.5cqw,8px) clamp(8px,1cqw,16px);
+  font-size:clamp(29px,4.7cqw,72px);
+  box-shadow:0 0 15px #270707a8;
+  animation:towerLossStamp .85s cubic-bezier(.19,1.18,.4,1) both;
+}
+@keyframes towerVsStamp {
+  0% {opacity:0;transform:translate(-50%,50%) scale(3.2) rotate(-15deg)}
+  58% {opacity:1;transform:translate(-50%,50%) scale(.85) rotate(-11deg)}
+  80% {transform:translate(-50%,50%) scale(1.09) rotate(-11deg)}
+  100% {opacity:1;transform:translate(-50%,50%) scale(1) rotate(-11deg)}
+}
+@keyframes towerLossStamp {
+  0% {opacity:0;transform:translate(-50%,50%) scale(2.6) rotate(-17deg)}
+  65% {opacity:1;transform:translate(-50%,50%) scale(.92) rotate(-11deg)}
+  100% {opacity:1;transform:translate(-50%,50%) scale(1) rotate(-11deg)}
+}
+@media(prefers-reduced-motion:reduce) {
+  .tower-stamp.is-versus,.tower-stamp.is-loss {animation:none}
+}
 @media(max-width:700px) {
   .tower-enemy-number {top:4px;left:5px;font-size:12px}
 }
@@ -977,6 +1023,7 @@ td { background:#1c1428 }
             </div>
           </div>
         </div>
+        <div class="tower-stamp" id="towerStamp" aria-live="polite" hidden></div>
       </div>
     </div>
   </div>
@@ -1183,7 +1230,9 @@ let bossHits = 0;
 let flipInProgress = false;
 let towerTransitioning = false;
 let towerTransitionTimer = null;
-const TOWER_TRANSITION_MS = 800;
+const TOWER_VS_MS = 1250;
+const TOWER_LOSS_MS = 1350;
+const TOWER_CLIMB_MS = 1000;
 
 /* SCREEN CONTROL */
 
@@ -1297,14 +1346,16 @@ $("confirmRaidCard").addEventListener("click",()=>{
   const card=rosterCard();
   if(!card||raidStore.isLocked(card.id))return;
   selectedRaidCard={...card};
-  updateSetup();
   showScreen("setupScreen");
+  updateSetup();
   towerTransitioning=true;
+  showTowerStamp("VS","center",1);
   clearTimeout(towerTransitionTimer);
   towerTransitionTimer=setTimeout(()=>{
+    hideTowerStamp();
     towerTransitioning=false;
     if(selectedRaidCard && !raid)startRaid();
-  },TOWER_TRANSITION_MS);
+  },TOWER_VS_MS);
 });
 raidStore.subscribe(renderRaidRoster);
 raidAuth.subscribe(user=>{
@@ -1340,6 +1391,13 @@ function positionTower(){
   // Both columns have the same box dimensions; only the left VCard climbs.
   $("towerClimber").style.bottom=((towerCurrentLevel-1)*step)+"px";
 
+  // Keep the VS / LOSS stamp aligned with the active encounter during movement.
+  const stamp=$("towerStamp");
+  if(!stamp.hidden){
+    const level=Number(stamp.dataset.level)||towerCurrentLevel;
+    stamp.style.bottom=((level-1)*step+floorHeight/2)+"px";
+  }
+
   // Follow the climb without adding a scrollbar or moving bosses independently.
   $("towerWorld").style.transform=
     "translateY("+(Math.max(0,towerCurrentLevel-2)*step)+"px)";
@@ -1358,6 +1416,26 @@ function renderTowerClimb(bossNumber){
     floor.classList.toggle("is-current",number===towerCurrentLevel);
     floor.classList.toggle("is-defeated",number<towerCurrentLevel);
   });
+}
+
+function hideTowerStamp(){
+  const stamp=$("towerStamp");
+  stamp.hidden=true;
+  stamp.className="tower-stamp";
+  stamp.textContent="";
+}
+
+function showTowerStamp(word,loserSide,level){
+  const stamp=$("towerStamp");
+  stamp.textContent=word;
+  stamp.dataset.level=String(level);
+  stamp.style.left=loserSide==="left"?"25%":loserSide==="right"?"75%":"50%";
+  stamp.className="tower-stamp";
+  stamp.hidden=false;
+  positionTower();
+  // Restart the stamp impact for every new matchup and every result.
+  void stamp.offsetWidth;
+  stamp.classList.add(word==="VS"?"is-versus":"is-loss");
 }
 
 // Boss image slots are ready for image URLs when the raid artwork is supplied.
@@ -1502,6 +1580,7 @@ function startRaid() {
   $("timer").textContent = "00:00";
   $("battleCaption").textContent = "BOSS 1";
   $("battleLog").textContent = "Entering tower…";
+  hideTowerStamp();
   renderTowerClimb(1);
 
   showScreen("travelScreen");
@@ -1619,38 +1698,46 @@ function finishBoss(won) {
   renderEgg();
   renderBossGrid();
 
-  if(!won) {
-    raid.defeated = true;
-    finishRaid();
-    return;
-  }
-
-  if(
-    raid.boss>=10 ||
-    raid.eggHp<=0
-  ) {
-    finishRaid();
-    return;
-  }
-
-  raid.boss++;
-
-  playerHits = 0;
-  bossHits = 0;
-  currentTurn = "player";
-
-  updateHits();
-  renderBossGrid();
-
-  // The VCard climbs only after the existing battle engine awards a victory.
+  // Show the result on the tower before progressing or ending the raid.
   towerTransitioning=true;
   showScreen("setupScreen");
   renderTowerClimb(raid.boss);
+  showTowerStamp("LOSS",won?"right":"left",raid.boss);
   clearTimeout(towerTransitionTimer);
   towerTransitionTimer=setTimeout(()=>{
-    towerTransitioning=false;
-    if(raid && !raid.completed)showScreen("travelScreen");
-  },TOWER_TRANSITION_MS);
+    hideTowerStamp();
+    if(!raid || raid.completed)return;
+
+    if(!won) {
+      raid.defeated=true;
+      finishRaid();
+      return;
+    }
+
+    if(raid.boss>=10 || raid.eggHp<=0) {
+      finishRaid();
+      return;
+    }
+
+    // Only a successful battle advances the VCard to the next Boss.
+    raid.boss++;
+    playerHits=0;
+    bossHits=0;
+    currentTurn="player";
+    updateHits();
+    renderBossGrid();
+    renderTowerClimb(raid.boss);
+
+    towerTransitionTimer=setTimeout(()=>{
+      if(!raid || raid.completed)return;
+      showTowerStamp("VS","center",raid.boss);
+      towerTransitionTimer=setTimeout(()=>{
+        hideTowerStamp();
+        towerTransitioning=false;
+        if(raid && !raid.completed)showScreen("travelScreen");
+      },TOWER_VS_MS);
+    },TOWER_CLIMB_MS);
+  },TOWER_LOSS_MS);
 }
 
 /* FINISH RAID */
@@ -1658,6 +1745,7 @@ function finishBoss(won) {
 function finishRaid() {
   clearInterval(raidInterval);
   clearTimeout(towerTransitionTimer);
+  hideTowerStamp();
   towerTransitioning=false;
 
   raid.completed = true;
@@ -1728,6 +1816,7 @@ $("confirmButton").addEventListener(
   "click",
   () => {
     clearTimeout(towerTransitionTimer);
+    hideTowerStamp();
     towerTransitioning=false;
     raid = null;
     selectedRaidCard=null;
