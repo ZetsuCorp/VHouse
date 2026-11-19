@@ -134,7 +134,7 @@ select {
 
 .actions button { min-width:145px }
 
-/* The Tower stage shows only the 10 enemy floors and the climbing VCard. */
+/* TOWER STAGE — TWO IDENTICAL-SIZE BOX COLUMNS; THE PLAYER CLIMBS. */
 .tower-stage {
   height:100%;
   min-height:0;
@@ -143,73 +143,101 @@ select {
   gap:6px;
 }
 .tower-stage-arena {
-  display:grid;
-  grid-template-columns:minmax(0,220px) minmax(0,145px);
-  align-items:stretch;
-  justify-content:center;
-  gap:12px;
-  min-height:0;
-  width:100%;
-}
-.tower-climber-lane {
   position:relative;
+  width:100%;
+  height:100%;
   min-height:0;
+  overflow:hidden;
+  --floor-height:200px;
+  --vcard-width:120px;
+}
+.tower-stage-world {
+  position:absolute;
+  inset:0;
+  transition:transform .7s ease;
+}
+.tower-climber-lane,
+.tower-enemies {
+  position:absolute;
+  bottom:0;
+  width:calc(50% - 2px);
+  height:100%;
+  min-width:0;
+}
+.tower-climber-lane {left:0;}
+.tower-enemies {
+  right:0;
+  display:flex;
+  flex-direction:column-reverse;
+  justify-content:flex-start;
+  gap:4px;
+  overflow:visible;
+}
+.tower-climber,
+.tower-enemy-floor {
+  width:100%;
+  height:var(--floor-height);
+  flex:0 0 var(--floor-height);
+  border:2px solid var(--gold);
+  background:#2b1b3c;
+  position:relative;
+  overflow:hidden;
 }
 .tower-climber {
   position:absolute;
   bottom:0;
-  left:50%;
-  width:min(100%,200px,28dvh);
-  transform:translateX(-50%);
-  transition:bottom .45s ease;
-}
-.tower-climber .vhouse-vcard-host {
-  width:100%;
-}
-.tower-enemies {
-  display:grid;
-  grid-template-rows:repeat(10,minmax(0,1fr));
-  gap:3px;
-  min-height:0;
-  height:100%;
-}
-.tower-enemy-floor {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:5px;
-  min-height:0;
-  padding:1px 6px;
-  border:1px solid #6e557e;
-  border-radius:4px;
-  background:#241a31;
-}
-.tower-enemy-number {
-  color:#e1c6ec;
-  font-size:clamp(12px,1.8dvh,17px);
-  font-weight:900;
-  font-variant-numeric:tabular-nums;
-}
-.tower-enemy-face {
+  left:0;
   display:grid;
   place-items:center;
+  transition:bottom .7s ease;
+  border-color:#ffd477;
+}
+#towerCardPreview {
+  width:min(100%,var(--vcard-width));
+  min-width:0;
+}
+#towerCardPreview .vhouse-vcard-host {
+  width:100%;
+}
+.tower-enemy-floor {
+  display:grid;
+  place-items:center;
+}
+.tower-enemy-number {
+  position:absolute;
+  top:7px;
+  left:10px;
+  color:#f4d79f;
+  font-size:clamp(14px,2dvh,24px);
+  font-weight:900;
+  z-index:1;
+}
+.tower-enemy-art {
+  width:100%;
   height:100%;
-  max-height:65px;
-  aspect-ratio:1;
-  flex:0 0 auto;
-  font-size:clamp(30px,5.6dvh,53px);
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+.tower-enemy-image {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.tower-enemy-image[hidden],
+.tower-enemy-placeholder[hidden] {display:none;}
+.tower-enemy-placeholder {
+  font-size:clamp(70px,21dvh,190px);
   line-height:1;
-  border-radius:4px;
-  background:#110e1c;
 }
 .tower-enemy-floor.is-current {
-  border-color:#f5c475;
-  background:#443147;
-  box-shadow:inset 0 0 12px #edc87828;
+  border-color:#ffd477;
+  background:#40254d;
 }
 .tower-enemy-floor.is-defeated {
-  border-color:#3e826e;
-  background:#173028;
+  border-color:#4f9474;
+  background:#193329;
 }
 .tower-stage-bar {
   display:flex;
@@ -253,10 +281,7 @@ select {
   line-height:1;
 }
 @media(max-width:700px) {
-  .tower-stage-arena {grid-template-columns:minmax(0,95px) minmax(0,96px);gap:5px}
-  .tower-climber {width:min(100%,92px,21dvh)}
-  .tower-enemy-floor {padding:1px 4px;gap:3px}
-  .tower-enemy-face {font-size:clamp(22px,4dvh,35px)}
+  .tower-enemy-number {top:4px;left:5px;font-size:12px}
   .tower-stage-bar {gap:4px}
   .tower-stage-bar h1 {font-size:12px;margin-right:4px}
   .tower-stage-bar label {font-size:10px}
@@ -846,26 +871,88 @@ td { background:#1c1428 }
   </div>
 </section>
 
-<!-- STAGE 3 — TOWER: BOSSES STACKED ABOVE THE SELECTED VCARD -->
+<!-- STAGE 3 — TOWER PROGRESSION -->
 <section id="setupScreen" hidden>
   <div class="tower-stage">
-    <div class="tower-stage-arena">
-      <div class="tower-climber-lane">
-        <div class="tower-climber" id="towerClimber">
-          <div id="towerCardPreview"></div>
+    <div class="tower-stage-arena" id="towerArena">
+      <div class="tower-stage-world" id="towerWorld">
+        <div class="tower-climber-lane">
+          <div class="tower-climber" id="towerClimber">
+            <div id="towerCardPreview"></div>
+          </div>
         </div>
-      </div>
-      <div class="tower-enemies" id="towerEnemies" aria-label="Ten tower boss encounters">
-        <div class="tower-enemy-floor" data-boss="10"><span class="tower-enemy-number">10</span><span class="tower-enemy-face">👑</span></div>
-        <div class="tower-enemy-floor" data-boss="9"><span class="tower-enemy-number">09</span><span class="tower-enemy-face">💀</span></div>
-        <div class="tower-enemy-floor" data-boss="8"><span class="tower-enemy-number">08</span><span class="tower-enemy-face">👾</span></div>
-        <div class="tower-enemy-floor" data-boss="7"><span class="tower-enemy-number">07</span><span class="tower-enemy-face">🐉</span></div>
-        <div class="tower-enemy-floor" data-boss="6"><span class="tower-enemy-number">06</span><span class="tower-enemy-face">👹</span></div>
-        <div class="tower-enemy-floor" data-boss="5"><span class="tower-enemy-number">05</span><span class="tower-enemy-face">🥷</span></div>
-        <div class="tower-enemy-floor" data-boss="4"><span class="tower-enemy-number">04</span><span class="tower-enemy-face">🐍</span></div>
-        <div class="tower-enemy-floor" data-boss="3"><span class="tower-enemy-number">03</span><span class="tower-enemy-face">🦍</span></div>
-        <div class="tower-enemy-floor" data-boss="2"><span class="tower-enemy-number">02</span><span class="tower-enemy-face">🦂</span></div>
-        <div class="tower-enemy-floor is-current" data-boss="1"><span class="tower-enemy-number">01</span><span class="tower-enemy-face">🐺</span></div>
+        <div class="tower-enemies" id="towerEnemies" aria-label="Ten tower boss image containers">
+          <div class="tower-enemy-floor is-current" data-boss="1">
+            <span class="tower-enemy-number">01</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 01" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">🐺</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="2">
+            <span class="tower-enemy-number">02</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 02" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">🦂</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="3">
+            <span class="tower-enemy-number">03</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 03" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">🦍</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="4">
+            <span class="tower-enemy-number">04</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 04" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">🐍</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="5">
+            <span class="tower-enemy-number">05</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 05" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">🥷</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="6">
+            <span class="tower-enemy-number">06</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 06" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">👹</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="7">
+            <span class="tower-enemy-number">07</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 07" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">🐉</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="8">
+            <span class="tower-enemy-number">08</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 08" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">👾</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="9">
+            <span class="tower-enemy-number">09</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 09" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">💀</span>
+            </div>
+          </div>
+          <div class="tower-enemy-floor" data-boss="10">
+            <span class="tower-enemy-number">10</span>
+            <div class="tower-enemy-art">
+              <img class="tower-enemy-image" alt="Boss 10" hidden>
+              <span class="tower-enemy-placeholder" aria-hidden="true">👑</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="tower-stage-bar">
@@ -1215,6 +1302,25 @@ function calculateEggHp(level,card) {
   ) * multipliers[level];
 }
 
+let towerCurrentLevel=1;
+
+function positionTower(){
+  const arena=$("towerArena");
+  const floorHeight=arena.clientHeight/2;
+  if(!floorHeight)return;
+
+  const step=floorHeight+4;
+  arena.style.setProperty("--floor-height",floorHeight+"px");
+  arena.style.setProperty("--vcard-width",Math.floor(floorHeight*.55)+"px");
+
+  // Both columns have the same box dimensions; only the left VCard climbs.
+  $("towerClimber").style.bottom=((towerCurrentLevel-1)*step)+"px";
+
+  // Follow the climb without adding a scrollbar or moving bosses independently.
+  $("towerWorld").style.transform=
+    "translateY("+(Math.max(0,towerCurrentLevel-2)*step)+"px)";
+}
+
 function updateSetup() {
   const card=selectedRaidCard;
   const level=Number($("raidLevel").value);
@@ -1223,19 +1329,31 @@ function updateSetup() {
   window.VHouseVCard.render($("towerCardPreview"),card);
   renderTowerClimb(1);
 }
+
 function renderTowerClimb(bossNumber){
-  const current=Math.max(1,Math.min(10,Number(bossNumber)||1));
-  const climber=$("towerClimber");
-  const laneHeight=climber.parentElement.clientHeight;
-  const cardHeight=climber.offsetHeight;
-  const travel=Math.max(0,laneHeight-cardHeight);
-  climber.style.bottom=(travel*(current-1)/9)+"px";
+  towerCurrentLevel=Math.max(1,Math.min(10,Number(bossNumber)||1));
+  positionTower();
   $("towerEnemies").querySelectorAll("[data-boss]").forEach(floor=>{
     const number=Number(floor.dataset.boss);
-    floor.classList.toggle("is-current",number===current);
-    floor.classList.toggle("is-defeated",number<current);
+    floor.classList.toggle("is-current",number===towerCurrentLevel);
+    floor.classList.toggle("is-defeated",number<towerCurrentLevel);
   });
 }
+
+// Boss image slots are ready for image URLs when the raid artwork is supplied.
+function setTowerBossImage(bossNumber,imageUrl){
+  const floor=$("towerEnemies").querySelector('[data-boss="'+Number(bossNumber)+'"]');
+  if(!floor)return;
+  const image=floor.querySelector(".tower-enemy-image");
+  const placeholder=floor.querySelector(".tower-enemy-placeholder");
+  image.hidden=!imageUrl;
+  placeholder.hidden=!!imageUrl;
+  if(imageUrl)image.src=imageUrl;
+  else image.removeAttribute("src");
+}
+
+new ResizeObserver(positionTower).observe($("towerArena"));
+window.addEventListener("resize",positionTower);
 
 function formatTime(value) {
   const minutes = String(
