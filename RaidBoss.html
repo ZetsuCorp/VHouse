@@ -620,6 +620,11 @@ td { background:#1c1428 }
   width:min(100%,58cqh);
   flex:0 0 auto;
 }
+/* Keep ATK/DEF labels directly above their values at selector scale. */
+.raid-roster-vcard .card-stats { padding:1cqw 2.4cqw; }
+.raid-roster-vcard .stat { font-size:0; line-height:1; }
+.raid-roster-vcard .stat-label { margin-bottom:0; line-height:1; }
+.raid-roster-vcard .stat-value { line-height:1; }
 /* Colors belong to selection slots — never to the VCards or NFT artwork. */
 .raid-roster-tile:not(.raid-empty-slot):nth-child(6n+1) { background:linear-gradient(145deg,#7f326d,#271346); }
 .raid-roster-tile:not(.raid-empty-slot):nth-child(6n+2) { background:linear-gradient(145deg,#28598a,#142b50); }
