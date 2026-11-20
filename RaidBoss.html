@@ -201,7 +201,7 @@ select {
 .tower-stage-world {
   position:absolute;
   inset:0;
-  transition:transform .7s ease;
+  transition:transform 5s ease;
 }
 .tower-climber-lane,
 .tower-enemies {
@@ -236,7 +236,7 @@ select {
   left:0;
   display:grid;
   place-items:center;
-  transition:bottom .7s ease;
+  transition:bottom 5s ease;
   border-color:#ffd477;
 }
 #towerCardPreview {
@@ -1219,7 +1219,7 @@ let towerTransitioning = false;
 let towerTransitionTimer = null;
 const TOWER_VS_MS = 1250;
 const TOWER_LOSS_MS = 1350;
-const TOWER_CLIMB_MS = 1000;
+const TOWER_CLIMB_MS = 5000;
 
 /* SCREEN CONTROL */
 
