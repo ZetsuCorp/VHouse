@@ -1164,9 +1164,23 @@ td { background:#1c1428 }
   flex:0 0 auto;
   position:relative;
 }
-/* Reuse the Tower Boss white/blue spark burst directly on the selected VCard. */
-.raid-choice-preview .vhouse-vcard-host > .tower-opponent-sparks {
-  opacity:1;
+/* Reuse the connected-wallet purple light sweep on the currently selected VCard. */
+.raid-choice-preview .vhouse-vcard-host.is-purple-gleaming {
+  overflow:hidden;
+  border-radius:3.6cqw;
+}
+.raid-choice-preview .vhouse-vcard-host.is-purple-gleaming::after {
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:32%;
+  z-index:5;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(185,96,255,.46),rgba(234,191,255,.7),transparent);
+  animation:raidWalletPurpleGleam 1.15s ease-out both;
+}
+@media (prefers-reduced-motion:reduce) {
+  .raid-choice-preview .vhouse-vcard-host.is-purple-gleaming::after {animation:none;}
 }
 .raid-records {
   flex:0 0 auto;
@@ -1784,14 +1798,19 @@ function renderRaidRoster(){
       preview.replaceChildren(cardHost);
     }
     window.VHouseVCard.render(cardHost,card);
-    // Rebuild just the effect when the selected card changes; keep its artwork intact.
+    // Remove the previous white/blue spark effect from the selected card.
     cardHost.querySelector(":scope > .tower-opponent-sparks")?.remove();
-    const sparks=document.createElement("span");
-    sparks.className="tower-opponent-sparks";
-    sparks.setAttribute("aria-hidden","true");
-    cardHost.append(sparks);
+    // Play the same purple sweep as the wallet when a different VCard is selected.
+    const changed=preview.dataset.selectedCardId!==String(card.id);
+    preview.dataset.selectedCardId=String(card.id);
+    if(changed){
+      cardHost.classList.remove("is-purple-gleaming");
+      void cardHost.offsetWidth;
+      cardHost.classList.add("is-purple-gleaming");
+    }
   }else{
     preview.replaceChildren();
+    delete preview.dataset.selectedCardId;
   }
   // Raid results are not persisted yet: never show estimated rewards as earnings.
   for(const id of ["raidStatBattles","raidStatWins","raidStatLosses","raidStatRaids","raidStatBosses","raidStatEggs"]){
