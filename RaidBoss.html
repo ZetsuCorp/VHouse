@@ -291,6 +291,80 @@ select {
   from {opacity:.4; transform:translateY(23%);}
   to {opacity:1; transform:translateY(-28%);}
 }
+/* Result effects follow the player's VCard, without modifying card art or geometry. */
+.tower-result-fx {
+  position:absolute;
+  left:0;
+  bottom:0;
+  width:100%;
+  height:var(--floor-height);
+  z-index:3;
+  pointer-events:none;
+  opacity:0;
+  transition:bottom 5s ease;
+}
+.tower-result-fx.is-win,.tower-result-fx.is-loss {opacity:1;}
+.tower-result-fx::before,.tower-result-fx::after {
+  content:"";
+  position:absolute;
+  inset:-9% -5%;
+  opacity:0;
+  pointer-events:none;
+}
+.tower-result-fx.is-win::before {
+  background:
+    radial-gradient(ellipse at 50% 76%,rgba(255,202,87,.65),transparent 54%),
+    radial-gradient(ellipse at 50% 48%,rgba(255,233,151,.35),transparent 65%);
+  filter:drop-shadow(0 0 10px rgba(255,180,57,.65));
+  animation:towerVCardWinAura 1.3s ease-out both;
+}
+.tower-result-fx.is-win::after {
+  background:
+    radial-gradient(circle at 17% 70%,#fff0a5 0 2px,transparent 5px),
+    radial-gradient(circle at 30% 28%,#ffc765 0 3px,transparent 6px),
+    radial-gradient(circle at 82% 38%,#ffeb90 0 3px,transparent 6px),
+    radial-gradient(circle at 76% 78%,#ffbf49 0 2px,transparent 5px),
+    radial-gradient(circle at 50% 12%,#ffe7aa 0 2px,transparent 5px),
+    radial-gradient(circle at 12% 44%,#ffd571 0 3px,transparent 6px),
+    radial-gradient(circle at 92% 62%,#fff1a3 0 2px,transparent 5px);
+  filter:drop-shadow(0 0 6px #ffd06b);
+  animation:towerVCardWinSparks 1.3s ease-out both;
+}
+.tower-result-fx.is-loss::before {
+  background:
+    radial-gradient(ellipse at 35% 98%,rgba(255,79,50,.65),transparent 49%),
+    radial-gradient(ellipse at 62% 92%,rgba(240,32,79,.6),transparent 52%),
+    radial-gradient(ellipse at 52% 65%,rgba(191,25,33,.35),transparent 60%);
+  filter:drop-shadow(0 0 9px rgba(255,54,38,.7));
+  animation:towerVCardLossFlame 1.3s ease-out both;
+}
+.tower-result-fx.is-loss::after {
+  background:
+    radial-gradient(ellipse at 18% 92%,rgba(255,190,79,.85),transparent 25%),
+    radial-gradient(ellipse at 45% 87%,rgba(255,58,43,.75),transparent 27%),
+    radial-gradient(ellipse at 77% 92%,rgba(255,114,35,.78),transparent 29%);
+  filter:blur(3px) drop-shadow(0 0 8px #dd3929);
+  animation:towerVCardLossFlame 1.3s ease-out both;
+}
+@keyframes towerVCardWinAura {
+  0% {opacity:0;transform:scale(.75);}
+  25% {opacity:1;transform:scale(1.05);}
+  100% {opacity:0;transform:scale(1.28);}
+}
+@keyframes towerVCardWinSparks {
+  0% {opacity:0;transform:translateY(14%) scale(.65);}
+  20% {opacity:1;}
+  100% {opacity:0;transform:translateY(-23%) scale(1.2);}
+}
+@keyframes towerVCardLossFlame {
+  0% {opacity:0;transform:translateY(15%) scale(.85);}
+  22% {opacity:1;}
+  100% {opacity:0;transform:translateY(-20%) scale(1.08);}
+}
+@media(prefers-reduced-motion:reduce) {
+  .tower-result-fx::before,.tower-result-fx::after {animation:none;}
+  .tower-result-fx.is-win::before,.tower-result-fx.is-loss::before {opacity:.35;}
+}
 #towerCardPreview {
   width:min(100%,var(--vcard-width));
   min-width:0;
@@ -337,6 +411,27 @@ select {
 .tower-enemy-floor.is-defeated {
   border-color:#4f9474;
   background:#193329;
+}
+/* Minimal boss reaction: soft flash only, secondary to the VCard result. */
+.tower-enemy-floor.is-result-hit::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background:radial-gradient(ellipse at 50% 60%,rgba(255,106,71,.23),transparent 72%);
+  animation:towerBossResultFlash .75s ease-out both;
+}
+.tower-enemy-floor.is-result-hit.is-boss-victory::before {
+  background:radial-gradient(ellipse at 50% 60%,rgba(255,217,119,.16),transparent 72%);
+}
+@keyframes towerBossResultFlash {
+  0% {opacity:0;}
+  35% {opacity:.85;}
+  100% {opacity:0;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .tower-enemy-floor.is-result-hit::before {animation:none;opacity:.14;}
 }
 /* The destination floor charges while the VCard slides, then pulses on arrival. */
 .tower-enemy-floor.is-climb-target::after,
@@ -1023,6 +1118,7 @@ td { background:#1c1428 }
           <div class="tower-climber" id="towerClimber">
             <div id="towerCardPreview"></div>
           </div>
+          <div class="tower-result-fx" id="towerResultFx" aria-hidden="true"></div>
         </div>
         <div class="tower-enemies" id="towerEnemies" aria-label="Ten tower boss image containers">
           <div class="tower-enemy-floor is-current" data-boss="1">
@@ -1464,6 +1560,7 @@ function positionTower(){
   // Both columns have the same box dimensions; only the left VCard climbs.
   $("towerClimber").style.bottom=((towerCurrentLevel-1)*step)+"px";
   $("towerTrail").style.bottom=((towerCurrentLevel-1)*step)+"px";
+  $("towerResultFx").style.bottom=((towerCurrentLevel-1)*step)+"px";
 
   // Keep the VS / LOSS stamp aligned with the active encounter during movement.
   const stamp=$("towerStamp");
@@ -1502,7 +1599,26 @@ function renderTowerClimb(bossNumber){
   });
 }
 
+function hideTowerResultEffects() {
+  $("towerResultFx").className="tower-result-fx";
+  $("towerEnemies").querySelectorAll(".is-result-hit").forEach(floor=>{
+    floor.classList.remove("is-result-hit","is-boss-victory");
+  });
+}
+function showTowerResultEffects(won,bossNumber) {
+  hideTowerResultEffects();
+  const fx=$("towerResultFx");
+  // Restart the impact animations with each completed encounter.
+  void fx.offsetWidth;
+  fx.classList.add(won?"is-win":"is-loss");
+  const floor=$("towerEnemies").querySelector('[data-boss="'+Number(bossNumber)+'"]');
+  if(floor) {
+    floor.classList.add("is-result-hit");
+    if(!won)floor.classList.add("is-boss-victory");
+  }
+}
 function hideTowerStamp(){
+  hideTowerResultEffects();
   const stamp=$("towerStamp");
   stamp.hidden=true;
   stamp.className="tower-stamp";
@@ -1787,6 +1903,7 @@ function finishBoss(won) {
   showScreen("setupScreen");
   renderTowerClimb(raid.boss);
   showTowerStamp("LOSS",won?"right":"left",raid.boss);
+  showTowerResultEffects(won,raid.boss);
   clearTimeout(towerTransitionTimer);
   towerTransitionTimer=setTimeout(()=>{
     hideTowerStamp();
