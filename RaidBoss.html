@@ -688,6 +688,17 @@ select {
   background:linear-gradient(#692733,#220f18);
   animation:bossMove 1.2s ease-in-out infinite alternate;
 }
+/* Keep both existing fighter boxes; show the real VCard object and boss PNG. */
+.fighter.player .vhouse-vcard-host {
+  width:min(100%,64px);
+  flex:0 0 auto;
+}
+.fighter.boss .battle-boss-image {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
 
 @keyframes playerMove {
   from { transform:translateX(0) }
@@ -1437,8 +1448,8 @@ td { background:#1c1428 }
       BOSS 1
     </div>
 
-    <div class="fighter player">◆</div>
-    <div class="fighter boss">♛</div>
+    <div class="fighter player"><div id="battlePlayerCard"></div></div>
+    <div class="fighter boss"><img class="battle-boss-image" id="battleBossImage" src="assets/TowerBoss1.png" alt="Tower Boss 1"></div>
 
     <div class="battle-score">
       <span>
@@ -1647,6 +1658,7 @@ function showScreen(name) {
   ]) {
     $(id).hidden = id !== name;
   }
+  if(name==="travelScreen" && raid)renderBattleFighters();
 }
 
 /* The same account inventory and linked-Phantom wallet sources used by Journey.
@@ -2070,6 +2082,17 @@ function renderBossGrid() {
 function updateHits() {
   $("playerHits").textContent = playerHits;
   $("bossHits").textContent = bossHits;
+}
+
+/* BATTLE FIGHTERS — the selected VCard object and the current boss artwork. */
+function renderBattleFighters(){
+  if(!raid)return;
+  window.VHouseVCard.render($("battlePlayerCard"),raid.card);
+  const bossNumber=Math.max(1,Math.min(10,Number(raid.boss)||1));
+  const bossImage=$("battleBossImage");
+  const src="assets/TowerBoss"+bossNumber+".png";
+  if(bossImage.getAttribute("src")!==src)bossImage.src=src;
+  bossImage.alt="Tower Boss "+bossNumber;
 }
 
 /* START RAID */
