@@ -975,6 +975,36 @@ td { background:#1c1428 }
   background:#21142def;
   color:#f5e9d7;
   box-shadow:0 2px 8px #0009;
+  position:relative;
+  overflow:hidden;
+}
+#raidConnectedWallet.is-revealed {
+  animation:raidWalletPurpleGlow 1.15s ease-out both;
+}
+#raidConnectedWallet.is-revealed::after {
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:32%;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(185,96,255,.46),rgba(234,191,255,.7),transparent);
+  animation:raidWalletPurpleGleam 1.15s ease-out both;
+}
+#raidConnectedWallet .wallet-label,
+#raidWalletAddress {position:relative;z-index:1;}
+@keyframes raidWalletPurpleGlow {
+  0% {border-color:#bc9357;box-shadow:0 2px 8px #0009;}
+  33% {border-color:#d194ff;box-shadow:0 0 13px #ad4bffdd,0 0 24px #9c35ff77;}
+  100% {border-color:#bc9357;box-shadow:0 2px 8px #0009;}
+}
+@keyframes raidWalletPurpleGleam {
+  0% {transform:translateX(-120%);opacity:0;}
+  18% {opacity:1;}
+  100% {transform:translateX(430%);opacity:0;}
+}
+@media (prefers-reduced-motion:reduce) {
+  #raidConnectedWallet.is-revealed,
+  #raidConnectedWallet.is-revealed::after {animation:none;}
 }
 #raidConnectedWallet[hidden] {display:none!important;}
 #raidConnectedWallet .wallet-label {
@@ -1631,15 +1661,18 @@ async function refreshRaidInventory(){
 }
 async function refreshRaidWallet(){
   const panel=$("raidConnectedWallet"),address=$("raidWalletAddress");
-  panel.hidden=true;
-  address.textContent="";
-  address.title="";
+  const hideWallet=()=>{
+    panel.hidden=true;
+    panel.classList.remove("is-revealed");
+    address.textContent="";
+    address.title="";
+  };
   const auth=window.VHouseAuth;
-  if(!auth)return;
+  if(!auth){hideWallet();return;}
   try{
     await auth.ready;
     const user=auth.getUser?.();
-    if(!user)return;
+    if(!user){hideWallet();return;}
     const {data,error}=await auth.getClient().from("vhouse_accounts")
       .select("wallet_address").eq("id",user.id).maybeSingle();
     if(error)throw error;
@@ -1648,13 +1681,19 @@ async function refreshRaidWallet(){
     const phantom=window.phantom?.solana||window.solana;
     const connected=phantom?.isPhantom&&phantom.isConnected&&
       phantom.publicKey?.toBase58?.()===wallet;
-    if(!connected)return;
+    if(!connected){hideWallet();return;}
+    const firstReveal=panel.hidden||address.textContent!==wallet;
     address.textContent=wallet;
     address.title=wallet;
     panel.hidden=false;
+    if(firstReveal){
+      panel.classList.remove("is-revealed");
+      void panel.offsetWidth;
+      panel.classList.add("is-revealed");
+    }
   }catch(error){
     console.warn("Raid connected wallet:",error);
-    panel.hidden=true;
+    hideWallet();
   }
 }
 window.addEventListener("load",()=>{
