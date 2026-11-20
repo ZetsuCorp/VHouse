@@ -747,11 +747,19 @@ select {
 /* Every attack moves once after its coin flip; no idle fighter movement. */
 .fighter.player {
   --raid-recoil:-10px;
+  --raid-knockback:-38px;
+  --raid-finish-knockback:-76px;
+  --raid-knock-tilt:-6deg;
+  --raid-finish-tilt:-12deg;
   --raid-dodge-x:clamp(-100px,-7cqw,-52px);
   --raid-dodge-tilt:-9deg;
 }
 .fighter.boss {
   --raid-recoil:10px;
+  --raid-knockback:38px;
+  --raid-finish-knockback:76px;
+  --raid-knock-tilt:6deg;
+  --raid-finish-tilt:12deg;
   --raid-dodge-x:clamp(52px,7cqw,100px);
   --raid-dodge-tilt:9deg;
 }
@@ -763,7 +771,8 @@ select {
   z-index:4;
   animation:raidBattleLunge .95s ease-in-out both;
 }
-.fighter.is-hit {animation:raidBattleImpact .95s ease-out both;}
+.fighter.is-hit {animation:raidBattleShatterKnockback 1.5s ease-out both;}
+.fighter.is-hit.is-finishing-hit {animation:raidBattleFinisherKnockback 1.5s ease-out both;}
 .fighter.is-dodging {animation:raidBattleDodge .95s ease-in-out both;}
 /* These effects sit in the battle world, not inside the VCard or boss artwork. */
 .battle-wind-fx,.battle-impact-fx {
@@ -806,31 +815,86 @@ select {
   filter:drop-shadow(0 0 7px #86daff);
 }
 .battle-impact-fx {
-  width:clamp(90px,11cqw,180px);
-  aspect-ratio:1;
+  width:clamp(120px,14cqw,260px);
+  height:clamp(130px,15cqw,280px);
+  --shatter-scale:1;
 }
-.battle-impact-fx.is-active {animation:raidBattleImpactBurst .95s ease-out both;}
+.battle-impact-fx.is-finisher {--shatter-scale:1.35;}
+.battle-impact-fx.is-active {animation:raidShatterImpactPulse 1.5s ease-out both;}
 .battle-impact-fx::before {
-  inset:0;
-  background:
-    radial-gradient(circle,#fff 0 5%,#fff3aa 6% 10%,#ffb04e 12% 18%,transparent 33%),
-    conic-gradient(from 0deg,transparent 0 13deg,#fff6b0 15deg 23deg,transparent 25deg 58deg,
-      #ffcc64 60deg 68deg,transparent 70deg 103deg,
-      #fff6b0 105deg 113deg,transparent 115deg 148deg,
-      #ffcc64 150deg 158deg,transparent 160deg 193deg,
-      #fff6b0 195deg 203deg,transparent 205deg 238deg,
-      #ffcc64 240deg 248deg,transparent 250deg 283deg,
-      #fff6b0 285deg 293deg,transparent 295deg 328deg,
-      #ffcc64 330deg 338deg,transparent 340deg);
-  filter:drop-shadow(0 0 12px #ffcf68);
+  inset:22%;
   border-radius:50%;
+  background:radial-gradient(circle,#fff 0 9%,#fff0a1 13%,rgba(252,178,67,.95) 24%,rgba(184,86,255,.72) 42%,transparent 69%);
+  filter:drop-shadow(0 0 17px #e3abff);
 }
 .battle-impact-fx::after {
-  inset:23%;
-  border:4px solid rgba(255,243,180,.95);
+  inset:17%;
+  border:4px solid #ffe6a3;
   border-radius:50%;
-  box-shadow:0 0 12px #ffb34a,0 0 18px #fff8b4;
-  animation:raidImpactRing .95s ease-out both;
+  box-shadow:0 0 14px #ba6cff,inset 0 0 11px #fff5c2;
+  animation:raidShatterShockwave 1.5s ease-out both;
+}
+.battle-shatter-cracks {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  filter:drop-shadow(0 0 4px #ffd888) drop-shadow(0 0 5px #b066ef);
+  animation:raidShatterCracks 1.5s ease-out both;
+}
+.battle-shatter-cracks path {
+  fill:none;
+  stroke:#ffedb5;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.battle-shatter-shards {position:absolute;inset:0;}
+.battle-shatter-shards i {
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:clamp(7px,1.3cqw,17px);
+  height:clamp(11px,1.7cqw,23px);
+  background:linear-gradient(150deg,#fff5bd 0%,#ffb74b 50%,#9d42ea 100%);
+  clip-path:polygon(44% 0%,100% 78%,17% 100%,0% 30%);
+  filter:drop-shadow(0 0 8px #bc71ff);
+  opacity:0;
+}
+.battle-impact-fx.is-active .battle-shatter-shards i {
+  animation:raidShatterShardFlight 1.5s cubic-bezier(.14,.7,.18,1) both;
+}
+.battle-shatter-shards i:nth-child(1) {--shard-x:-94px;--shard-y:-79px;--shard-angle:-75deg;}
+.battle-shatter-shards i:nth-child(2) {--shard-x:-37px;--shard-y:-108px;--shard-angle:65deg;}
+.battle-shatter-shards i:nth-child(3) {--shard-x:58px;--shard-y:-100px;--shard-angle:130deg;}
+.battle-shatter-shards i:nth-child(4) {--shard-x:107px;--shard-y:-35px;--shard-angle:230deg;}
+.battle-shatter-shards i:nth-child(5) {--shard-x:93px;--shard-y:86px;--shard-angle:120deg;}
+.battle-shatter-shards i:nth-child(6) {--shard-x:25px;--shard-y:112px;--shard-angle:275deg;}
+.battle-shatter-shards i:nth-child(7) {--shard-x:-69px;--shard-y:91px;--shard-angle:-160deg;}
+.battle-shatter-shards i:nth-child(8) {--shard-x:-111px;--shard-y:9px;--shard-angle:35deg;}
+@keyframes raidShatterImpactPulse {
+  0%,19% {opacity:0;transform:translate(-50%,-50%) scale(.3);}
+  28% {opacity:1;transform:translate(-50%,-50%) scale(var(--shatter-scale));}
+  64% {opacity:.95;transform:translate(-50%,-50%) scale(calc(1.09 * var(--shatter-scale)));}
+  100% {opacity:0;transform:translate(-50%,-50%) scale(calc(1.3 * var(--shatter-scale)));}
+}
+@keyframes raidShatterShockwave {
+  0%,23% {opacity:0;transform:scale(.35);}
+  31% {opacity:1;transform:scale(.75);}
+  100% {opacity:0;transform:scale(2);}
+}
+@keyframes raidShatterCracks {
+  0%,21% {opacity:0;transform:scale(.12);}
+  29% {opacity:1;transform:scale(.47);}
+  56% {opacity:1;transform:scale(1);}
+  100% {opacity:0;transform:scale(1.12);}
+}
+@keyframes raidShatterShardFlight {
+  0%,26% {opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0deg);}
+  34% {opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0deg);}
+  73% {opacity:1;transform:translate(calc(-50% + var(--shard-x)),calc(-50% + var(--shard-y))) rotate(var(--shard-angle));}
+  100% {opacity:0;transform:translate(calc(-50% + var(--shard-x)),calc(-50% + var(--shard-y))) rotate(var(--shard-angle)) scale(.4);}
 }
 @keyframes raidBattleWind {
   0%,16% {opacity:0;transform:translate(-50%,-50%) scaleX(var(--wind-mirror)) scale(.65);}
@@ -892,10 +956,19 @@ select {
   0%,100% {transform:translateX(0);}
   43%,58% {transform:translateX(var(--raid-lunge-distance,0px));}
 }
-@keyframes raidBattleImpact {
-  0%,100% {transform:translateX(0);filter:brightness(1);}
-  43% {transform:translateX(var(--raid-recoil));filter:brightness(1.7);}
-  65% {transform:translateX(0);filter:brightness(1.2);}
+@keyframes raidBattleShatterKnockback {
+  0%,15% {transform:translate(0,0) rotate(0);filter:brightness(1);}
+  28% {transform:translate(var(--raid-knockback),-8px) rotate(var(--raid-knock-tilt));filter:brightness(1.85);}
+  52% {transform:translate(calc(var(--raid-knockback) * .7),-5px) rotate(calc(var(--raid-knock-tilt) * .7));filter:brightness(1.15);}
+  84% {transform:translate(-3px,0) rotate(1deg);filter:brightness(1);}
+  100% {transform:translate(0,0) rotate(0);filter:brightness(1);}
+}
+@keyframes raidBattleFinisherKnockback {
+  0%,15% {transform:translate(0,0) rotate(0);filter:brightness(1);}
+  28% {transform:translate(var(--raid-finish-knockback),-15px) rotate(var(--raid-finish-tilt));filter:brightness(2);}
+  59% {transform:translate(calc(var(--raid-finish-knockback) * .8),-12px) rotate(calc(var(--raid-finish-tilt) * .8));filter:brightness(1.3);}
+  84% {transform:translate(calc(var(--raid-finish-knockback) * .25),0) rotate(3deg);filter:brightness(1);}
+  100% {transform:translate(0,0) rotate(0);filter:brightness(1);}
 }
 @keyframes raidBattleDodge {
   0%,13%,100% {transform:translate(0,0) rotate(0deg);}
@@ -1124,7 +1197,8 @@ td { background:#1c1428 }
   .fighter.is-burning::before,.fighter.is-burning::after,
   .fighter.is-burning > #battlePlayerCard,.fighter.is-burning > .battle-boss-image,
   .battle-wind-fx.is-active,.battle-impact-fx.is-active,
-  .battle-impact-fx::after {animation:none;}
+  .battle-impact-fx::after,.battle-shatter-cracks,
+  .battle-impact-fx.is-active .battle-shatter-shards i {animation:none;}
   .fighter.is-burning::before {opacity:.55;}
 }
 
@@ -1670,7 +1744,12 @@ td { background:#1c1428 }
     <div class="fighter player"><div id="battlePlayerCard"></div></div>
     <div class="fighter boss"><img class="battle-boss-image" id="battleBossImage" src="assets/TowerBoss1.png" alt="Tower Boss 1"></div>
     <span id="battleWindFx" class="battle-wind-fx" aria-hidden="true"></span>
-    <span id="battleImpactFx" class="battle-impact-fx" aria-hidden="true"></span>
+    <span id="battleImpactFx" class="battle-impact-fx" aria-hidden="true">
+      <svg class="battle-shatter-cracks" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M50 50 L43 38 L32 33 L29 21 L17 11 M50 50 L60 41 L65 29 L81 20 L87 8 M50 50 L59 57 L71 60 L78 74 L93 84 M50 50 L42 63 L32 70 L28 84 L17 95 M50 50 L34 51 L22 44 L7 47 M50 50 L68 48 L79 39 L95 41 M43 38 L38 20 M71 60 L88 57 M32 70 L17 72"/>
+      </svg>
+      <span class="battle-shatter-shards"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    </span>
 
     <div class="battle-score">
       <span>
@@ -2388,18 +2467,19 @@ function startRaid() {
 const BATTLE_READY_MS=500;
 const BATTLE_FLIP_MS=1000;
 const BATTLE_ACTION_MS=950;
+const BATTLE_HIT_ACTION_MS=1500;
 const BATTLE_SCORE_MS=500;
 const BATTLE_FINISH_MS=2200;
 const battlePause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function clearBattleMotion(){
   for(const fighter of $("travelScreen").querySelectorAll(".fighter")){
-    fighter.classList.remove("is-turn","is-attacking","is-hit","is-dodging");
+    fighter.classList.remove("is-turn","is-attacking","is-hit","is-finishing-hit","is-dodging");
     fighter.style.removeProperty("--raid-lunge-distance");
   }
   for(const id of ["battleWindFx","battleImpactFx"]){
     const fx=$(id);
-    fx.classList.remove("is-active","is-left");
+    fx.classList.remove("is-active","is-left","is-finisher");
   }
 }
 function clearBattleFinish(){
@@ -2407,13 +2487,18 @@ function clearBattleFinish(){
     fighter.classList.remove("is-burning");
   });
 }
-function placeBattleFx(id,fighter){
+function placeBattleFx(id,fighter,finisher=false){
   const fx=$(id);
   const battle=$("travelScreen").querySelector(".battle-world").getBoundingClientRect();
   const box=fighter.getBoundingClientRect();
   fx.style.left=(box.left+box.width/2-battle.left)+"px";
   fx.style.top=(box.top+box.height/2-battle.top)+"px";
-  fx.classList.remove("is-active","is-left");
+  fx.classList.remove("is-active","is-left","is-finisher");
+  if(id==="battleImpactFx"){
+    fx.style.width=Math.ceil(Math.max(130,box.width*1.25))+"px";
+    fx.style.height=Math.ceil(Math.max(140,box.height*1.28))+"px";
+    if(finisher)fx.classList.add("is-finisher");
+  }
   if(id==="battleWindFx"&&fighter.classList.contains("player"))
     fx.classList.add("is-left");
   void fx.offsetWidth;
@@ -2423,7 +2508,7 @@ function isActiveBattleTurn(run,bossNumber){
   return raid===run && !run.completed && !towerTransitioning &&
     run.boss===bossNumber && !$("travelScreen").hidden;
 }
-function animateBattleAttack(actor,heads){
+function animateBattleAttack(actor,heads,finisher=false){
   const attacker=$("travelScreen").querySelector(".fighter."+actor);
   const defender=$("travelScreen").querySelector(".fighter."+(actor==="player"?"boss":"player"));
   const from=attacker.getBoundingClientRect();
@@ -2433,7 +2518,8 @@ function animateBattleAttack(actor,heads){
   attacker.style.setProperty("--raid-lunge-distance",distance+"px");
   attacker.classList.add("is-attacking");
   defender.classList.add(heads?"is-hit":"is-dodging");
-  placeBattleFx(heads?"battleImpactFx":"battleWindFx",defender);
+  if(heads&&finisher)defender.classList.add("is-finishing-hit");
+  placeBattleFx(heads?"battleImpactFx":"battleWindFx",defender,finisher);
 }
 async function performTurn(){
   if(!raid || raid.completed || towerTransitioning || flipInProgress)return;
@@ -2459,9 +2545,10 @@ async function performTurn(){
     await battlePause(BATTLE_FLIP_MS);
     if(!active())return;
 
-    animateBattleAttack(actor,heads);
+    const finisher=heads&&(actor==="player"?playerHits:bossHits)===2;
+    animateBattleAttack(actor,heads,finisher);
     $("battleLog").textContent=label+" FLIPPED "+(heads?"HEADS — HIT":"TAILS — MISS");
-    await battlePause(BATTLE_ACTION_MS);
+    await battlePause(heads?BATTLE_HIT_ACTION_MS:BATTLE_ACTION_MS);
     if(!active())return;
 
     clearBattleMotion();
