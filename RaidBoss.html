@@ -916,6 +916,25 @@ select {
   font-weight:900;
   text-shadow:0 2px 5px #000;
 }
+/* Live battle event announcements appear under the turn indicator. */
+.battle-status {
+  position:absolute;
+  top:clamp(35px,3.2cqw,52px);
+  left:3%;
+  width:94%;
+  margin:0;
+  z-index:5;
+  pointer-events:none;
+  text-align:center;
+  font-family:"Trebuchet MS","Arial Rounded MT Bold",Verdana,sans-serif;
+  font-size:clamp(18px,2.25cqw,32px);
+  font-weight:900;
+  letter-spacing:.035em;
+  line-height:1.1;
+  color:#ffe8a6;
+  -webkit-text-stroke:.35px #734d8e;
+  text-shadow:0 2px 0 #5a2e6d,0 4px 2px #201025,0 0 15px #b174ef;
+}
 
 .battle-score {
   position:absolute;
@@ -1646,6 +1665,7 @@ td { background:#1c1428 }
     <div class="battle-caption" id="battleCaption">
       BOSS 1
     </div>
+    <p class="battle-status" id="battleLog" aria-live="polite">Entering tower…</p>
 
     <div class="fighter player"><div id="battlePlayerCard"></div></div>
     <div class="fighter boss"><img class="battle-boss-image" id="battleBossImage" src="assets/TowerBoss1.png" alt="Tower Boss 1"></div>
@@ -1693,10 +1713,6 @@ td { background:#1c1428 }
       <h2>TOWER BATTLES</h2>
 
       <div class="boss-grid" id="bossGrid"></div>
-
-      <p class="muted" id="battleLog">
-        Entering tower…
-      </p>
     </div>
 
   </div>
