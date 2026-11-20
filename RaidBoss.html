@@ -1910,7 +1910,7 @@ td { background:#1c1428 }
   Local demo only:
     No blockchain transactions.
     No live rewards.
-    No Supabase writes.
+    Raid results are recorded in Supabase by the server engine.
 */
 
 const $ = id => document.getElementById(id);
@@ -1934,6 +1934,8 @@ let raidCheckedPlayerId = null;
 let raidRestoreRequestedForId = null;
 let raidRestoreGeneration = 0;
 let raidSavedTurnCount = 0;
+let raidSeenBossResults = 0;
+let raidPolling = false;
 let raidSaveFailed = false;
 async function raidRpc(name,args){
   await raidAuth.ready;
@@ -2231,6 +2233,7 @@ function clearRaidForAccountChange(){
   raid=null;
   selectedRaidCard=null;
   raidSaveFailed=false;
+  raidPolling=false;
   raidCheckedPlayerId=null;
   raidRestoreRequestedForId=null;
   clearBattleMotion();
@@ -2555,7 +2558,9 @@ function startRaid(restoredRecord=null) {
   };
 
   raidSavedTurnCount=(record.turn_history||[]).length;
+  raidSeenBossResults=(record.boss_results||[]).length;
   raidSaveFailed=false;
+  raidPolling=false;
   seconds=0;
   playerHits=Number(record.player_hits);
   bossHits=Number(record.boss_hits);
@@ -2563,7 +2568,7 @@ function startRaid(restoredRecord=null) {
   flipInProgress=false;
   towerTransitioning=false;
 
-  $("timer").textContent="00:00";
+  $("timer").textContent=new Date().toLocaleTimeString();
   $("battleCaption").textContent="BOSS "+raid.boss+" — "+currentTurn.toUpperCase();
   $("battleLog").textContent=restoredRecord?"RAID RESUMED":"Entering tower…";
   hideTowerStamp();
@@ -2579,18 +2584,9 @@ function startRaid(restoredRecord=null) {
   }
 
   showScreen("travelScreen");
-  // A crash between the final saved hit and boss-result write is recoverable.
-  if(playerHits===3||bossHits===3){
-    void finishBoss(playerHits===3);
-    return;
-  }
-
-  raidInterval=setInterval(()=>{
-    if(document.hidden)return; // Paused while the player is away.
-    seconds++;
-    $("timer").textContent=formatTime(Math.floor(seconds/4));
-    if(!raidSaveFailed)void performTurn();
-  },250);
+  // Supabase runs the battle. This interval only observes and presents results.
+  raidInterval=setInterval(()=>void observeRaid(),1200);
+  void observeRaid();
 }
 
 /* ZETSU COUNTER BLITZ — one visible movement sequence per coin flip. */
@@ -2651,160 +2647,107 @@ function animateBattleAttack(actor,heads,finisher=false){
   if(heads&&finisher)defender.classList.add("is-finishing-hit");
   placeBattleFx(heads?"battleImpactFx":"battleWindFx",defender,finisher);
 }
-async function performTurn(){
-  if(!raid || raid.completed || towerTransitioning || flipInProgress ||
-    raidSaveFailed || document.hidden)return;
-
-  flipInProgress=true;
-  const run=raid;
-  const bossNumber=run.boss;
-  const actor=currentTurn;
-  const label=actor==="player"?"VCARD":"BOSS";
-  const active=()=>isActiveBattleTurn(run,bossNumber);
-
-  try{
-    clearBattleMotion();
-    const attacker=$("travelScreen").querySelector(".fighter."+actor);
-    attacker.classList.add("is-turn");
-    $("battleCaption").textContent="BOSS "+bossNumber+" — "+actor.toUpperCase();
-    $("battleLog").textContent=label+" TURN";
-    await battlePause(BATTLE_READY_MS);
-    if(!active())return;
-
-    $("battleLog").textContent=label+" FLIPPING…";
-    const heads=await secureCoinFlip();
-    await battlePause(BATTLE_FLIP_MS);
-    if(!active())return;
-
-    const finisher=heads&&(actor==="player"?playerHits:bossHits)===2;
-    animateBattleAttack(actor,heads,finisher);
-    $("battleLog").textContent=label+" FLIPPED "+(heads?"HEADS — HIT":"TAILS — MISS");
-    await battlePause(heads?BATTLE_HIT_ACTION_MS:BATTLE_ACTION_MS);
-    if(!active())return;
-
-    clearBattleMotion();
-    // Save the completed flip before applying it locally or allowing another turn.
-    const saved=await raidRpc("vhouse_save_raid_turn",{
-      p_raid_id:run.id,
-      p_expected_turn:raidSavedTurnCount,
-      p_actor:actor,
-      p_heads:heads
-    });
-    if(!active())return;
-    raidSavedTurnCount=(saved.turn_history||[]).length;
-    playerHits=Number(saved.player_hits);
-    bossHits=Number(saved.boss_hits);
-    currentTurn=saved.current_turn;
-    updateHits();
-    await battlePause(BATTLE_SCORE_MS);
-    if(!active())return;
-
-    // End the fight only after the final impact and score are shown.
-    if(playerHits===3){
-      finishBoss(true);
-      return;
-    }
-    if(bossHits===3){
-      finishBoss(false);
-      return;
-    }
-    // Next actor is already saved and restored from Supabase.
-  }catch(error){
-    haltRaidSave(error);
-  }finally{
-    clearBattleMotion();
-    flipInProgress=false;
-  }
-}
-
-/* BOSS RESULT */
-
-async function finishBoss(won) {
-  // Prevent new turns while the server records the actual boss outcome.
+async function playRecordedBossResult(result,nextBoss){
+  const won=!!result.win;
+  const currentBoss=Number(result.boss);
   towerTransitioning=true;
-  const finishedRun=raid;
-  const finishedBoss=raid.boss;
-  let saved;
-  try{
-    saved=await raidRpc("vhouse_finish_raid_boss",{
-      p_raid_id:finishedRun.id,p_boss:finishedBoss
-    });
-    if(raid!==finishedRun)return;
-  }catch(error){
-    haltRaidSave(error);
-    return;
-  }
-  const outcome=(saved.boss_results||[]).find(r=>Number(r.boss)===finishedBoss);
-  if(!outcome){
-    haltRaidSave(Error("RAID_BOSS_RESULT_MISSING"));
-    return;
-  }
-  won=!!outcome.win;
-  const damage=Number(outcome.damage);
-  raid.eggHp=Number(saved.egg_hp);
-  raid.results=saved.boss_results||[];
-  raid.defeated=!won;
-  raid.serverStatus=saved.status;
-  $("battleLog").textContent=won
-    ?"BOSS DEFEATED — RAID EGG HIT FOR "+damage
-    :"VCARD DEFEATED";
-
-  renderEgg();
-  renderBossGrid();
-
-  // A completed battle must finish visually before returning to the Tower.
   clearBattleMotion();
   clearBattleFinish();
+  $("battleLog").textContent=won
+    ?"BOSS DEFEATED — RAID EGG HIT FOR "+result.damage
+    :"VCARD DEFEATED";
   const loser=$("travelScreen").querySelector(".fighter."+(won?"boss":"player"));
-  loser.classList.add("is-burning");
-  clearTimeout(towerTransitionTimer);
-  towerTransitionTimer=setTimeout(()=>{
-    if(raid!==finishedRun||raid.completed||raid.boss!==finishedBoss)return;
-    clearBattleFinish();
-    showScreen("setupScreen");
-    renderTowerClimb(raid.boss);
-    showTowerStamp("LOSS",won?"right":"left",raid.boss);
-    showTowerResultEffects(won,raid.boss);
+  loser?.classList.add("is-burning");
+  await battlePause(BATTLE_FINISH_MS);
+  if(!raid)return;
+  clearBattleFinish();
+  showScreen("setupScreen");
+  renderTowerClimb(currentBoss);
+  showTowerStamp("LOSS",won?"right":"left",currentBoss);
+  showTowerResultEffects(won,currentBoss);
+  await battlePause(TOWER_LOSS_MS);
+  if(!raid)return;
+  hideTowerStamp();
+  if(nextBoss===null){
+    finishRaid();
+    return;
+  }
+  renderTowerClimb(nextBoss);
+  setTowerClimbEffects("climbing");
+  await battlePause(TOWER_CLIMB_MS);
+  if(!raid)return;
+  setTowerClimbEffects("arrived");
+  showTowerStamp("VS","center",nextBoss);
+  await battlePause(TOWER_VS_MS);
+  if(!raid)return;
+  hideTowerStamp();
+  setTowerClimbEffects("idle");
+  towerTransitioning=false;
+  showScreen("travelScreen");
+}
+async function observeRaid(){
+  if(!raid||raid.completed||raidSaveFailed||raidPolling)return;
+  const id=raid.id,owner=raid.ownerId;
+  raidPolling=true;
+  try{
+    const {data,error}=await raidAuth.getClient().from("vhouse_raid_records")
+      .select("*").eq("id",id).eq("player_id",owner).maybeSingle();
+    if(error)throw error;
+    if(!data)throw Error("RAID_NOT_FOUND");
+    if(!raid||raid.id!==id||raidAuth.getUser()?.id!==owner)return;
 
-    // Hold on the burned boss and LOSS result before starting the next climb.
-    towerTransitionTimer=setTimeout(()=>{
-      hideTowerStamp();
-      if(raid!==finishedRun||raid.completed||raid.boss!==finishedBoss)return;
+    $("timer").textContent=new Date().toLocaleTimeString();
+    const previousTurn=raidSavedTurnCount;
+    const oldBossResults=raidSeenBossResults;
+    const history=data.turn_history||[];
+    const results=data.boss_results||[];
 
-      if(!won) {
-        raid.defeated=true;
-        finishRaid();
-        return;
+    raidSavedTurnCount=history.length;
+    raidSeenBossResults=results.length;
+    raid.eggHp=Number(data.egg_hp);
+    raid.results=results;
+    raid.boss=Number(data.current_boss);
+    raid.serverStatus=data.status;
+    raid.defeated=results.at(-1)?.win===false;
+    playerHits=Number(data.player_hits);
+    bossHits=Number(data.boss_hits);
+    currentTurn=data.current_turn;
+    updateHits();
+    renderEgg();
+    renderBossGrid();
+
+    if(data.status==="RESULTS_READY"&&oldBossResults===results.length){
+      finishRaid();
+      return;
+    }
+    if(document.hidden)return; // Only visual playback is hidden; the server never pauses.
+
+    if(results.length>oldBossResults){
+      const result=results.at(-1);
+      await playRecordedBossResult(
+        result,data.status==="RESULTS_READY"?null:Number(data.current_boss)
+      );
+      return;
+    }
+    if(history.length>previousTurn&&!towerTransitioning){
+      const event=history.at(-1);
+      const bossNumber=Number(event.boss);
+      if(bossNumber===raid.boss){
+        $("battleCaption").textContent="BOSS "+bossNumber+" — "+event.actor.toUpperCase();
+        $("battleLog").textContent=(event.actor==="player"?"VCARD":"BOSS")+
+          " FLIPPED "+(event.heads?"HEADS — HIT":"TAILS — MISS");
+        // Animate an actual recorded outcome, not a locally generated flip.
+        animateBattleAttack(event.actor,!!event.heads,
+          !!event.heads&&(event.actor==="player"?Number(event.playerHits):Number(event.bossHits))===3);
+        await battlePause(event.heads?BATTLE_HIT_ACTION_MS:BATTLE_ACTION_MS);
+        clearBattleMotion();
       }
-
-      if(raid.serverStatus==="RESULTS_READY" || raid.boss>=10 || raid.eggHp<=0) {
-        finishRaid();
-        return;
-      }
-
-      // Only a successful battle advances the VCard to the next Boss.
-      raid.boss=Number(saved.current_boss);
-      playerHits=Number(saved.player_hits);
-      bossHits=Number(saved.boss_hits);
-      currentTurn=saved.current_turn;
-      updateHits();
-      renderBossGrid();
-      renderTowerClimb(raid.boss);
-      setTowerClimbEffects("climbing");
-
-      towerTransitionTimer=setTimeout(()=>{
-        if(raid!==finishedRun || raid.completed)return;
-        setTowerClimbEffects("arrived");
-        showTowerStamp("VS","center",raid.boss);
-        towerTransitionTimer=setTimeout(()=>{
-          hideTowerStamp();
-          setTowerClimbEffects("idle");
-          towerTransitioning=false;
-          if(raid===finishedRun && !raid.completed)showScreen("travelScreen");
-        },TOWER_VS_MS);
-      },TOWER_CLIMB_MS);
-    },TOWER_LOSS_MS);
-  },BATTLE_FINISH_MS);
+    }
+  }catch(error){
+    if(raid?.id===id)haltRaidSave(error);
+  }finally{
+    raidPolling=false;
+  }
 }
 
 /* FINISH RAID */
@@ -2889,6 +2832,7 @@ $("confirmButton").addEventListener("click",async()=>{
     clearTimeout(towerTransitionTimer);
     hideTowerStamp();
     towerTransitioning=false;
+    clearInterval(raidInterval);
     raid=null;
     selectedRaidCard=null;
     raidCheckedPlayerId=raidAuth.getUser()?.id||null;
