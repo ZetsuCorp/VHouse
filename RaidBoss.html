@@ -1927,6 +1927,26 @@ let rosterLoadError = "";
 
 let raid = null;
 let raidInterval = null;
+let raidStarting = false;
+let raidPendingRecord = null;
+let raidSavedTurnCount = 0;
+let raidSaveFailed = false;
+async function raidRpc(name,args){
+  await raidAuth.ready;
+  if(!raidAuth.getUser())throw Error("SIGN_IN_REQUIRED");
+  const {data,error}=await raidAuth.getClient().rpc(name,args);
+  if(error)throw error;
+  if(!data||typeof data!=="object")throw Error("RAID_SAVE_UNAVAILABLE");
+  return data;
+}
+function haltRaidSave(error){
+  clearInterval(raidInterval);
+  raidSaveFailed=true;
+  console.error("Tower Raid persistence:",error);
+  if(!$("travelScreen").hidden)$("battleLog").textContent="RAID SAVE FAILED — REOPEN RAID TO RECOVER";
+  else if(!$("completeScreen").hidden)$("resultDescription").textContent="RAID SAVE FAILED — REOPEN RAID TO RECOVER";
+}
+
 let seconds = 0;
 let currentTurn = "player";
 let playerHits = 0;
@@ -2140,10 +2160,29 @@ async function loadRaidRoster(){
   }
   renderRaidRoster();
 }
-$("confirmRaidCard").addEventListener("click",()=>{
+$("confirmRaidCard").addEventListener("click",async()=>{
   const card=rosterCard();
-  if(!card||raidStore.isLocked(card.id))return;
-  selectedRaidCard={...card};
+  if(!card||raidStore.isLocked(card.id)||raidStarting||raid)return;
+  raidStarting=true;
+  $("confirmRaidCard").disabled=true;
+  try{
+    // Do not start the tower introduction until Supabase reserves the player's one Raid.
+    const record=await raidRpc("vhouse_start_raid",{
+      p_card_id:String(card.id),p_level:1
+    });
+    raidPendingRecord=record;
+    selectedRaidCard={...record.card_snapshot};
+  }catch(error){
+    console.error("Tower Raid start:",error);
+    rosterLoadError=String(error.message||"RAID START FAILED").includes("RAID_ALREADY_ACTIVE")
+      ?"RAID ALREADY ACTIVE — RETURN TO YOUR EXISTING RAID"
+      :"RAID START FAILED — "+String(error.message||"TRY AGAIN");
+    raidStarting=false;
+    renderRaidRoster();
+    return;
+  }
+  raidStarting=false;
+  rosterLoadError="";
   showScreen("setupScreen");
   updateSetup();
   towerTransitioning=true;
@@ -2401,7 +2440,7 @@ function renderBattleFighters(){
 /* START RAID */
 
 function startRaid() {
-  if(!selectedRaidCard){
+  if(!selectedRaidCard||!raidPendingRecord){
     showScreen("cardSelectScreen");
     return;
   }
@@ -2415,29 +2454,27 @@ function startRaid() {
 
   clearInterval(raidInterval);
 
-  const level = 1;
-
-  const eggMax = calculateEggHp(
-    level,
-    selectedRaidCard
-  );
-
-  raid = {
-    level,
-    card:{...selectedRaidCard},
-    eggMax,
-    eggHp:eggMax,
-    boss:1,
-    results:[],
+  const record=raidPendingRecord;
+  raidPendingRecord=null;
+  raid={
+    id:record.id,
+    level:Number(record.level),
+    card:{...record.card_snapshot},
+    eggMax:Number(record.egg_max),
+    eggHp:Number(record.egg_hp),
+    boss:Number(record.current_boss),
+    results:record.boss_results||[],
     completed:false,
     defeated:false
   };
 
-  seconds = 0;
-  playerHits = 0;
-  bossHits = 0;
-  currentTurn = "player";
-  flipInProgress = false;
+  raidSavedTurnCount=(record.turn_history||[]).length;
+  raidSaveFailed=false;
+  seconds=0;
+  playerHits=Number(record.player_hits);
+  bossHits=Number(record.boss_hits);
+  currentTurn=record.current_turn;
+  flipInProgress=false;
 
   $("timer").textContent = "00:00";
   $("battleCaption").textContent = "BOSS 1";
@@ -2459,7 +2496,7 @@ function startRaid() {
       Math.floor(seconds / 4)
     );
 
-    void performTurn();
+    if(!raidSaveFailed)void performTurn();
   },250);
 }
 
@@ -2522,7 +2559,7 @@ function animateBattleAttack(actor,heads,finisher=false){
   placeBattleFx(heads?"battleImpactFx":"battleWindFx",defender,finisher);
 }
 async function performTurn(){
-  if(!raid || raid.completed || towerTransitioning || flipInProgress)return;
+  if(!raid || raid.completed || towerTransitioning || flipInProgress || raidSaveFailed)return;
 
   flipInProgress=true;
   const run=raid;
@@ -2552,10 +2589,18 @@ async function performTurn(){
     if(!active())return;
 
     clearBattleMotion();
-    if(heads){
-      if(actor==="player")playerHits++;
-      else bossHits++;
-    }
+    // Save the completed flip before applying it locally or allowing another turn.
+    const saved=await raidRpc("vhouse_save_raid_turn",{
+      p_raid_id:run.id,
+      p_expected_turn:raidSavedTurnCount,
+      p_actor:actor,
+      p_heads:heads
+    });
+    if(!active())return;
+    raidSavedTurnCount=(saved.turn_history||[]).length;
+    playerHits=Number(saved.player_hits);
+    bossHits=Number(saved.boss_hits);
+    currentTurn=saved.current_turn;
     updateHits();
     await battlePause(BATTLE_SCORE_MS);
     if(!active())return;
@@ -2569,11 +2614,9 @@ async function performTurn(){
       finishBoss(false);
       return;
     }
-    currentTurn=actor==="player"?"boss":"player";
+    // Next actor is already saved and restored from Supabase.
   }catch(error){
-    clearInterval(raidInterval);
-    console.error("Secure coin flip failed:",error);
-    $("battleLog").textContent="SECURE RANDOMNESS UNAVAILABLE";
+    haltRaidSave(error);
   }finally{
     clearBattleMotion();
     flipInProgress=false;
@@ -2582,38 +2625,44 @@ async function performTurn(){
 
 /* BOSS RESULT */
 
-function finishBoss(won) {
-  const damage = won
-    ? Math.min(raid.card.atk,raid.eggHp)
-    : 0;
-
-  if(won) {
-    raid.eggHp -= damage;
+async function finishBoss(won) {
+  // Prevent new turns while the server records the actual boss outcome.
+  towerTransitioning=true;
+  const finishedRun=raid;
+  const finishedBoss=raid.boss;
+  let saved;
+  try{
+    saved=await raidRpc("vhouse_finish_raid_boss",{
+      p_raid_id:finishedRun.id,p_boss:finishedBoss
+    });
+    if(raid!==finishedRun)return;
+  }catch(error){
+    haltRaidSave(error);
+    return;
   }
-
-  raid.results.push({
-    boss:raid.boss,
-    win:won,
-    damage,
-    eggHp:raid.eggHp
-  });
-
-  $("battleLog").textContent = won
-    ? "BOSS DEFEATED — RAID EGG HIT FOR " +
-      damage
-    : "VCARD DEFEATED";
+  const outcome=(saved.boss_results||[]).find(r=>Number(r.boss)===finishedBoss);
+  if(!outcome){
+    haltRaidSave(Error("RAID_BOSS_RESULT_MISSING"));
+    return;
+  }
+  won=!!outcome.win;
+  const damage=Number(outcome.damage);
+  raid.eggHp=Number(saved.egg_hp);
+  raid.results=saved.boss_results||[];
+  raid.defeated=!won;
+  raid.serverStatus=saved.status;
+  $("battleLog").textContent=won
+    ?"BOSS DEFEATED — RAID EGG HIT FOR "+damage
+    :"VCARD DEFEATED";
 
   renderEgg();
   renderBossGrid();
 
   // A completed battle must finish visually before returning to the Tower.
-  towerTransitioning=true;
   clearBattleMotion();
   clearBattleFinish();
   const loser=$("travelScreen").querySelector(".fighter."+(won?"boss":"player"));
   loser.classList.add("is-burning");
-  const finishedRun=raid;
-  const finishedBoss=raid.boss;
   clearTimeout(towerTransitionTimer);
   towerTransitionTimer=setTimeout(()=>{
     if(raid!==finishedRun||raid.completed||raid.boss!==finishedBoss)return;
@@ -2634,16 +2683,16 @@ function finishBoss(won) {
         return;
       }
 
-      if(raid.boss>=10 || raid.eggHp<=0) {
+      if(raid.serverStatus==="RESULTS_READY" || raid.boss>=10 || raid.eggHp<=0) {
         finishRaid();
         return;
       }
 
       // Only a successful battle advances the VCard to the next Boss.
-      raid.boss++;
-      playerHits=0;
-      bossHits=0;
-      currentTurn="player";
+      raid.boss=Number(saved.current_boss);
+      playerHits=Number(saved.player_hits);
+      bossHits=Number(saved.boss_hits);
+      currentTurn=saved.current_turn;
       updateHits();
       renderBossGrid();
       renderTowerClimb(raid.boss);
@@ -2737,18 +2786,26 @@ function finishRaid() {
 
 /* BUTTONS */
 
-$("confirmButton").addEventListener(
-  "click",
-  () => {
+$("confirmButton").addEventListener("click",async()=>{
+  if(!raid||raidSaveFailed||$("confirmButton").disabled)return;
+  $("confirmButton").disabled=true;
+  try{
+    const record=await raidRpc("vhouse_confirm_raid",{p_raid_id:raid.id});
+    if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
     clearTimeout(towerTransitionTimer);
     hideTowerStamp();
     towerTransitioning=false;
-    raid = null;
+    raid=null;
     selectedRaidCard=null;
     showScreen("cardSelectScreen");
     renderRaidRoster();
+  }catch(error){
+    console.error("Tower Raid confirm:",error);
+    $("resultDescription").textContent="RAID CONFIRMATION FAILED — TRY AGAIN";
+  }finally{
+    $("confirmButton").disabled=false;
   }
-);
+});
 
 updateSetup();
 </script>
