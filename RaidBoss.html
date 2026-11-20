@@ -1132,6 +1132,11 @@ td { background:#1c1428 }
 .raid-choice-preview .vhouse-vcard-host {
   width:min(100%,64cqh);
   flex:0 0 auto;
+  position:relative;
+}
+/* Reuse the Tower Boss white/blue spark burst directly on the selected VCard. */
+.raid-choice-preview .vhouse-vcard-host > .tower-opponent-sparks {
+  opacity:1;
 }
 .raid-records {
   flex:0 0 auto;
@@ -1740,6 +1745,12 @@ function renderRaidRoster(){
       preview.replaceChildren(cardHost);
     }
     window.VHouseVCard.render(cardHost,card);
+    // Rebuild just the effect when the selected card changes; keep its artwork intact.
+    cardHost.querySelector(":scope > .tower-opponent-sparks")?.remove();
+    const sparks=document.createElement("span");
+    sparks.className="tower-opponent-sparks";
+    sparks.setAttribute("aria-hidden","true");
+    cardHost.append(sparks);
   }else{
     preview.replaceChildren();
   }
