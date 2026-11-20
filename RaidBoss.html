@@ -900,6 +900,98 @@ td { background:#1c1428 }
 }
 
 /* STAGE 1 — PLAYER VCARD ROSTER */
+#cardSelectScreen {position:relative;}
+/* Reserve the bottom strip for the same items / connected-wallet controls as Journey. */
+#cardSelectScreen .raid-select-layout {
+  height:calc(100% - 3.2cqw);
+}
+.raid-select-footer {
+  position:absolute;
+  left:11%;
+  right:2%;
+  bottom:.35cqw;
+  z-index:12;
+  display:grid;
+  grid-template-columns:minmax(160px,30%) minmax(0,1fr);
+  align-items:end;
+  gap:2cqw;
+}
+#raidUseItems {
+  position:relative;
+  min-width:0;
+  border:1px solid #bc9357;
+  border-radius:6px;
+  background:#21142def;
+  color:#f5e9d7;
+  box-shadow:0 2px 8px #0009;
+}
+#raidUseItems summary {
+  cursor:pointer;
+  list-style:none;
+  color:#f7d797;
+  font-weight:900;
+  font-size:clamp(10px,.75cqw,13px);
+  padding:.35cqw .7cqw;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+#raidUseItems summary::-webkit-details-marker {display:none;}
+#raidUseItems summary::after {content:"⌄";color:#d3a4ff;}
+#raidUseItems[open] summary::after {content:"⌃";}
+.raid-use-item-options {
+  position:absolute;
+  bottom:calc(100% + 4px);
+  left:0;
+  right:0;
+  border:1px solid #bc9357;
+  border-radius:6px;
+  background:#21142df5;
+  box-shadow:0 -2px 10px #000b;
+  overflow:hidden;
+}
+#raidUseItems .use-item-option {
+  padding:5px 9px;
+  border-top:1px solid #62477b;
+  font-size:clamp(9px,.69cqw,12px);
+  font-weight:700;
+}
+#raidUseItems .use-item-option:first-child {border-top:0;}
+#raidUseItems .use-item-option small {
+  display:block;
+  margin-top:2px;
+  color:#cba5ed;
+  font-size:clamp(8px,.62cqw,10px);
+}
+#raidConnectedWallet {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  min-height:0;
+  padding:.35cqw .7cqw;
+  border:1px solid #bc9357;
+  border-radius:6px;
+  background:#21142def;
+  color:#f5e9d7;
+  box-shadow:0 2px 8px #0009;
+}
+#raidConnectedWallet[hidden] {display:none!important;}
+#raidConnectedWallet .wallet-label {
+  flex-shrink:0;
+  color:#f7d797;
+  font-size:clamp(9px,.65cqw,11px);
+  font-weight:900;
+  white-space:nowrap;
+}
+#raidWalletAddress {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font:clamp(9px,.69cqw,12px) monospace;
+  color:#e8cfff;
+}
 .raid-select-layout {
   display:grid;
   grid-template-columns:minmax(0,1.55fr) minmax(180px,.8fr);
@@ -1168,6 +1260,19 @@ td { background:#1c1428 }
         </div>
       </div>
       <button class="primary" type="button" id="confirmRaidCard" disabled>CONFIRM VCARD</button>
+    </div>
+  </div>
+  <div class="raid-select-footer">
+    <details id="raidUseItems">
+      <summary>USE ITEMS</summary>
+      <div class="raid-use-item-options" aria-label="Owned items">
+        <div class="use-item-option">🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="raidBootsOwned">0</b></small></div>
+        <div class="use-item-option">🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="raidTicketOwned">0</b></small></div>
+      </div>
+    </details>
+    <div id="raidConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden>
+      <span class="wallet-label">CONNECTED WALLET</span>
+      <span id="raidWalletAddress"></span>
     </div>
   </div>
 </section>
@@ -1480,6 +1585,11 @@ const TOWER_CLIMB_MS = 5000;
 /* SCREEN CONTROL */
 
 function showScreen(name) {
+  if(name!=="cardSelectScreen")$("raidUseItems").open=false;
+  else {
+    void refreshRaidInventory();
+    void refreshRaidWallet();
+  }
   for(const id of [
     "cardSelectScreen",
     "setupScreen",
@@ -1489,6 +1599,74 @@ function showScreen(name) {
     $(id).hidden = id !== name;
   }
 }
+
+/* The same account inventory and linked-Phantom wallet sources used by Journey.
+   Raid consumable behavior is not defined, so the menu displays owned quantities
+   without consuming or assigning Journey-only items to a Raid. */
+async function refreshRaidInventory(){
+  const auth=window.VHouseAuth;
+  const boots=$("raidBootsOwned"),ticket=$("raidTicketOwned");
+  boots.textContent="0";
+  ticket.textContent="0";
+  if(!auth)return;
+  try{
+    await auth.ready;
+    const playerId=auth.getUser?.()?.id;
+    if(!playerId)return;
+    const data=await auth.loadPlayerData();
+    if(auth.getUser?.()?.id!==playerId||data?.playerId!==playerId)return;
+    const counts=new Map((data.inventory||[])
+      .filter(row=>row.type==="Item"&&Number(row.quantity)>0)
+      .map(row=>[String(row.thing),Math.max(0,Math.floor(Number(row.quantity)||0))]));
+    boots.textContent=String(counts.get("Swift Boots")||0);
+    ticket.textContent=String(counts.get("Stage Ticket")||0);
+  }catch(error){
+    console.warn("Raid inventory:",error);
+  }
+}
+async function refreshRaidWallet(){
+  const panel=$("raidConnectedWallet"),address=$("raidWalletAddress");
+  panel.hidden=true;
+  address.textContent="";
+  address.title="";
+  const auth=window.VHouseAuth;
+  if(!auth)return;
+  try{
+    await auth.ready;
+    const user=auth.getUser?.();
+    if(!user)return;
+    const {data,error}=await auth.getClient().from("vhouse_accounts")
+      .select("wallet_address").eq("id",user.id).maybeSingle();
+    if(error)throw error;
+    if(auth.getUser?.()?.id!==user.id)return;
+    const wallet=String(data?.wallet_address||"");
+    const phantom=window.phantom?.solana||window.solana;
+    const connected=phantom?.isPhantom&&phantom.isConnected&&
+      phantom.publicKey?.toBase58?.()===wallet;
+    if(!connected)return;
+    address.textContent=wallet;
+    address.title=wallet;
+    panel.hidden=false;
+  }catch(error){
+    console.warn("Raid connected wallet:",error);
+    panel.hidden=true;
+  }
+}
+window.addEventListener("load",()=>{
+  void refreshRaidInventory();
+  void refreshRaidWallet();
+  window.VHouseAuth?.subscribe?.(()=>{
+    void refreshRaidInventory();
+    void refreshRaidWallet();
+  });
+  const phantom=window.phantom?.solana||window.solana;
+  if(phantom?.isPhantom&&typeof phantom.on==="function"){
+    for(const event of ["connect","disconnect","accountChanged"]){
+      phantom.on(event,()=>void refreshRaidWallet());
+    }
+  }
+});
+window.addEventListener("vhouse:inventory-updated",()=>void refreshRaidInventory());
 
 /* STAGE 1 — USE THE SAME SUPABASE VCARD STORE AS THE CLOSET. */
 const raidStore = window.VHouseCardStore;
