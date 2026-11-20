@@ -236,7 +236,7 @@ select {
   left:0;
   display:grid;
   place-items:center;
-  transition:bottom 5s ease;
+  transition:bottom 5s ease,transform 5s ease;
   border-color:#ffd477;
   z-index:1;
 }
@@ -250,7 +250,13 @@ select {
   z-index:0;
   pointer-events:none;
   opacity:0;
-  transition:bottom 5s ease,opacity .25s ease;
+  transition:bottom 5s ease,transform 5s ease,opacity .25s ease;
+}
+/* First encounter starts one floor below the visible arena. */
+.tower-climber.is-intro-start,
+.tower-climb-trail.is-intro-start {
+  transform:translateY(calc(var(--floor-height) + 4px));
+  transition:none;
 }
 .tower-climb-trail.is-climbing {opacity:1;}
 .tower-climb-trail::before {
@@ -1518,13 +1524,28 @@ $("confirmRaidCard").addEventListener("click",()=>{
   showScreen("setupScreen");
   updateSetup();
   towerTransitioning=true;
-  showTowerStamp("VS","center",1);
+  // Introduce the VCard from below the screen, like later 5-second climbs.
+  const climber=$("towerClimber");
+  const trail=$("towerTrail");
+  climber.classList.add("is-intro-start");
+  trail.classList.add("is-intro-start");
+  void climber.offsetWidth; // Establish the offscreen starting position.
   clearTimeout(towerTransitionTimer);
-  towerTransitionTimer=setTimeout(()=>{
-    hideTowerStamp();
-    towerTransitioning=false;
-    if(selectedRaidCard && !raid)startRaid();
-  },TOWER_VS_MS);
+  requestAnimationFrame(()=>{
+    climber.classList.remove("is-intro-start");
+    trail.classList.remove("is-intro-start");
+    setTowerClimbEffects("climbing");
+    towerTransitionTimer=setTimeout(()=>{
+      setTowerClimbEffects("arrived");
+      showTowerStamp("VS","center",1);
+      towerTransitionTimer=setTimeout(()=>{
+        hideTowerStamp();
+        setTowerClimbEffects("idle");
+        towerTransitioning=false;
+        if(selectedRaidCard && !raid)startRaid();
+      },TOWER_VS_MS);
+    },TOWER_CLIMB_MS);
+  });
 });
 raidStore.subscribe(renderRaidRoster);
 raidAuth.subscribe(user=>{
