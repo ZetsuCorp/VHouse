@@ -1929,6 +1929,10 @@ let raid = null;
 let raidInterval = null;
 let raidStarting = false;
 let raidPendingRecord = null;
+let raidRestoring = true;
+let raidCheckedPlayerId = null;
+let raidRestoreRequestedForId = null;
+let raidRestoreGeneration = 0;
 let raidSavedTurnCount = 0;
 let raidSaveFailed = false;
 async function raidRpc(name,args){
@@ -2147,7 +2151,8 @@ function renderRaidRoster(){
   for(const id of ["raidEarnedTotal","raidEarnedBoss","raidEarnedEgg"]){
     $(id).textContent=card?"$0.00":"—";
   }
-  $("confirmRaidCard").disabled=!card||raidStore.isLocked(card.id);
+  $("confirmRaidCard").disabled=!card||raidStore.isLocked(card.id)||
+    raidRestoring||raidStarting||!!raid||!!raidPendingRecord;
 }
 async function loadRaidRoster(){
   try{
@@ -2162,7 +2167,7 @@ async function loadRaidRoster(){
 }
 $("confirmRaidCard").addEventListener("click",async()=>{
   const card=rosterCard();
-  if(!card||raidStore.isLocked(card.id)||raidStarting||raid)return;
+  if(!card||raidStore.isLocked(card.id)||raidStarting||raidRestoring||raid||raidPendingRecord)return;
   raidStarting=true;
   $("confirmRaidCard").disabled=true;
   try{
@@ -2210,15 +2215,92 @@ $("confirmRaidCard").addEventListener("click",async()=>{
   });
 });
 raidStore.subscribe(renderRaidRoster);
+
+/* Leave / return: load the single unfinished Raid belonging to this player.
+   Never start a replacement Raid before the lookup has completed. */
+function clearRaidForAccountChange(){
+  raidRestoreGeneration++;
+  clearInterval(raidInterval);
+  clearTimeout(towerTransitionTimer);
+  raidInterval=null;
+  towerTransitionTimer=null;
+  towerTransitioning=false;
+  flipInProgress=false;
+  raidStarting=false;
+  raidPendingRecord=null;
+  raid=null;
+  selectedRaidCard=null;
+  raidSaveFailed=false;
+  raidCheckedPlayerId=null;
+  raidRestoreRequestedForId=null;
+  clearBattleMotion();
+  clearBattleFinish();
+  hideTowerStamp();
+  showScreen("cardSelectScreen");
+}
+async function restoreUnfinishedRaid(){
+  await raidAuth.ready;
+  const playerId=raidAuth.getUser()?.id;
+  if(!playerId){
+    raidRestoring=false;
+    renderRaidRoster();
+    return;
+  }
+  if(raidCheckedPlayerId===playerId||raidRestoreRequestedForId===playerId)return;
+  if(raid && raid.ownerId===playerId){
+    raidCheckedPlayerId=playerId;
+    raidRestoring=false;
+    renderRaidRoster();
+    return;
+  }
+  raidRestoreRequestedForId=playerId;
+  const generation=++raidRestoreGeneration;
+  raidRestoring=true;
+  renderRaidRoster();
+  try{
+    const {data,error}=await raidAuth.getClient().from("vhouse_raid_records")
+      .select("*")
+      .eq("player_id",playerId)
+      .in("status",["ACTIVE","RESULTS_READY"])
+      .order("started_at",{ascending:false})
+      .limit(1)
+      .maybeSingle();
+    if(error)throw error;
+    if(generation!==raidRestoreGeneration||raidAuth.getUser()?.id!==playerId)return;
+    raidCheckedPlayerId=playerId;
+    raidRestoreRequestedForId=null;
+    raidRestoring=false;
+    if(data && !raid && !raidPendingRecord){
+      selectedRaidCard={...data.card_snapshot};
+      startRaid(data);
+    }
+    renderRaidRoster();
+  }catch(error){
+    if(generation!==raidRestoreGeneration||raidAuth.getUser()?.id!==playerId)return;
+    console.error("Tower Raid return:",error);
+    raidRestoreRequestedForId=null;
+    // Fail closed: an unchecked account must not start a duplicate Raid.
+    rosterLoadError="COULD NOT CHECK EXISTING RAID — RELOAD TO TRY AGAIN";
+    raidRestoring=true;
+    renderRaidRoster();
+  }
+}
 raidAuth.subscribe(user=>{
-  if(!user){
-    selectedRaidCard=null;
+  const playerId=user?.id||null;
+  if(!playerId){
+    clearRaidForAccountChange();
+    raidRestoring=false;
     rosterSelectedId=null;
-    showScreen("cardSelectScreen");
+    renderRaidRoster();
+    return;
+  }
+  if(raid?.ownerId && raid.ownerId!==playerId)clearRaidForAccountChange();
+  if(playerId!==raidCheckedPlayerId&&playerId!==raidRestoreRequestedForId){
+    void restoreUnfinishedRaid();
   }
   renderRaidRoster();
 });
-void loadRaidRoster();
+void loadRaidRoster().then(()=>restoreUnfinishedRaid());
 
 /* RAID EGG CALCULATION */
 
@@ -2439,11 +2521,13 @@ function renderBattleFighters(){
 
 /* START RAID */
 
-function startRaid() {
-  if(!selectedRaidCard||!raidPendingRecord){
+function startRaid(restoredRecord=null) {
+  const record=restoredRecord||raidPendingRecord;
+  if(!record?.id||!record.card_snapshot){
     showScreen("cardSelectScreen");
     return;
   }
+  if(raid?.id===record.id)return;
   if(
     !window.crypto?.getRandomValues ||
     !window.crypto?.subtle?.digest
@@ -2454,18 +2538,20 @@ function startRaid() {
 
   clearInterval(raidInterval);
 
-  const record=raidPendingRecord;
-  raidPendingRecord=null;
+  if(record===raidPendingRecord)raidPendingRecord=null;
+  selectedRaidCard={...record.card_snapshot};
   raid={
     id:record.id,
+    ownerId:record.player_id,
     level:Number(record.level),
     card:{...record.card_snapshot},
     eggMax:Number(record.egg_max),
     eggHp:Number(record.egg_hp),
     boss:Number(record.current_boss),
     results:record.boss_results||[],
+    serverStatus:record.status,
     completed:false,
-    defeated:false
+    defeated:record.boss_results?.at(-1)?.win===false
   };
 
   raidSavedTurnCount=(record.turn_history||[]).length;
@@ -2475,27 +2561,34 @@ function startRaid() {
   bossHits=Number(record.boss_hits);
   currentTurn=record.current_turn;
   flipInProgress=false;
+  towerTransitioning=false;
 
-  $("timer").textContent = "00:00";
-  $("battleCaption").textContent = "BOSS 1";
-  $("battleLog").textContent = "Entering tower…";
+  $("timer").textContent="00:00";
+  $("battleCaption").textContent="BOSS "+raid.boss+" — "+currentTurn.toUpperCase();
+  $("battleLog").textContent=restoredRecord?"RAID RESUMED":"Entering tower…";
   hideTowerStamp();
-  renderTowerClimb(1);
-
-  showScreen("travelScreen");
-
+  renderTowerClimb(raid.boss);
   renderEgg();
   renderBossGrid();
   updateHits();
 
-  raidInterval = setInterval(() => {
+  // A completed Raid keeps its receipt visible until the player confirms.
+  if(record.status==="RESULTS_READY"){
+    finishRaid();
+    return;
+  }
+
+  showScreen("travelScreen");
+  // A crash between the final saved hit and boss-result write is recoverable.
+  if(playerHits===3||bossHits===3){
+    void finishBoss(playerHits===3);
+    return;
+  }
+
+  raidInterval=setInterval(()=>{
+    if(document.hidden)return; // Paused while the player is away.
     seconds++;
-
-    // Demo clock, not final raid duration.
-    $("timer").textContent = formatTime(
-      Math.floor(seconds / 4)
-    );
-
+    $("timer").textContent=formatTime(Math.floor(seconds/4));
     if(!raidSaveFailed)void performTurn();
   },250);
 }
@@ -2559,7 +2652,8 @@ function animateBattleAttack(actor,heads,finisher=false){
   placeBattleFx(heads?"battleImpactFx":"battleWindFx",defender,finisher);
 }
 async function performTurn(){
-  if(!raid || raid.completed || towerTransitioning || flipInProgress || raidSaveFailed)return;
+  if(!raid || raid.completed || towerTransitioning || flipInProgress ||
+    raidSaveFailed || document.hidden)return;
 
   flipInProgress=true;
   const run=raid;
@@ -2797,6 +2891,7 @@ $("confirmButton").addEventListener("click",async()=>{
     towerTransitioning=false;
     raid=null;
     selectedRaidCard=null;
+    raidCheckedPlayerId=raidAuth.getUser()?.id||null;
     showScreen("cardSelectScreen");
     renderRaidRoster();
   }catch(error){
