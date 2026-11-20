@@ -211,7 +211,7 @@ select {
   height:100%;
   min-width:0;
 }
-.tower-climber-lane {left:0;}
+.tower-climber-lane {left:0; isolation:isolate;}
 .tower-enemies {
   right:0;
   display:flex;
@@ -238,6 +238,58 @@ select {
   place-items:center;
   transition:bottom 5s ease;
   border-color:#ffd477;
+  z-index:1;
+}
+/* Purple/gold particles travel with the climbing VCard, outside its card art. */
+.tower-climb-trail {
+  position:absolute;
+  left:0;
+  bottom:0;
+  width:100%;
+  height:var(--floor-height);
+  z-index:0;
+  pointer-events:none;
+  opacity:0;
+  transition:bottom 5s ease,opacity .25s ease;
+}
+.tower-climb-trail.is-climbing {opacity:1;}
+.tower-climb-trail::before {
+  content:"";
+  position:absolute;
+  left:-8%;
+  right:-8%;
+  bottom:-42%;
+  height:85%;
+  background:
+    radial-gradient(ellipse at 47% 44%,rgba(157,67,249,.65),transparent 62%),
+    radial-gradient(ellipse at 56% 55%,rgba(255,198,96,.55),transparent 48%);
+  filter:blur(8px);
+  animation:towerEnergyDrift 1.4s ease-in-out infinite alternate;
+}
+.tower-climb-trail::after {
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:-54%;
+  width:100%;
+  height:85%;
+  background:
+    radial-gradient(circle at 19% 24%,#ffd77d 0 2px,transparent 4px),
+    radial-gradient(circle at 73% 31%,#ce8bff 0 3px,transparent 5px),
+    radial-gradient(circle at 42% 58%,#f3c76e 0 2px,transparent 4px),
+    radial-gradient(circle at 85% 68%,#b46dff 0 2px,transparent 5px),
+    radial-gradient(circle at 31% 82%,#f6d694 0 2px,transparent 4px),
+    radial-gradient(circle at 60% 89%,#a85eff 0 3px,transparent 5px);
+  filter:drop-shadow(0 0 5px #a95cff);
+  animation:towerEnergySparks 1.25s linear infinite;
+}
+@keyframes towerEnergyDrift {
+  from {opacity:.55; transform:translateY(10%) scale(.85);}
+  to {opacity:1; transform:translateY(-16%) scale(1.05);}
+}
+@keyframes towerEnergySparks {
+  from {opacity:.4; transform:translateY(23%);}
+  to {opacity:1; transform:translateY(-28%);}
 }
 #towerCardPreview {
   width:min(100%,var(--vcard-width));
@@ -285,6 +337,39 @@ select {
 .tower-enemy-floor.is-defeated {
   border-color:#4f9474;
   background:#193329;
+}
+/* The destination floor charges while the VCard slides, then pulses on arrival. */
+.tower-enemy-floor.is-climb-target::after,
+.tower-enemy-floor.is-climb-arrived::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  border:3px solid #ffd27a;
+  background:radial-gradient(ellipse at center,rgba(184,95,251,.3),transparent 72%);
+  box-shadow:inset 0 0 24px #b66eff,0 0 15px #f5bd6c;
+}
+.tower-enemy-floor.is-climb-target::after {
+  animation:towerFloorCharge 5s ease-in-out both;
+}
+.tower-enemy-floor.is-climb-arrived::after {
+  animation:towerFloorArrival .95s ease-out both;
+}
+@keyframes towerFloorCharge {
+  0% {opacity:.08;}
+  70% {opacity:.4;}
+  100% {opacity:1;}
+}
+@keyframes towerFloorArrival {
+  0% {opacity:1;}
+  40% {opacity:.85;}
+  100% {opacity:0;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .tower-climb-trail::before,.tower-climb-trail::after,
+  .tower-enemy-floor.is-climb-target::after,
+  .tower-enemy-floor.is-climb-arrived::after {animation:none;}
 }
 /* Matchup and result stamps sit over the characters, not in extra panels. */
 .tower-stamp {
@@ -934,6 +1019,7 @@ td { background:#1c1428 }
     <div class="tower-stage-arena" id="towerArena">
       <div class="tower-stage-world" id="towerWorld">
         <div class="tower-climber-lane">
+          <div class="tower-climb-trail" id="towerTrail" aria-hidden="true"></div>
           <div class="tower-climber" id="towerClimber">
             <div id="towerCardPreview"></div>
           </div>
@@ -1377,6 +1463,7 @@ function positionTower(){
 
   // Both columns have the same box dimensions; only the left VCard climbs.
   $("towerClimber").style.bottom=((towerCurrentLevel-1)*step)+"px";
+  $("towerTrail").style.bottom=((towerCurrentLevel-1)*step)+"px";
 
   // Keep the VS / LOSS stamp aligned with the active encounter during movement.
   const stamp=$("towerStamp");
@@ -1390,7 +1477,17 @@ function positionTower(){
     "translateY("+(Math.max(0,towerCurrentLevel-2)*step)+"px)";
 }
 
+function setTowerClimbEffects(state) {
+  $("towerTrail").classList.toggle("is-climbing",state==="climbing");
+  $("towerEnemies").querySelectorAll("[data-boss]").forEach(floor=>{
+    const active=Number(floor.dataset.boss)===towerCurrentLevel;
+    floor.classList.toggle("is-climb-target",active && state==="climbing");
+    floor.classList.toggle("is-climb-arrived",active && state==="arrived");
+  });
+}
+
 function updateSetup() {
+  setTowerClimbEffects("idle");
   window.VHouseVCard.render($("towerCardPreview"),selectedRaidCard);
   renderTowerClimb(1);
 }
@@ -1714,12 +1811,15 @@ function finishBoss(won) {
     updateHits();
     renderBossGrid();
     renderTowerClimb(raid.boss);
+    setTowerClimbEffects("climbing");
 
     towerTransitionTimer=setTimeout(()=>{
       if(!raid || raid.completed)return;
+      setTowerClimbEffects("arrived");
       showTowerStamp("VS","center",raid.boss);
       towerTransitionTimer=setTimeout(()=>{
         hideTowerStamp();
+        setTowerClimbEffects("idle");
         towerTransitioning=false;
         if(raid && !raid.completed)showScreen("travelScreen");
       },TOWER_VS_MS);
@@ -1732,6 +1832,7 @@ function finishBoss(won) {
 function finishRaid() {
   clearInterval(raidInterval);
   clearTimeout(towerTransitionTimer);
+  setTowerClimbEffects("idle");
   hideTowerStamp();
   towerTransitioning=false;
 
