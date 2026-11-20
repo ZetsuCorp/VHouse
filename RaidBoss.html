@@ -497,6 +497,40 @@ select {
 @media(prefers-reduced-motion:reduce) {
   .tower-enemy-floor.is-result-hit::before {animation:none;opacity:.14;}
 }
+/* The losing boss burns on its Tower floor before the next climb begins. */
+.tower-enemy-floor.is-boss-burning .tower-opponent-sparks {opacity:0;}
+.tower-enemy-floor.is-boss-burning .tower-enemy-art::before,
+.tower-enemy-floor.is-boss-burning .tower-enemy-art::after {
+  content:"";
+  position:absolute;
+  inset:-12% -6%;
+  z-index:4;
+  pointer-events:none;
+  animation:raidTowerBossBurn 2.1s ease-out both;
+}
+.tower-enemy-floor.is-boss-burning .tower-enemy-art::before {
+  background:
+    radial-gradient(ellipse at 35% 98%,rgba(255,79,50,.7),transparent 49%),
+    radial-gradient(ellipse at 62% 92%,rgba(240,32,79,.7),transparent 52%),
+    radial-gradient(ellipse at 52% 65%,rgba(191,25,33,.4),transparent 60%);
+  filter:drop-shadow(0 0 9px rgba(255,54,38,.8));
+}
+.tower-enemy-floor.is-boss-burning .tower-enemy-art::after {
+  background:
+    radial-gradient(ellipse at 18% 92%,rgba(255,190,79,.9),transparent 25%),
+    radial-gradient(ellipse at 45% 87%,rgba(255,58,43,.85),transparent 27%),
+    radial-gradient(ellipse at 77% 92%,rgba(255,114,35,.85),transparent 29%);
+  filter:blur(3px) drop-shadow(0 0 8px #dd3929);
+}
+@keyframes raidTowerBossBurn {
+  0% {opacity:0;transform:translateY(15%) scale(.85);}
+  20%,70% {opacity:1;}
+  100% {opacity:0;transform:translateY(-25%) scale(1.15);}
+}
+@media(prefers-reduced-motion:reduce) {
+  .tower-enemy-floor.is-boss-burning .tower-enemy-art::before,
+  .tower-enemy-floor.is-boss-burning .tower-enemy-art::after {animation:none;opacity:.4;}
+}
 /* The destination floor charges while the VCard slides, then pulses on arrival. */
 .tower-enemy-floor.is-climb-target::after,
 .tower-enemy-floor.is-climb-arrived::after {
@@ -711,8 +745,16 @@ select {
 }
 
 /* Every attack moves once after its coin flip; no idle fighter movement. */
-.fighter.player {--raid-recoil:-10px;--raid-dodge:-18px;}
-.fighter.boss {--raid-recoil:10px;--raid-dodge:18px;}
+.fighter.player {
+  --raid-recoil:-10px;
+  --raid-dodge-x:clamp(-100px,-7cqw,-52px);
+  --raid-dodge-tilt:-9deg;
+}
+.fighter.boss {
+  --raid-recoil:10px;
+  --raid-dodge-x:clamp(52px,7cqw,100px);
+  --raid-dodge-tilt:9deg;
+}
 .fighter.is-turn {
   border-color:#d79bff;
   box-shadow:0 0 17px #a747fa88,0 0 15px #000a;
@@ -723,6 +765,129 @@ select {
 }
 .fighter.is-hit {animation:raidBattleImpact .95s ease-out both;}
 .fighter.is-dodging {animation:raidBattleDodge .95s ease-in-out both;}
+/* These effects sit in the battle world, not inside the VCard or boss artwork. */
+.battle-wind-fx,.battle-impact-fx {
+  position:absolute;
+  left:0;
+  top:0;
+  z-index:6;
+  pointer-events:none;
+  opacity:0;
+  transform:translate(-50%,-50%);
+}
+.battle-wind-fx {
+  width:clamp(130px,16cqw,250px);
+  height:clamp(74px,9cqw,140px);
+  --wind-mirror:1;
+}
+.battle-wind-fx.is-left {--wind-mirror:-1;}
+.battle-wind-fx.is-active {animation:raidBattleWind .95s ease-out both;}
+.battle-wind-fx::before,.battle-wind-fx::after,
+.battle-impact-fx::before,.battle-impact-fx::after {
+  content:"";
+  position:absolute;
+  pointer-events:none;
+}
+.battle-wind-fx::before {
+  inset:10% 3%;
+  border-top:4px solid rgba(215,249,255,.95);
+  border-bottom:3px solid rgba(124,197,255,.85);
+  border-radius:50%;
+  transform:rotate(-10deg);
+  filter:drop-shadow(0 0 8px #8cddff);
+}
+.battle-wind-fx::after {
+  inset:0;
+  background:repeating-linear-gradient(167deg,
+    transparent 0 11px,rgba(223,250,255,.94) 12px 15px,
+    rgba(113,195,255,.7) 16px 18px,transparent 19px 31px);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 35%,transparent 74%);
+  mask-image:radial-gradient(ellipse at center,#000 35%,transparent 74%);
+  filter:drop-shadow(0 0 7px #86daff);
+}
+.battle-impact-fx {
+  width:clamp(90px,11cqw,180px);
+  aspect-ratio:1;
+}
+.battle-impact-fx.is-active {animation:raidBattleImpactBurst .95s ease-out both;}
+.battle-impact-fx::before {
+  inset:0;
+  background:
+    radial-gradient(circle,#fff 0 5%,#fff3aa 6% 10%,#ffb04e 12% 18%,transparent 33%),
+    conic-gradient(from 0deg,transparent 0 13deg,#fff6b0 15deg 23deg,transparent 25deg 58deg,
+      #ffcc64 60deg 68deg,transparent 70deg 103deg,
+      #fff6b0 105deg 113deg,transparent 115deg 148deg,
+      #ffcc64 150deg 158deg,transparent 160deg 193deg,
+      #fff6b0 195deg 203deg,transparent 205deg 238deg,
+      #ffcc64 240deg 248deg,transparent 250deg 283deg,
+      #fff6b0 285deg 293deg,transparent 295deg 328deg,
+      #ffcc64 330deg 338deg,transparent 340deg);
+  filter:drop-shadow(0 0 12px #ffcf68);
+  border-radius:50%;
+}
+.battle-impact-fx::after {
+  inset:23%;
+  border:4px solid rgba(255,243,180,.95);
+  border-radius:50%;
+  box-shadow:0 0 12px #ffb34a,0 0 18px #fff8b4;
+  animation:raidImpactRing .95s ease-out both;
+}
+@keyframes raidBattleWind {
+  0%,16% {opacity:0;transform:translate(-50%,-50%) scaleX(var(--wind-mirror)) scale(.65);}
+  31% {opacity:1;transform:translate(-50%,-50%) scaleX(var(--wind-mirror)) translateX(-13px) scale(1);}
+  65% {opacity:.9;transform:translate(-50%,-50%) scaleX(var(--wind-mirror)) translateX(25px) scale(1.08);}
+  100% {opacity:0;transform:translate(-50%,-50%) scaleX(var(--wind-mirror)) translateX(60px) scale(1.35);}
+}
+@keyframes raidBattleImpactBurst {
+  0%,30% {opacity:0;transform:translate(-50%,-50%) scale(.35);}
+  44% {opacity:1;transform:translate(-50%,-50%) scale(.85);}
+  67% {opacity:.8;transform:translate(-50%,-50%) scale(1.25);}
+  100% {opacity:0;transform:translate(-50%,-50%) scale(1.7);}
+}
+@keyframes raidImpactRing {
+  0%,32% {opacity:0;transform:scale(.35);}
+  44% {opacity:1;transform:scale(.85);}
+  100% {opacity:0;transform:scale(2.25);}
+}
+/* Match the rising red/orange loss flames from the Tower result effect. */
+.fighter.is-burning {overflow:visible;}
+.fighter.is-burning::before,.fighter.is-burning::after {
+  content:"";
+  position:absolute;
+  inset:-20% -18%;
+  z-index:7;
+  pointer-events:none;
+}
+.fighter.is-burning::before {
+  background:
+    radial-gradient(ellipse at 35% 98%,rgba(255,79,50,.8),transparent 49%),
+    radial-gradient(ellipse at 62% 92%,rgba(240,32,79,.8),transparent 52%),
+    radial-gradient(ellipse at 52% 65%,rgba(191,25,33,.55),transparent 60%);
+  filter:drop-shadow(0 0 13px rgba(255,54,38,.9));
+  animation:raidBattleBurn 2.2s ease-out both;
+}
+.fighter.is-burning::after {
+  background:
+    radial-gradient(ellipse at 18% 92%,rgba(255,206,93,.95),transparent 25%),
+    radial-gradient(ellipse at 45% 87%,rgba(255,58,43,.9),transparent 27%),
+    radial-gradient(ellipse at 77% 92%,rgba(255,136,35,.94),transparent 29%);
+  filter:blur(3px) drop-shadow(0 0 9px #dd3929);
+  animation:raidBattleBurn 2.2s ease-out both;
+}
+.fighter.is-burning > #battlePlayerCard,
+.fighter.is-burning > .battle-boss-image {
+  animation:raidBattleBurnout 2.2s ease-out both;
+}
+@keyframes raidBattleBurn {
+  0% {opacity:0;transform:translateY(17%) scale(.8);}
+  18%,62% {opacity:1;}
+  100% {opacity:0;transform:translateY(-38%) scale(1.14);}
+}
+@keyframes raidBattleBurnout {
+  0%,35% {filter:brightness(1);}
+  70% {filter:brightness(.7) saturate(.8);}
+  100% {filter:brightness(.32) saturate(.45);}
+}
 @keyframes raidBattleLunge {
   0%,100% {transform:translateX(0);}
   43%,58% {transform:translateX(var(--raid-lunge-distance,0px));}
@@ -733,8 +898,10 @@ select {
   65% {transform:translateX(0);filter:brightness(1.2);}
 }
 @keyframes raidBattleDodge {
-  0%,100% {transform:translateX(0);}
-  43%,58% {transform:translateX(var(--raid-dodge));}
+  0%,13%,100% {transform:translate(0,0) rotate(0deg);}
+  27% {transform:translate(var(--raid-dodge-x),-29px) rotate(var(--raid-dodge-tilt));}
+  60% {transform:translate(var(--raid-dodge-x),-24px) rotate(var(--raid-dodge-tilt));}
+  82% {transform:translate(calc(var(--raid-dodge-x) * .25),-6px) rotate(0deg);}
 }
 
 .battle-caption {
@@ -934,7 +1101,12 @@ td { background:#1c1428 }
 }
 
 @media(prefers-reduced-motion:reduce) {
-  .fighter.is-attacking,.fighter.is-hit,.fighter.is-dodging {animation:none}
+  .fighter.is-attacking,.fighter.is-hit,.fighter.is-dodging,
+  .fighter.is-burning::before,.fighter.is-burning::after,
+  .fighter.is-burning > #battlePlayerCard,.fighter.is-burning > .battle-boss-image,
+  .battle-wind-fx.is-active,.battle-impact-fx.is-active,
+  .battle-impact-fx::after {animation:none;}
+  .fighter.is-burning::before {opacity:.55;}
 }
 
 /* STAGE 1 — PLAYER VCARD ROSTER */
@@ -1477,6 +1649,8 @@ td { background:#1c1428 }
 
     <div class="fighter player"><div id="battlePlayerCard"></div></div>
     <div class="fighter boss"><img class="battle-boss-image" id="battleBossImage" src="assets/TowerBoss1.png" alt="Tower Boss 1"></div>
+    <span id="battleWindFx" class="battle-wind-fx" aria-hidden="true"></span>
+    <span id="battleImpactFx" class="battle-impact-fx" aria-hidden="true"></span>
 
     <div class="battle-score">
       <span>
@@ -1666,7 +1840,7 @@ let flipInProgress = false;
 let towerTransitioning = false;
 let towerTransitionTimer = null;
 const TOWER_VS_MS = 1250;
-const TOWER_LOSS_MS = 1350;
+const TOWER_LOSS_MS = 2150;
 const TOWER_CLIMB_MS = 5000;
 
 /* SCREEN CONTROL */
@@ -1983,7 +2157,7 @@ function renderTowerClimb(bossNumber){
 function hideTowerResultEffects() {
   $("towerResultFx").className="tower-result-fx";
   $("towerEnemies").querySelectorAll(".is-result-hit").forEach(floor=>{
-    floor.classList.remove("is-result-hit","is-boss-victory");
+    floor.classList.remove("is-result-hit","is-boss-victory","is-boss-burning");
   });
 }
 function showTowerResultEffects(won,bossNumber) {
@@ -1995,7 +2169,8 @@ function showTowerResultEffects(won,bossNumber) {
   const floor=$("towerEnemies").querySelector('[data-boss="'+Number(bossNumber)+'"]');
   if(floor) {
     floor.classList.add("is-result-hit");
-    if(!won)floor.classList.add("is-boss-victory");
+    if(won)floor.classList.add("is-boss-burning");
+    else floor.classList.add("is-boss-victory");
   }
 }
 function hideTowerStamp(){
@@ -2198,6 +2373,7 @@ const BATTLE_READY_MS=500;
 const BATTLE_FLIP_MS=1000;
 const BATTLE_ACTION_MS=950;
 const BATTLE_SCORE_MS=500;
+const BATTLE_FINISH_MS=2200;
 const battlePause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function clearBattleMotion(){
@@ -2205,6 +2381,27 @@ function clearBattleMotion(){
     fighter.classList.remove("is-turn","is-attacking","is-hit","is-dodging");
     fighter.style.removeProperty("--raid-lunge-distance");
   }
+  for(const id of ["battleWindFx","battleImpactFx"]){
+    const fx=$(id);
+    fx.classList.remove("is-active","is-left");
+  }
+}
+function clearBattleFinish(){
+  $("travelScreen").querySelectorAll(".fighter.is-burning").forEach(fighter=>{
+    fighter.classList.remove("is-burning");
+  });
+}
+function placeBattleFx(id,fighter){
+  const fx=$(id);
+  const battle=$("travelScreen").querySelector(".battle-world").getBoundingClientRect();
+  const box=fighter.getBoundingClientRect();
+  fx.style.left=(box.left+box.width/2-battle.left)+"px";
+  fx.style.top=(box.top+box.height/2-battle.top)+"px";
+  fx.classList.remove("is-active","is-left");
+  if(id==="battleWindFx"&&fighter.classList.contains("player"))
+    fx.classList.add("is-left");
+  void fx.offsetWidth;
+  fx.classList.add("is-active");
 }
 function isActiveBattleTurn(run,bossNumber){
   return raid===run && !run.completed && !towerTransitioning &&
@@ -2220,6 +2417,7 @@ function animateBattleAttack(actor,heads){
   attacker.style.setProperty("--raid-lunge-distance",distance+"px");
   attacker.classList.add("is-attacking");
   defender.classList.add(heads?"is-hit":"is-dodging");
+  placeBattleFx(heads?"battleImpactFx":"battleWindFx",defender);
 }
 async function performTurn(){
   if(!raid || raid.completed || towerTransitioning || flipInProgress)return;
@@ -2305,50 +2503,62 @@ function finishBoss(won) {
   renderEgg();
   renderBossGrid();
 
-  // Show the result on the tower before progressing or ending the raid.
+  // A completed battle must finish visually before returning to the Tower.
   towerTransitioning=true;
-  showScreen("setupScreen");
-  renderTowerClimb(raid.boss);
-  showTowerStamp("LOSS",won?"right":"left",raid.boss);
-  showTowerResultEffects(won,raid.boss);
+  clearBattleMotion();
+  clearBattleFinish();
+  const loser=$("travelScreen").querySelector(".fighter."+(won?"boss":"player"));
+  loser.classList.add("is-burning");
+  const finishedRun=raid;
+  const finishedBoss=raid.boss;
   clearTimeout(towerTransitionTimer);
   towerTransitionTimer=setTimeout(()=>{
-    hideTowerStamp();
-    if(!raid || raid.completed)return;
-
-    if(!won) {
-      raid.defeated=true;
-      finishRaid();
-      return;
-    }
-
-    if(raid.boss>=10 || raid.eggHp<=0) {
-      finishRaid();
-      return;
-    }
-
-    // Only a successful battle advances the VCard to the next Boss.
-    raid.boss++;
-    playerHits=0;
-    bossHits=0;
-    currentTurn="player";
-    updateHits();
-    renderBossGrid();
+    if(raid!==finishedRun||raid.completed||raid.boss!==finishedBoss)return;
+    clearBattleFinish();
+    showScreen("setupScreen");
     renderTowerClimb(raid.boss);
-    setTowerClimbEffects("climbing");
+    showTowerStamp("LOSS",won?"right":"left",raid.boss);
+    showTowerResultEffects(won,raid.boss);
 
+    // Hold on the burned boss and LOSS result before starting the next climb.
     towerTransitionTimer=setTimeout(()=>{
-      if(!raid || raid.completed)return;
-      setTowerClimbEffects("arrived");
-      showTowerStamp("VS","center",raid.boss);
+      hideTowerStamp();
+      if(raid!==finishedRun||raid.completed||raid.boss!==finishedBoss)return;
+
+      if(!won) {
+        raid.defeated=true;
+        finishRaid();
+        return;
+      }
+
+      if(raid.boss>=10 || raid.eggHp<=0) {
+        finishRaid();
+        return;
+      }
+
+      // Only a successful battle advances the VCard to the next Boss.
+      raid.boss++;
+      playerHits=0;
+      bossHits=0;
+      currentTurn="player";
+      updateHits();
+      renderBossGrid();
+      renderTowerClimb(raid.boss);
+      setTowerClimbEffects("climbing");
+
       towerTransitionTimer=setTimeout(()=>{
-        hideTowerStamp();
-        setTowerClimbEffects("idle");
-        towerTransitioning=false;
-        if(raid && !raid.completed)showScreen("travelScreen");
-      },TOWER_VS_MS);
-    },TOWER_CLIMB_MS);
-  },TOWER_LOSS_MS);
+        if(raid!==finishedRun || raid.completed)return;
+        setTowerClimbEffects("arrived");
+        showTowerStamp("VS","center",raid.boss);
+        towerTransitionTimer=setTimeout(()=>{
+          hideTowerStamp();
+          setTowerClimbEffects("idle");
+          towerTransitioning=false;
+          if(raid===finishedRun && !raid.completed)showScreen("travelScreen");
+        },TOWER_VS_MS);
+      },TOWER_CLIMB_MS);
+    },TOWER_LOSS_MS);
+  },BATTLE_FINISH_MS);
 }
 
 /* FINISH RAID */
