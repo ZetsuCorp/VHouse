@@ -710,14 +710,31 @@ select {
   object-fit:contain;
 }
 
-@keyframes playerMove {
-  from { transform:translateX(0) }
-  to { transform:translateX(55px) }
+/* Every attack moves once after its coin flip; no idle fighter movement. */
+.fighter.player {--raid-recoil:-10px;--raid-dodge:-18px;}
+.fighter.boss {--raid-recoil:10px;--raid-dodge:18px;}
+.fighter.is-turn {
+  border-color:#d79bff;
+  box-shadow:0 0 17px #a747fa88,0 0 15px #000a;
 }
-
-@keyframes bossMove {
-  from { transform:translateX(0) }
-  to { transform:translateX(-55px) }
+.fighter.is-attacking {
+  z-index:4;
+  animation:raidBattleLunge .95s ease-in-out both;
+}
+.fighter.is-hit {animation:raidBattleImpact .95s ease-out both;}
+.fighter.is-dodging {animation:raidBattleDodge .95s ease-in-out both;}
+@keyframes raidBattleLunge {
+  0%,100% {transform:translateX(0);}
+  43%,58% {transform:translateX(var(--raid-lunge-distance,0px));}
+}
+@keyframes raidBattleImpact {
+  0%,100% {transform:translateX(0);filter:brightness(1);}
+  43% {transform:translateX(var(--raid-recoil));filter:brightness(1.7);}
+  65% {transform:translateX(0);filter:brightness(1.2);}
+}
+@keyframes raidBattleDodge {
+  0%,100% {transform:translateX(0);}
+  43%,58% {transform:translateX(var(--raid-dodge));}
 }
 
 .battle-caption {
@@ -917,7 +934,7 @@ td { background:#1c1428 }
 }
 
 @media(prefers-reduced-motion:reduce) {
-  .fighter {animation:none}
+  .fighter.is-attacking,.fighter.is-hit,.fighter.is-dodging {animation:none}
 }
 
 /* STAGE 1 — PLAYER VCARD ROSTER */
@@ -2176,74 +2193,89 @@ function startRaid() {
   },250);
 }
 
-/* ZETSU COUNTER BLITZ */
+/* ZETSU COUNTER BLITZ — one visible movement sequence per coin flip. */
+const BATTLE_READY_MS=500;
+const BATTLE_FLIP_MS=1000;
+const BATTLE_ACTION_MS=950;
+const BATTLE_SCORE_MS=500;
+const battlePause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
-async function performTurn() {
-  if(
-    !raid ||
-    raid.completed ||
-    towerTransitioning ||
-    flipInProgress
-  ) return;
+function clearBattleMotion(){
+  for(const fighter of $("travelScreen").querySelectorAll(".fighter")){
+    fighter.classList.remove("is-turn","is-attacking","is-hit","is-dodging");
+    fighter.style.removeProperty("--raid-lunge-distance");
+  }
+}
+function isActiveBattleTurn(run,bossNumber){
+  return raid===run && !run.completed && !towerTransitioning &&
+    run.boss===bossNumber && !$("travelScreen").hidden;
+}
+function animateBattleAttack(actor,heads){
+  const attacker=$("travelScreen").querySelector(".fighter."+actor);
+  const defender=$("travelScreen").querySelector(".fighter."+(actor==="player"?"boss":"player"));
+  const from=attacker.getBoundingClientRect();
+  const to=defender.getBoundingClientRect();
+  const gap=actor==="player" ? to.left-from.right : from.left-to.right;
+  const distance=Math.max(0,gap-12)*(actor==="player"?1:-1);
+  attacker.style.setProperty("--raid-lunge-distance",distance+"px");
+  attacker.classList.add("is-attacking");
+  defender.classList.add(heads?"is-hit":"is-dodging");
+}
+async function performTurn(){
+  if(!raid || raid.completed || towerTransitioning || flipInProgress)return;
 
-  flipInProgress = true;
+  flipInProgress=true;
+  const run=raid;
+  const bossNumber=run.boss;
+  const actor=currentTurn;
+  const label=actor==="player"?"VCARD":"BOSS";
+  const active=()=>isActiveBattleTurn(run,bossNumber);
 
-  try {
-    const heads = await secureCoinFlip();
+  try{
+    clearBattleMotion();
+    const attacker=$("travelScreen").querySelector(".fighter."+actor);
+    attacker.classList.add("is-turn");
+    $("battleCaption").textContent="BOSS "+bossNumber+" — "+actor.toUpperCase();
+    $("battleLog").textContent=label+" TURN";
+    await battlePause(BATTLE_READY_MS);
+    if(!active())return;
 
-    if(!raid || raid.completed) return;
+    $("battleLog").textContent=label+" FLIPPING…";
+    const heads=await secureCoinFlip();
+    await battlePause(BATTLE_FLIP_MS);
+    if(!active())return;
 
-    const actor = currentTurn;
+    animateBattleAttack(actor,heads);
+    $("battleLog").textContent=label+" FLIPPED "+(heads?"HEADS — HIT":"TAILS — MISS");
+    await battlePause(BATTLE_ACTION_MS);
+    if(!active())return;
 
-    if(heads) {
-      if(actor==="player") {
-        playerHits++;
-      } else {
-        bossHits++;
-      }
+    clearBattleMotion();
+    if(heads){
+      if(actor==="player")playerHits++;
+      else bossHits++;
     }
-
-    $("battleCaption").textContent =
-      "BOSS " +
-      raid.boss +
-      " — " +
-      actor.toUpperCase();
-
-    $("battleLog").textContent =
-      (actor==="player"?"VCARD":"BOSS") +
-      " FLIPPED " +
-      (heads?"HEADS — HIT":"TAILS — MISS");
-
     updateHits();
+    await battlePause(BATTLE_SCORE_MS);
+    if(!active())return;
 
-    // First to three hits wins.
-    if(playerHits===3) {
+    // End the fight only after the final impact and score are shown.
+    if(playerHits===3){
       finishBoss(true);
       return;
     }
-
-    if(bossHits===3) {
+    if(bossHits===3){
       finishBoss(false);
       return;
     }
-
-    // Alternate player and Boss.
-    currentTurn =
-      actor==="player" ? "boss" : "player";
-
-  } catch(error) {
+    currentTurn=actor==="player"?"boss":"player";
+  }catch(error){
     clearInterval(raidInterval);
-
-    console.error(
-      "Secure coin flip failed:",
-      error
-    );
-
-    $("battleLog").textContent =
-      "SECURE RANDOMNESS UNAVAILABLE";
-
-  } finally {
-    flipInProgress = false;
+    console.error("Secure coin flip failed:",error);
+    $("battleLog").textContent="SECURE RANDOMNESS UNAVAILABLE";
+  }finally{
+    clearBattleMotion();
+    flipInProgress=false;
   }
 }
 
