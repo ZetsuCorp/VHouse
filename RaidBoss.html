@@ -665,38 +665,48 @@ select {
 
 .fighter {
   position:absolute;
-  bottom:18%;
-  width:90px;
-  height:100px;
+  bottom:10%;
+  height:min(72%,30dvh);
+  width:auto;
+  aspect-ratio:2 / 3;
   display:grid;
   place-items:center;
+  min-width:0;
+  min-height:0;
+  padding:3px;
+  overflow:hidden;
   border:2px solid var(--gold);
   border-radius:10px 10px 5px 5px;
   background:linear-gradient(#4f3270,#171125);
   box-shadow:0 0 15px #000a;
-  font-size:45px;
   z-index:2;
 }
-
-.fighter.player {
-  left:18%;
-  animation:playerMove 1.2s ease-in-out infinite alternate;
-}
-
+.fighter.player {left:18%;}
 .fighter.boss {
   right:18%;
+  width:min(26%,36dvh);
+  height:min(60%,27dvh);
+  aspect-ratio:auto;
   background:linear-gradient(#692733,#220f18);
-  animation:bossMove 1.2s ease-in-out infinite alternate;
 }
-/* Keep both existing fighter boxes; show the real VCard object and boss PNG. */
+/* The whole VCard object must fit inside its battle frame. */
+.fighter.player #battlePlayerCard {
+  display:grid;
+  place-items:center;
+  width:100%;
+  min-width:0;
+}
 .fighter.player .vhouse-vcard-host {
-  width:min(100%,64px);
-  flex:0 0 auto;
+  width:100%;
+  min-width:0;
 }
+/* Boss artwork is a horizontal PNG, not another VCard object. */
 .fighter.boss .battle-boss-image {
   display:block;
   width:100%;
   height:100%;
+  min-width:0;
+  min-height:0;
   object-fit:contain;
 }
 
@@ -899,7 +909,7 @@ td { background:#1c1428 }
   .panel {padding:6px}
   .metric b {font-size:16px}
   .metric small {font-size:8px}
-  .fighter {width:65px;height:75px;font-size:35px}
+  .fighter {font-size:35px}
   .complete-screen {grid-template-columns:minmax(120px,33%) minmax(0,1fr);}
   .receipt {padding:6px}
   .raid-screen {gap:5px}
@@ -1897,18 +1907,23 @@ let towerCurrentLevel=1;
 
 function positionTower(){
   const arena=$("towerArena");
-  const floorHeight=arena.clientHeight/2;
+  const floorHeight=Math.round(arena.clientHeight/2);
   if(!floorHeight)return;
 
   const step=floorHeight+4;
-  arena.style.setProperty("--floor-height",floorHeight+"px");
-  arena.style.setProperty("--vcard-width",
-    Math.floor(Math.min(arena.clientWidth/2-12,floorHeight*.7))+"px");
+  const floorSize=floorHeight+"px";
+  // Fit the COMPLETE VCard, not just its artwork, inside the tower floor.
+  const vcardSize=Math.max(1,Math.floor(Math.min(arena.clientWidth/2-12,(floorHeight-12)/1.55)))+"px";
+  if(arena.style.getPropertyValue("--floor-height")!==floorSize)
+    arena.style.setProperty("--floor-height",floorSize);
+  if(arena.style.getPropertyValue("--vcard-width")!==vcardSize)
+    arena.style.setProperty("--vcard-width",vcardSize);
 
   // Both columns have the same box dimensions; only the left VCard climbs.
-  $("towerClimber").style.bottom=((towerCurrentLevel-1)*step)+"px";
-  $("towerTrail").style.bottom=((towerCurrentLevel-1)*step)+"px";
-  $("towerResultFx").style.bottom=((towerCurrentLevel-1)*step)+"px";
+  const bottom=((towerCurrentLevel-1)*step)+"px";
+  for(const id of ["towerClimber","towerTrail","towerResultFx"]){
+    if($(id).style.bottom!==bottom)$(id).style.bottom=bottom;
+  }
 
   // Keep the VS / LOSS stamp aligned with the active encounter during movement.
   const stamp=$("towerStamp");
@@ -1918,8 +1933,9 @@ function positionTower(){
   }
 
   // Follow the climb without adding a scrollbar or moving bosses independently.
-  $("towerWorld").style.transform=
-    "translateY("+(Math.max(0,towerCurrentLevel-2)*step)+"px)";
+  const worldTransform="translateY("+(Math.max(0,towerCurrentLevel-2)*step)+"px)";
+  if($("towerWorld").style.transform!==worldTransform)
+    $("towerWorld").style.transform=worldTransform;
 }
 
 function setTowerClimbEffects(state) {
