@@ -2151,23 +2151,43 @@ function renderRaidRoster(){
     preview.replaceChildren();
     delete preview.dataset.selectedCardId;
   }
-  // Display placeholders until the Raid results table is connected.
-  for(const id of ["raidStatNumber","raidStatPlayer","raidStatVCard","raidRewardType"]){
-    $(id).textContent="—";
-  }
-  for(const id of ["raidStatBattles","raidStatWins","raidStatLosses","raidStatBosses","raidStatEggs"]){
-    $(id).textContent=card?"0":"—";
-  }
-  for(const id of ["raidEarnedEncounter","raidEarnedEgg","raidEarnedTotal"]){
-    $(id).textContent=card?"$0.00":"—";
+  // The signed-in player's Raid results come from the existing VHouse preload.
+  const preload=raidAuth?.getPreloadedPlayerData?.();
+  const loaded=preload?.playerId===raidAuth?.getUser()?.id;
+  const raidRecords=loaded?preload.raidRecords||[]:[];
+  const savedResults=loaded?preload.raidResults||[]:[];
+  const latestRaid=card?raidRecords.find(entry=>String(entry.card_id)===String(card.id)):null;
+  const raidId=latestRaid?.id||null;
+  const result=raidId?savedResults.find(entry=>entry.raid_id===raidId&&
+    String(entry.vcard_id)===String(card?.id)):null;
+  const number=key=>!loaded||!card?"—":String(result?.[key]??0);
+  const money=key=>!loaded||!card?"—":"$"+Number(result?.[key]??0).toFixed(2);
+  const values={
+    raidStatNumber:raidId||"—",
+    raidStatPlayer:loaded?(preload.player?.displayName||preload.player?.username||
+      raidAuth.getLoginIdentity()||"—"):"—",
+    raidStatVCard:loaded&&card?String(card.name||"VCard"):"—",
+    raidStatBattles:number("battles"),
+    raidStatWins:number("wins"),
+    raidStatLosses:number("losses"),
+    raidStatBosses:number("bosses_defeated"),
+    raidRewardType:result?.reward_type||"—",
+    raidEarnedEncounter:money("encounter_earnings"),
+    raidStatEggs:number("eggs_broken"),
+    raidEarnedEgg:money("total_egg_rewards"),
+    raidEarnedTotal:money("total_earned")
+  };
+  for(const [id,value] of Object.entries(values)){
+    $(id).textContent=value;
+    $(id).title=String(value);
   }
   $("confirmRaidCard").disabled=!card||raidStore.isLocked(card.id)||
-    raidRestoring||raidStarting||!!raid||!!raidPendingRecord;
+    !loaded||raidRestoring||raidStarting||!!raid||!!raidPendingRecord;
 }
 async function loadRaidRoster(){
   try{
     await raidAuth.ready;
-    await raidStore.refresh();
+    await raidStore.refresh({includeRaid:true});
     rosterLoadError="";
   }catch(error){
     console.error("Tower Raid VCard load:",error);
@@ -2187,7 +2207,7 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     });
     raidPendingRecord=record;
     selectedRaidCard={...record.card_snapshot};
-    await raidStore.refresh();
+    await raidStore.refresh({includeRaid:true});
   }catch(error){
     console.error("Tower Raid start:",error);
     rosterLoadError=String(error.message||"RAID START FAILED").includes("RAID_ALREADY_ACTIVE")
@@ -2846,7 +2866,7 @@ $("confirmButton").addEventListener("click",async()=>{
     selectedRaidCard=null;
     raidCheckedPlayerId=raidAuth.getUser()?.id||null;
     showScreen("cardSelectScreen");
-    await raidStore.refresh();
+    await raidStore.refresh({includeRaid:true});
     renderRaidRoster();
   }catch(error){
     console.error("Tower Raid confirm:",error);

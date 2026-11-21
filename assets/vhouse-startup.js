@@ -121,6 +121,13 @@
     if (!discordLinked) $("discordLogin").textContent = "LINK DISCORD";
     if (!emailLinked) $("emailLogin").textContent = "LINK EMAIL";
   }
+  async function preloadSignedInPlayer(user){
+    if(!user?.id||typeof authAdapter?.preloadPlayerData!=="function")
+      throw Error("Player and Raid preload unavailable.");
+    $("authStatus").textContent="Loading player information and Raid records…";
+    const data=await authAdapter.preloadPlayerData();
+    if(data?.playerId!==user.id)throw Error("Player and Raid preload failed.");
+  }
   async function showAuth() {
     setStage("auth");
     const status = $("authStatus");
@@ -140,13 +147,20 @@
       try {
         const session = await authAdapter.restoreSession();
         if (session?.authenticated === true) {
+          await preloadSignedInPlayer(session.user);
           authMode = "authenticated";
-          status.textContent = "Signed in.";
+          status.textContent = "Signed in. Player and Raid records loaded.";
           renderAccount(session.user);
           $("sessionContinue").hidden = false;
           return;
         }
-      } catch (error) { console.warn("VHouse session restoration failed:",error); }
+      } catch (error) {
+        console.warn("VHouse player preload failed:",error);
+        if(authAdapter?.getUser?.()){
+          status.textContent="PLAYER DATA UNAVAILABLE — RELOAD TO RETRY";
+          return;
+        }
+      }
     }
     status.textContent = "Sign in with Discord or Email to continue.";
   }
@@ -156,6 +170,7 @@
     try {
       const session = await authAdapter.signIn(provider, options);
       if (session?.authenticated === true) {
+        await preloadSignedInPlayer(session.user);
         authMode = "authenticated";
         showLegal();
       } else if (session?.pending) {

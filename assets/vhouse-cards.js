@@ -30,14 +30,14 @@ function getStatus(cardId){
   const status=journeyStates.get(key(cardId));
   return status?copy(status):{status:"AVAILABLE",activity:null,missionId:null,stageId:null};
 }
-async function loadForPlayer(){
+async function loadForPlayer(options={}){
   const ticket=++request,service=auth();
   if(!service){clear();return;}
   await service.ready;
   const id=playerId();
   if(!id){if(ticket===request)clear();return;}
   const [data,statusResponse]=await Promise.all([
-    service.loadPlayerData(),
+    service.loadPlayerData(options),
     service.getClient().from("vhouse_vcard_journey_states")
       .select("card_id,status,mission_id,stage_id,activity").eq("player_id",id)
   ]);
@@ -74,8 +74,8 @@ async function loadForPlayer(){
   ]));
   notify();
 }
-function refresh(){
-  loadPromise=loadForPlayer().catch(e=>{
+function refresh(options={}){
+  loadPromise=loadForPlayer(options).catch(e=>{
     console.error("VHouse card data load failed:",e);
     if(!playerId())clear();
     throw e;
