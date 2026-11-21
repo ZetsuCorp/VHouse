@@ -64,16 +64,6 @@ function onLogin(user){
     notify();
   }
   if(!id)return;
-  // Use the verified snapshot already acquired during VHouse startup.
-  const preloaded=auth()?.getPreloadedPlayerData?.();
-  const stats=preloaded?.playerId===id?preloaded.scrapStats:null;
-  if(stats?.player_id===id&&Number.isFinite(Number(stats.atk))&&
-    Number.isFinite(Number(stats.def))){
-    snapshot=stats;
-    loadedPlayer=id;
-    notify();
-    return;
-  }
   void refresh().catch(error=>console.warn("VHouse Scrap strength:",error));
 }
 if(auth()){
