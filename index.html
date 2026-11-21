@@ -2,34 +2,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Restart startup validation only on a browser reload; regular game links are unchanged. -->
-<script>
-if (performance.getEntriesByType("navigation").some(entry => entry.type === "reload")) {
-  window.location.replace("./startup.html");
-}
-</script>
+<script src="assets/vhouse-entry.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
 
 <title>VHouse Game Map</title>
-<script>
-// First external entry goes through Draft 2 startup. Internal game navigation stays intact.
-try {
-  const params = new URLSearchParams(window.location.search);
-  const returningFromTutorial = params.has("entered");
-  const comingFromTitle = params.has("started");
-  const started = sessionStorage.getItem("vhouse_startup_ready_v1") === "yes";
-  if (returningFromTutorial || comingFromTitle) {
-    sessionStorage.setItem("vhouse_startup_ready_v1", "yes");
-  } else if (!started) {
-    window.location.replace("./startup.html");
-  }
-} catch (error) {
-  // If browser storage is unavailable, the existing Town remains accessible.
-  console.warn("VHouse entry check could not access session storage:", error);
-}
-</script>
+
 
 <link rel="stylesheet" href="assets/vhouse-buttons.css">
 <style>

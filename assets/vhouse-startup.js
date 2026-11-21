@@ -15,6 +15,8 @@
   let policyScrollCleanup = null;
   const root = $("startupRoot");
   if (!root) return;
+  // A new startup must finish before another game page can open.
+  try{sessionStorage.removeItem(SESSION_KEY);}catch{}
 
   function setStage(name) {
     root.querySelectorAll("[data-stage]").forEach(s => { s.hidden = s.dataset.stage !== name; });
@@ -257,10 +259,19 @@
   }
   function showTitle() { setStage("title"); }
   function play() {
-    try { sessionStorage.setItem(SESSION_KEY, "yes"); } catch (error) { /* URL bypass still works. */ }
-    let seen = false;
-    try { seen = localStorage.getItem(TUTORIAL_KEY) === "yes"; } catch (error) { /* Open tutorial. */ }
-    window.location.assign(seen ? "./index.html?started=1" : "./tutorial.html");
+    if(authMode!=="authenticated"||!authAdapter?.getPreloadedPlayerData?.()){
+      $("startupAnnouncer").textContent="Player data must finish loading before entering VHouse.";
+      return;
+    }
+    try{sessionStorage.setItem(SESSION_KEY,"yes");}
+    catch(error){
+      console.error("VHouse startup session:",error);
+      $("startupAnnouncer").textContent="Browser session storage is required for VHouse.";
+      return;
+    }
+    let seen=false;
+    try{seen=localStorage.getItem(TUTORIAL_KEY)==="yes";}catch{}
+    window.location.assign(seen?"./index.html":"./tutorial.html");
   }
 
   $("versionRetry").addEventListener("click", () => window.location.reload());
