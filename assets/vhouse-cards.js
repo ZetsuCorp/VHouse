@@ -36,11 +36,7 @@ async function loadForPlayer(options={}){
   await service.ready;
   const id=playerId();
   if(!id){if(ticket===request)clear();return;}
-  const preload=options.usePreload===true?service.getPreloadedPlayerData?.():null;
-  const cached=preload?.playerId===id&&preload.account&&
-    Array.isArray(preload.inventory)&&Array.isArray(preload.vcardRows)&&
-    Array.isArray(preload.vcardStates)?preload:null;
-  const data=cached||await service.loadPlayerData(options);
+  const data=await service.loadPlayerData(options);
   const statusResponse=data?.vcardStates?null:await service.getClient()
     .from("vhouse_vcard_journey_states")
     .select("card_id,status,mission_id,stage_id,activity").eq("player_id",id);
@@ -226,10 +222,10 @@ if(service){
     }
     if(next===previousUserId)return;
     previousUserId=next;
-    void refresh({usePreload:true});
+    void refresh();
   });
   void service.ready.then(()=>{
-    if(playerId()&&loadedPlayerId!==playerId())return refresh({usePreload:true});
+    if(playerId()&&loadedPlayerId!==playerId())return refresh();
   }).catch(e=>console.error("VHouse login unavailable:",e));
 }else{
   console.error("VHouse Auth must load before VCard store.");
