@@ -2208,6 +2208,9 @@ $("confirmRaidCard").addEventListener("click",async()=>{
   raidStarting=true;
   $("confirmRaidCard").disabled=true;
   try{
+    // Refresh the verified on-chain Scrap strength before server-side Raid creation.
+    // The RPC reads the saved authoritative snapshot, not client-supplied ATK/DEF.
+    await window.VHouseScrapStats.refresh();
     // Do not start the tower introduction until Supabase reserves the player's one Raid.
     const record=await raidRpc("vhouse_start_raid",{
       p_card_id:String(card.id),p_level:1
@@ -2217,9 +2220,12 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     await raidStore.refresh({includeRaid:true});
   }catch(error){
     console.error("Tower Raid start:",error);
-    rosterLoadError=String(error.message||"RAID START FAILED").includes("RAID_ALREADY_ACTIVE")
+    const reason=String(error.message||"TRY AGAIN");
+    rosterLoadError=reason.includes("RAID_ALREADY_ACTIVE")
       ?"RAID ALREADY ACTIVE — RETURN TO YOUR EXISTING RAID"
-      :"RAID START FAILED — "+String(error.message||"TRY AGAIN");
+      :reason.includes("SCRAP_STATS_OUTDATED")||reason.includes("SCRAP_STATS_UNAVAILABLE")
+      ?"VERIFIED SCRAP STATS UNAVAILABLE — CHECK WALLET AND RETRY"
+      :"RAID START FAILED — "+reason;
     raidStarting=false;
     renderRaidRoster();
     return;
