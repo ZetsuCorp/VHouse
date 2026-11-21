@@ -161,6 +161,7 @@ html, body {
   pointer-events:none;text-shadow:0 1px 2px #000;
 }
 .closet-card-status[data-status="ON_JOURNEY"]{color:#a9e9ff;border-color:#62b8d5}
+.closet-card-status[data-status="ON_RAID"]{color:#ffd59d;border-color:#cf9556}
 .closet-card-status[data-status="RESULTS_READY"]{color:#b5ffe0;border-color:#70d8a9}
 .closet-stats-overlay{
   position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.48);
@@ -421,6 +422,11 @@ html, body {
       if(ticket===statsLoadSequence){historyLoading=false;updateHistoryPager();}
     }
   }
+  function busyLabel(state){
+    return state.status==="ON_RAID"?"ON RAID":
+      state.status==="ON_JOURNEY"?"ON JOURNEY":
+      state.status==="RESULTS_READY"?"RESULTS READY":"";
+  }
   function fillCardStats(card){
     if(!statsPanel||!card)return;
     const state=store.getStatus(card.id);
@@ -437,8 +443,7 @@ html, body {
     statField("cardId",card.id);
     statField("name",card.name||"VCard");
     statField("status",(active?"ACTIVE":"AVAILABLE")+
-      (state.status==="ON_JOURNEY"?" · ON JOURNEY":
-       state.status==="RESULTS_READY"?" · RESULTS READY":""));
+      (busyLabel(state)?" · "+busyLabel(state):""));
     statField("team",card.team);
     statField("level",card.level);
     statField("atk",card.atk);
@@ -710,8 +715,7 @@ html, body {
       if(card){
         const state=store.getStatus(card.id),isActive=card.id===store.getActiveId();
         const label=(isActive?"ACTIVE":"AVAILABLE")+
-          (state.status==="ON_JOURNEY"?" · ON JOURNEY":
-           state.status==="RESULTS_READY"?" · RESULTS READY":"");
+          (busyLabel(state)?" · "+busyLabel(state):"");
         stateBadge.textContent=label;
         stateBadge.dataset.status=state.status;
         stateBadge.hidden=false;
@@ -725,8 +729,7 @@ html, body {
     const activeState=active?store.getStatus(active.id).status:"AVAILABLE";
     activeName.textContent=active
       ?String(active.name||"VCard")+
-        (activeState==="ON_JOURNEY"?" · ON JOURNEY":
-         activeState==="RESULTS_READY"?" · RESULTS READY":"")
+        (busyLabel({status:activeState})?" · "+busyLabel({status:activeState}):"")
       :"NONE";
     activeName.title = activeName.textContent;
     selectedName.textContent = current ? String(current.name || "VCard") : "NONE";
@@ -737,6 +740,7 @@ html, body {
     confirmButton.textContent=assigning?"SAVING…":
       current?.id===store.getActiveId()?"ACTIVE ✓":
       currentState==="ON_JOURNEY"?"ON JOURNEY":
+      currentState==="ON_RAID"?"ON RAID":
       currentState==="RESULTS_READY"?"RESULTS READY":"SET AS ACTIVE";
     VHouseMessage.set(messageHost, {
       header: current ? (current.id === store.getActiveId() ? "ACTIVE VCARD" : "VIEWING VCARD") : "EMPTY SLOT",
