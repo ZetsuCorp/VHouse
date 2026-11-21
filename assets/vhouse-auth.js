@@ -7,23 +7,8 @@
   const listeners=new Set();
   const LOGIN_METHOD_KEY="vhouse-login-method-v1";
   const LOGIN_PENDING_KEY="vhouse-login-pending-v1";
-  const PLAYER_PRELOAD_KEY="vhouse-player-preload-v1";
-  let playerPreload=null;
-  function clearPlayerPreload(){
-    playerPreload=null;
-    try{sessionStorage.removeItem(PLAYER_PRELOAD_KEY);}catch{}
-  }
-  function getPreloadedPlayerData(){
-    const id=currentUser?.id;
-    if(!id)return null;
-    if(playerPreload?.playerId===id)return playerPreload;
-    try{
-      const saved=JSON.parse(sessionStorage.getItem(PLAYER_PRELOAD_KEY)||"null");
-      if(saved?.playerId!==id)return null;
-      playerPreload=saved;
-      return saved;
-    }catch{return null;}
-  }
+  // Discard the obsolete browser copy of player records. Supabase is authoritative.
+  try{sessionStorage.removeItem("vhouse-player-preload-v1");}catch{}
   let client=null, currentUser=null;
   function readLoginRecord(key) {
     try { return JSON.parse(localStorage.getItem(key) || "null"); }
@@ -116,7 +101,7 @@
       persistSession:true,autoRefreshToken:true,detectSessionInUrl:true
     }});
     client.auth.onAuthStateChange((event,session)=>{
-      if(event==="SIGNED_OUT"){clearLoginRecord();clearPlayerPreload();}
+      if(event==="SIGNED_OUT"){clearLoginRecord();}
       currentUser=session?.user||null;
       finishLogin(currentUser);
       notify();
@@ -178,7 +163,6 @@
     if(!user)return null;
     const playerId=user.id;
     const includeRaid=options.includeRaid===true;
-    if(includeRaid)clearPlayerPreload();
     const requests=[
       client.from("vhouse_accounts")
         .select("id,username,display_name,igm_balance,active_vcard_id,active_vcard_snapshot")
@@ -246,15 +230,6 @@
       }
       if(currentUser?.id!==playerId)return null;
       data.scrapStats=scrapStats;
-      playerPreload={
-        ...data,
-        player:{
-          displayName:data.account?.display_name||null,
-          username:data.account?.username||null
-        }
-      };
-      try{sessionStorage.setItem(PLAYER_PRELOAD_KEY,JSON.stringify(playerPreload));}
-      catch(error){console.warn("VHouse preload storage unavailable:",error);}
     }
     return data;
   }
@@ -289,13 +264,12 @@
     await ready;
     const {error}=await client.auth.signOut();
     if(error)throw error;
-    currentUser=null;clearLoginRecord();clearPlayerPreload();notify();
+    currentUser=null;clearLoginRecord();notify();
   }
   window.VHouseAuth={
     ready,restoreSession,signIn,signOut,syncActiveVCard,
     getUser:()=>currentUser,getLoginIdentity,loadPlayerData,
     preloadPlayerData:()=>loadPlayerData({includeRaid:true}),
-    getPreloadedPlayerData,
     getClient:()=>client,
     subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn)}
   };
