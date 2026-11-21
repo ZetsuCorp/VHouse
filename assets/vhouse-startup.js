@@ -8,6 +8,7 @@
   const FALLBACK_ASSETS = ["assets/VStart.png","assets/VCrad Town.png","assets/Vhome1.png"];
   const $ = id => document.getElementById(id);
   let config = null, configError = null, imageErrors = [];
+  let preloadedPlayerId = null;
   let authAdapter = null, authMode = null;
   let legalRequired = false;
   let policyScrollReached = false;
@@ -34,7 +35,8 @@
     const response = await fetch(CONFIG_URL, {cache:"no-store"});
     if (!response.ok) throw Error("Published startup configuration returned " + response.status);
     const loaded = await response.json();
-    if (!loaded || loaded.appId !== "vhouse" || !loaded.buildVersion) throw Error("Invalid published startup configuration");
+    if (!loaded || loaded.appId !== "vhouse" || !loaded.buildVersion || !/^[0-9a-f]{40}$/i.test(String(loaded.publishedRevision||"")))
+      throw Error("Invalid published startup version metadata");
     return loaded;
   }
   function preloadImage(path) {
@@ -86,8 +88,8 @@
       return;
     }
     status.textContent = compareVersions(BUILD_VERSION, config.latestVersion) < 0
-      ? "A newer compatible build is published."
-      : "Build " + BUILD_VERSION + " matches the published startup configuration.";
+      ? "A newer compatible build is published: " + config.buildVersion + " (" + config.publishedRevision.slice(0,7) + ")."
+      : "Published build " + config.buildVersion + " (" + config.publishedRevision.slice(0,7) + ") verified.";
     // Version verification is automatic; players do not need to approve a successful check.
     await sleep(350);
     if (root.dataset.stage === "version") await showAuth();
@@ -127,8 +129,10 @@
     if(!user?.id||typeof authAdapter?.preloadPlayerData!=="function")
       throw Error("Player and Raid preload unavailable.");
     $("authStatus").textContent="Loading player information and Raid records…";
+    preloadedPlayerId=null;
     const data=await authAdapter.preloadPlayerData();
     if(data?.playerId!==user.id)throw Error("Player and Raid preload failed.");
+    preloadedPlayerId=user.id;
   }
   async function showAuth() {
     setStage("auth");
@@ -259,7 +263,8 @@
   }
   function showTitle() { setStage("title"); }
   function play() {
-    if(authMode!=="authenticated"||!authAdapter?.getPreloadedPlayerData?.()){
+    if(authMode!=="authenticated"||!preloadedPlayerId||
+      preloadedPlayerId!==authAdapter?.getUser?.()?.id){
       $("startupAnnouncer").textContent="Player data must finish loading before entering VHouse.";
       return;
     }
