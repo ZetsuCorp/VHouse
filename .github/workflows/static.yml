@@ -31,6 +31,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Stamp published VHouse build from deployed commit
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path("assets/startup-config.json")
+          config = json.loads(path.read_text(encoding="utf-8"))
+          revision = os.environ["GITHUB_SHA"]
+          base_version = config["buildVersion"].split("+", 1)[0]
+          config["buildVersion"] = f"{base_version}+{revision[:7]}"
+          config["publishedRevision"] = revision
+          path.write_text(json.dumps(config, indent=2) + "\\n", encoding="utf-8")
+          PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
