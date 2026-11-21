@@ -1603,7 +1603,7 @@ td { background:#1c1428 }
       <div class="raid-records" aria-label="Selected VCard Raid results">
         <h3 class="raid-records-title">RAID RESULTS TABLE</h3>
         <div class="raid-records-grid">
-          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatNumber">—</span><span class="raid-record-label">RAID #</span></div>
+          <div class="raid-record-metric"><span class="raid-record-value" id="raidStatRaids">—</span><span class="raid-record-label">TOTAL RAIDS</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatPlayer">—</span><span class="raid-record-label">PLAYER</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatVCard">—</span><span class="raid-record-label">VCARD</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatBattles">0</span><span class="raid-record-label">BATTLES</span></div>
@@ -2158,6 +2158,10 @@ function renderRaidRoster(){
   const loaded=!!signedInPlayer?.id&&preload?.playerId===signedInPlayer.id;
   const raidRecords=loaded?preload.raidRecords||[]:[];
   const savedResults=loaded?preload.raidResults||[]:[];
+  // Count every Raid this player entered with the selected VCard, once per Raid ID.
+  const raidCount=card&&loaded?new Set(raidRecords
+    .filter(entry=>String(entry.card_id)===String(card.id))
+    .map(entry=>String(entry.id))).size:null;
   const latestRaid=card?raidRecords.find(entry=>String(entry.card_id)===String(card.id)):null;
   const raidId=latestRaid?.id||null;
   const result=raidId?savedResults.find(entry=>entry.raid_id===raidId&&
@@ -2165,7 +2169,7 @@ function renderRaidRoster(){
   const number=key=>result?String(result[key]??0):"—";
   const money=key=>result?"$"+Number(result[key]??0).toFixed(2):"—";
   const values={
-    raidStatNumber:raidId||"—",
+    raidStatRaids:raidCount===null?"—":String(raidCount),
     raidStatPlayer:signedInPlayer?(loaded?(preload.player?.displayName||
       preload.player?.username||raidAuth.getLoginIdentity()||"—"):
       raidAuth.getLoginIdentity()||"—"):"—",
