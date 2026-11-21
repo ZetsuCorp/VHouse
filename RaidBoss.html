@@ -2069,6 +2069,27 @@ window.addEventListener("vhouse:inventory-updated",()=>void refreshRaidInventory
 /* STAGE 1 — USE THE SAME SUPABASE VCARD STORE AS THE CLOSET. */
 const raidStore = window.VHouseCardStore;
 const raidAuth = window.VHouseAuth;
+// Raid history is read from Supabase, never from a startup browser snapshot.
+let raidHistory={playerId:null,raidRecords:[],raidResults:[]};
+async function refreshRaidHistory(){
+  await raidAuth.ready;
+  const id=raidAuth.getUser()?.id;
+  if(!id){
+    raidHistory={playerId:null,raidRecords:[],raidResults:[]};
+    return;
+  }
+  const client=raidAuth.getClient();
+  const [records,results]=await Promise.all([
+    client.from("vhouse_raid_records").select("id,card_id,status,started_at")
+      .eq("player_id",id).order("started_at",{ascending:false}),
+    client.from("vhouse_raid_results").select("*").eq("player_id",id)
+  ]);
+  if(records.error)throw records.error;
+  if(results.error)throw results.error;
+  if(raidAuth.getUser()?.id!==id)return;
+  raidHistory={playerId:id,raidRecords:records.data||[],raidResults:results.data||[]};
+  renderRaidRoster();
+}
 const rosterCard = () => raidStore?.getCards().find(
   card => String(card.id) === String(rosterSelectedId)
 ) || null;
@@ -2152,12 +2173,11 @@ function renderRaidRoster(){
     preview.replaceChildren();
     delete preview.dataset.selectedCardId;
   }
-  // The signed-in player's Raid results come from the existing VHouse preload.
-  const preload=raidAuth?.getPreloadedPlayerData?.();
+  // Read Raid history from the latest Supabase response.
   const signedInPlayer=raidAuth?.getUser?.();
-  const loaded=!!signedInPlayer?.id&&preload?.playerId===signedInPlayer.id;
-  const raidRecords=loaded?preload.raidRecords||[]:[];
-  const savedResults=loaded?preload.raidResults||[]:[];
+  const loaded=!!signedInPlayer?.id&&raidHistory.playerId===signedInPlayer.id;
+  const raidRecords=loaded?raidHistory.raidRecords:[];
+  const savedResults=loaded?raidHistory.raidResults:[];
   // Count every Raid this player entered with the selected VCard, once per Raid ID.
   const raidCount=card&&loaded?new Set(raidRecords
     .filter(entry=>String(entry.card_id)===String(card.id))
@@ -2170,9 +2190,7 @@ function renderRaidRoster(){
   const money=key=>result?"$"+Number(result[key]??0).toFixed(2):"—";
   const values={
     raidStatRaids:raidCount===null?"—":String(raidCount),
-    raidStatPlayer:signedInPlayer?(loaded?(preload.player?.displayName||
-      preload.player?.username||raidAuth.getLoginIdentity()||"—"):
-      raidAuth.getLoginIdentity()||"—"):"—",
+    raidStatPlayer:signedInPlayer?(raidAuth.getLoginIdentity()||"—"):"—",
     raidStatVCard:card?String(card.name||"VCard"):"—",
     raidStatBattles:number("battles"),
     raidStatWins:number("wins"),
@@ -2194,7 +2212,8 @@ function renderRaidRoster(){
 async function loadRaidRoster(){
   try{
     await raidAuth.ready;
-    await raidStore.refresh({usePreload:true});
+    await raidStore.refresh();
+    await refreshRaidHistory();
     rosterLoadError="";
   }catch(error){
     console.error("Tower Raid VCard load:",error);
@@ -2218,6 +2237,7 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     raidPendingRecord=record;
     selectedRaidCard={...record.card_snapshot};
     await raidStore.refresh({includeRaid:true});
+    await refreshRaidHistory();
   }catch(error){
     console.error("Tower Raid start:",error);
     const reason=String(error.message||"TRY AGAIN");
@@ -2333,6 +2353,7 @@ async function restoreUnfinishedRaid(){
 raidAuth.subscribe(user=>{
   const playerId=user?.id||null;
   if(!playerId){
+    raidHistory={playerId:null,raidRecords:[],raidResults:[]};
     clearRaidForAccountChange();
     raidRestoring=false;
     rosterSelectedId=null;
@@ -2880,6 +2901,7 @@ $("confirmButton").addEventListener("click",async()=>{
     raidCheckedPlayerId=raidAuth.getUser()?.id||null;
     showScreen("cardSelectScreen");
     await raidStore.refresh({includeRaid:true});
+    await refreshRaidHistory();
     renderRaidRoster();
   }catch(error){
     console.error("Tower Raid confirm:",error);
