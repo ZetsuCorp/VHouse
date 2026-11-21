@@ -2179,6 +2179,7 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     });
     raidPendingRecord=record;
     selectedRaidCard={...record.card_snapshot};
+    await raidStore.refresh();
   }catch(error){
     console.error("Tower Raid start:",error);
     rosterLoadError=String(error.message||"RAID START FAILED").includes("RAID_ALREADY_ACTIVE")
@@ -2837,6 +2838,7 @@ $("confirmButton").addEventListener("click",async()=>{
     selectedRaidCard=null;
     raidCheckedPlayerId=raidAuth.getUser()?.id||null;
     showScreen("cardSelectScreen");
+    await raidStore.refresh();
     renderRaidRoster();
   }catch(error){
     console.error("Tower Raid confirm:",error);
