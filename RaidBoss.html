@@ -2153,7 +2153,8 @@ function renderRaidRoster(){
   }
   // The signed-in player's Raid results come from the existing VHouse preload.
   const preload=raidAuth?.getPreloadedPlayerData?.();
-  const loaded=preload?.playerId===raidAuth?.getUser()?.id;
+  const signedInPlayer=raidAuth?.getUser?.();
+  const loaded=!!signedInPlayer?.id&&preload?.playerId===signedInPlayer.id;
   const raidRecords=loaded?preload.raidRecords||[]:[];
   const savedResults=loaded?preload.raidResults||[]:[];
   const latestRaid=card?raidRecords.find(entry=>String(entry.card_id)===String(card.id)):null;
@@ -2164,9 +2165,10 @@ function renderRaidRoster(){
   const money=key=>!loaded||!card?"—":"$"+Number(result?.[key]??0).toFixed(2);
   const values={
     raidStatNumber:raidId||"—",
-    raidStatPlayer:loaded?(preload.player?.displayName||preload.player?.username||
+    raidStatPlayer:signedInPlayer?(loaded?(preload.player?.displayName||
+      preload.player?.username||raidAuth.getLoginIdentity()||"—"):
       raidAuth.getLoginIdentity()||"—"):"—",
-    raidStatVCard:loaded&&card?String(card.name||"VCard"):"—",
+    raidStatVCard:card?String(card.name||"VCard"):"—",
     raidStatBattles:number("battles"),
     raidStatWins:number("wins"),
     raidStatLosses:number("losses"),
