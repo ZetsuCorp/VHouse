@@ -139,6 +139,7 @@ function mount(host){
     const state=store?.getActiveStatus?.()||{status:"AVAILABLE"};
     const locked=state.status!=="AVAILABLE";
     const ready=state.status==="RESULTS_READY";
+    const raid=state.activity==="RAID";
     if(card&&typeof card.image==="string"&&
       /^(https?:\/\/|blob:|data:image\/(?:svg\+xml|jpeg|png|webp|gif))/i.test(card.image)){
       art.src=card.image;
@@ -149,30 +150,33 @@ function mount(host){
     host.classList.toggle("is-locked",locked);
     host.classList.toggle("results-ready",ready);
     status.hidden=!locked;
-    status.textContent=ready?"RESULTS":"LOCKED";
+    status.textContent=ready?"RESULTS":raid?"ON RAID":"LOCKED";
     host.setAttribute("aria-label",card?
-      "Active VCard: "+card.name+(locked?", "+(ready?"results ready":"on Journey"):""):
+      "Active VCard: "+card.name+(locked?", "+(ready?"results ready":raid?"on Raid":"on Journey"):""):
       "Player VCard placeholder");
     selected.textContent=card?String(card.name||"VCard"):"NO VCARD ASSIGNED";
     details.textContent=!card?"Assign a VCard from Mint, Load, or Closet."
       :state.status==="ON_JOURNEY"?"ON JOURNEY · STAGE "+(state.stageId??"—")
-      :ready?"RESULTS READY · CONFIRM RECEIPT"
+      :state.status==="ON_RAID"?"ON RAID"
+      :ready?"RESULTS READY · "+(raid?"RAID":"JOURNEY")+" RECEIPT"
       :"AVAILABLE";
     if(card?.external)details.textContent+=" · LOADED NFT";
     const lockedCards=store?.getLockedCards?.()||[];
     journey.replaceChildren();
     if(lockedCards.length){
       const heading=document.createElement("strong");
-      heading.textContent="JOURNEY LOCKS";journey.append(heading);
+      heading.textContent="BUSY VCARDS";journey.append(heading);
       for(const entry of lockedCards){
         const row=document.createElement("div");
         const known=store?.getCards?.().find(c=>c.id===entry.cardId);
         row.textContent=(known?.name||entry.cardId)+" · "+
-          (entry.status==="RESULTS_READY"?"RESULTS READY":"ON JOURNEY");
+          (entry.status==="RESULTS_READY"?"RESULTS READY · "+(entry.activity==="RAID"?"RAID":"JOURNEY"):
+            entry.status==="ON_RAID"?"ON RAID":"ON JOURNEY");
         journey.append(row);
       }
     }
     goJourney.textContent=ready?"VIEW RECEIPT":"JOURNEY";
+    goJourney.onclick=()=>{location.href=ready&&raid?"./RaidBoss.html":"./index.html?journey=1";};
   }
   trigger.addEventListener("click",()=>{
     panel.hidden=!panel.hidden;
