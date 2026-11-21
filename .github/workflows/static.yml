@@ -42,7 +42,7 @@ jobs:
           base_version = config["buildVersion"].split("+", 1)[0]
           config["buildVersion"] = f"{base_version}+{revision[:7]}"
           config["publishedRevision"] = revision
-          path.write_text(json.dumps(config, indent=2) + "\\n", encoding="utf-8")
+          path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
