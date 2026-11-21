@@ -2162,8 +2162,8 @@ function renderRaidRoster(){
   const raidId=latestRaid?.id||null;
   const result=raidId?savedResults.find(entry=>entry.raid_id===raidId&&
     String(entry.vcard_id)===String(card?.id)):null;
-  const number=key=>!loaded||!card?"—":String(result?.[key]??0);
-  const money=key=>!loaded||!card?"—":"$"+Number(result?.[key]??0).toFixed(2);
+  const number=key=>result?String(result[key]??0):"—";
+  const money=key=>result?"$"+Number(result[key]??0).toFixed(2):"—";
   const values={
     raidStatNumber:raidId||"—",
     raidStatPlayer:signedInPlayer?(loaded?(preload.player?.displayName||
@@ -2190,7 +2190,7 @@ function renderRaidRoster(){
 async function loadRaidRoster(){
   try{
     await raidAuth.ready;
-    await raidStore.refresh({includeRaid:true});
+    await raidStore.refresh({usePreload:true});
     rosterLoadError="";
   }catch(error){
     console.error("Tower Raid VCard load:",error);

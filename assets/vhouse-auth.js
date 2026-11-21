@@ -193,7 +193,9 @@
           .eq("player_id",playerId),
         client.from("vhouse_raid_records")
           .select("id,card_id,status,started_at")
-          .eq("player_id",playerId).order("started_at",{ascending:false})
+          .eq("player_id",playerId).order("started_at",{ascending:false}),
+        client.from("vhouse_vcard_journey_states")
+          .select("card_id,status,mission_id,stage_id,activity").eq("player_id",playerId)
       );
     }
     const responses=await Promise.all(requests);
@@ -208,17 +210,29 @@
     if(includeRaid){
       data.raidResults=responses[2].data||[];
       data.raidRecords=responses[3].data||[];
+      data.vcardStates=responses[4].data||[];
+      const owned=[...new Set(data.inventory
+        .filter(row=>row.type==="VCard"&&Number(row.quantity)>0)
+        .map(row=>row.thing))];
+      let vcardRows=[];
+      if(owned.length){
+        const {data:rows,error}=await client.from("vcard_list")
+          .select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address")
+          .in("card_id",owned);
+        if(error)throw error;
+        vcardRows=rows||[];
+      }
+      if(currentUser?.id!==playerId)return null;
+      data.vcardRows=vcardRows;
       playerPreload={
-        playerId,
+        ...data,
         player:{
           displayName:data.account?.display_name||null,
           username:data.account?.username||null
-        },
-        raidResults:data.raidResults,
-        raidRecords:data.raidRecords
+        }
       };
       try{sessionStorage.setItem(PLAYER_PRELOAD_KEY,JSON.stringify(playerPreload));}
-      catch(error){console.warn("VHouse Raid preload storage:",error);}
+      catch(error){console.warn("VHouse preload storage unavailable:",error);}
     }
     return data;
   }

@@ -36,29 +36,33 @@ async function loadForPlayer(options={}){
   await service.ready;
   const id=playerId();
   if(!id){if(ticket===request)clear();return;}
-  const [data,statusResponse]=await Promise.all([
-    service.loadPlayerData(options),
-    service.getClient().from("vhouse_vcard_journey_states")
-      .select("card_id,status,mission_id,stage_id,activity").eq("player_id",id)
-  ]);
-  if(statusResponse.error)throw statusResponse.error;
+  const preload=options.usePreload===true?service.getPreloadedPlayerData?.():null;
+  const cached=preload?.playerId===id&&preload.account&&
+    Array.isArray(preload.inventory)&&Array.isArray(preload.vcardRows)&&
+    Array.isArray(preload.vcardStates)?preload:null;
+  const data=cached||await service.loadPlayerData(options);
+  const statusResponse=data?.vcardStates?null:await service.getClient()
+    .from("vhouse_vcard_journey_states")
+    .select("card_id,status,mission_id,stage_id,activity").eq("player_id",id);
+  if(statusResponse?.error)throw statusResponse.error;
   if(ticket!==request||playerId()!==id||!data)return;
   const owned=[...new Set((data.inventory||[])
     .filter(row=>row.type==="VCard"&&Number(row.quantity)>0)
     .map(row=>row.thing))];
-  let found=[];
-  if(owned.length){
+  let rows=Array.isArray(data.vcardRows)?data.vcardRows:null;
+  if(!rows&&owned.length){
     const response=await service.getClient().from("vcard_list")
       .select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address")
       .in("card_id",owned);
     if(response.error)throw response.error;
-    found=(response.data||[]).map(row=>({
-      id:row.card_id,name:row.name,image:row.image||"",
-      description:row.description||"",team:row.designation,
-      level:row.level,atk:row.atk,def:row.def,
-      luck:row.luck,speed:row.speed,mint_address:row.mint_address
-    }));
+    rows=response.data||[];
   }
+  const found=(rows||[]).filter(row=>owned.includes(row.card_id)).map(row=>({
+    id:row.card_id,name:row.name,image:row.image||"",
+    description:row.description||"",team:row.designation,
+    level:row.level,atk:row.atk,def:row.def,
+    luck:row.luck,speed:row.speed,mint_address:row.mint_address
+  }));
   if(ticket!==request||playerId()!==id)return;
   const assigned=data.account?.active_vcard_id||null;
   const snapshot=data.account?.active_vcard_snapshot||null;
@@ -67,7 +71,7 @@ async function loadForPlayer(options={}){
   activeSnapshot=snapshot?.id===assigned&&snapshot.external?copy(snapshot):null;
   if(!getActive())activeId=null;
   loadedPlayerId=id;
-  journeyStates=new Map((statusResponse.data||[]).map(row=>[
+  journeyStates=new Map((data.vcardStates||statusResponse?.data||[]).map(row=>[
     key(row.card_id),{
       status:row.status,missionId:row.mission_id,stageId:row.stage_id,activity:row.activity
     }
@@ -199,7 +203,7 @@ const api={
 };
 window.VHouseCardStore=api;
 window.addEventListener("vhouse:scrap-stats-updated",notify);
-window.addEventListener("pageshow",()=>{if(playerId())void refresh();});
+window.addEventListener("pageshow",event=>{if(event.persisted&&playerId())void refresh();});
 for(const [event,status] of [
   ["vhouse:journey-started","ON_JOURNEY"],
   ["vhouse:journey-completed","RESULTS_READY"],
@@ -222,10 +226,10 @@ if(service){
     }
     if(next===previousUserId)return;
     previousUserId=next;
-    void refresh();
+    void refresh({usePreload:true});
   });
   void service.ready.then(()=>{
-    if(playerId()&&loadedPlayerId!==playerId())return refresh();
+    if(playerId()&&loadedPlayerId!==playerId())return refresh({usePreload:true});
   }).catch(e=>console.error("VHouse login unavailable:",e));
 }else{
   console.error("VHouse Auth must load before VCard store.");

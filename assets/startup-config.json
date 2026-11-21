@@ -11,7 +11,19 @@
     "assets/Vhome1.png",
     "assets/Vshop.png",
     "assets/VCloset.png",
-    "assets/Vcontainer.png"
+    "assets/Vcontainer.png",
+    "assets/TOWERSELECT.png",
+    "assets/TOWERBOSS.png",
+    "assets/TowerBoss1.png",
+    "assets/TowerBoss2.png",
+    "assets/TowerBoss3.png",
+    "assets/TowerBoss4.png",
+    "assets/TowerBoss5.png",
+    "assets/TowerBoss6.png",
+    "assets/TowerBoss7.png",
+    "assets/TowerBoss8.png",
+    "assets/TowerBoss9.png",
+    "assets/TowerBoss10.png"
   ],
   "auth": {
     "enabled": true,
