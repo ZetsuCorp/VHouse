@@ -1,5 +1,5 @@
 /* VHouse Placeholder: one authoritative active VCard assignment across Mint,
-   Load and Closet. Per-card Journey state is separate from the active slot.
+   Load and Closet. Per-card Journey / Raid activity is separate from the active slot.
    Player data lives in Supabase, not localStorage. */
 (function(){
 "use strict";
@@ -28,7 +28,7 @@ function getActive(){
 }
 function getStatus(cardId){
   const status=journeyStates.get(key(cardId));
-  return status?copy(status):{status:"AVAILABLE",missionId:null,stageId:null};
+  return status?copy(status):{status:"AVAILABLE",activity:null,missionId:null,stageId:null};
 }
 async function loadForPlayer(){
   const ticket=++request,service=auth();
@@ -39,7 +39,7 @@ async function loadForPlayer(){
   const [data,statusResponse]=await Promise.all([
     service.loadPlayerData(),
     service.getClient().from("vhouse_vcard_journey_states")
-      .select("card_id,status,mission_id,stage_id").eq("player_id",id)
+      .select("card_id,status,mission_id,stage_id,activity").eq("player_id",id)
   ]);
   if(statusResponse.error)throw statusResponse.error;
   if(ticket!==request||playerId()!==id||!data)return;
@@ -69,7 +69,7 @@ async function loadForPlayer(){
   loadedPlayerId=id;
   journeyStates=new Map((statusResponse.data||[]).map(row=>[
     key(row.card_id),{
-      status:row.status,missionId:row.mission_id,stageId:row.stage_id
+      status:row.status,missionId:row.mission_id,stageId:row.stage_id,activity:row.activity
     }
   ]));
   notify();
@@ -97,6 +97,8 @@ async function setActive(cardId){
     const card=cards.find(c=>key(c.id)===id)||
       (activeSnapshot?.id===id?activeSnapshot:null);
     if(!card)throw Error("This VCard is not in your Closet.");
+    await refresh();
+    if(getStatus(id).status!=="AVAILABLE")throw Error("This VCard is busy.");
     await auth().syncActiveVCard(card);
     if(playerId()!==account)throw Error("VHouse account changed during assignment.");
     activeId=id;
@@ -150,7 +152,7 @@ async function setJourneyStatus(cardId,status,missionId,stageId){
     if(previous&&missionId&&previous.missionId!==missionId)return;
     journeyStates.delete(id);
   }else{
-    journeyStates.set(id,{status,missionId,stageId:stageId??null});
+    journeyStates.set(id,{status,missionId,stageId:stageId??null,activity:"JOURNEY"});
   }
   notify();
   await refresh();
@@ -197,6 +199,7 @@ const api={
 };
 window.VHouseCardStore=api;
 window.addEventListener("vhouse:scrap-stats-updated",notify);
+window.addEventListener("pageshow",()=>{if(playerId())void refresh();});
 for(const [event,status] of [
   ["vhouse:journey-started","ON_JOURNEY"],
   ["vhouse:journey-completed","RESULTS_READY"],
