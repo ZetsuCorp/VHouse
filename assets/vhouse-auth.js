@@ -155,8 +155,8 @@
     }
     throw Error("Unsupported login provider");
   }
-  // Load account-specific game data only after Supabase has restored the login session.
-  // This is read-only: item grants, card creation and verification are separate operations.
+  // Load account-specific game data after Supabase restores the login session.
+  // Read-only player data is accompanied by secondary, server-checked verification logs.
   async function loadPlayerData(options={}){
     await ready;
     const user=currentUser;
@@ -231,7 +231,17 @@
       if(currentUser?.id!==playerId)return null;
       data.scrapStats=scrapStats;
     }
-    return data;
+    // Record actual Supabase EX/OWN/USE observations. The log is secondary:
+    // an audit failure never changes the result of an existing gameplay check.
+    if(currentUser?.id===playerId){
+      try{
+        const {error:auditError}=await client.rpc("vhouse_record_player_verification_checks");
+        if(auditError)throw auditError;
+      }catch(error){
+        console.error("VHouse verification log unavailable:",error);
+      }
+    }
+    return currentUser?.id===playerId?data:null;
   }
   async function syncActiveVCard(card){
     await ready;
