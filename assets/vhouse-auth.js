@@ -224,6 +224,28 @@
       }
       if(currentUser?.id!==playerId)return null;
       data.vcardRows=vcardRows;
+      // Refresh the same server-verified Scrap strength used by VHouse cards.
+      // A player without a linked wallet can still enter VHouse; Raid start
+      // separately requires the verified snapshot.
+      let scrapStats=null;
+      if(data.account?.id&&user.id===playerId){
+        const walletResult=await client.from("vhouse_accounts")
+          .select("wallet_address").eq("id",playerId).maybeSingle();
+        if(walletResult.error)throw walletResult.error;
+        if(walletResult.data?.wallet_address){
+          try{
+            const {data:stats,error:statsError}=await client.functions
+              .invoke("vhouse-scrap-stats",{body:{}});
+            if(statsError)throw statsError;
+            if(stats?.snapshot?.player_id===playerId)
+              scrapStats=stats.snapshot;
+          }catch(error){
+            console.warn("VHouse verified Scrap preload unavailable:",error);
+          }
+        }
+      }
+      if(currentUser?.id!==playerId)return null;
+      data.scrapStats=scrapStats;
       playerPreload={
         ...data,
         player:{
