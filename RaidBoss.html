@@ -1063,9 +1063,33 @@ select {
   margin:0 0 clamp(4px,.5cqw,7px);
   font-size:clamp(11px,1.45cqw,16px);
 }
-.raid-status-panel {display:flex;flex-direction:column;justify-content:center;gap:3px;}
-.raid-status-panel .muted {font-size:clamp(10px,1.1cqw,13px);line-height:1.2;}
-.raid-status-panel .clock {font-size:clamp(17px,2.2cqw,27px);}
+.raid-status-panel {display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:clamp(4px,.45cqw,7px);}
+.raid-status-panel .raid-lock-note {
+  font-size:clamp(9px,1.05cqw,13px);line-height:1.2;
+  color:var(--muted);
+}
+.raid-status-panel .raid-stones-line {
+  font-size:clamp(11px,1.25cqw,15px);font-weight:800;line-height:1.2;
+  color:#ffddaa;
+}
+.raid-status-panel .raid-stones-line b {color:#fff;font-variant-numeric:tabular-nums;}
+.raid-time-row {
+  display:flex;align-items:center;gap:clamp(3px,.35cqw,5px);
+  min-width:0;max-width:100%;white-space:nowrap;
+}
+.raid-time-label {
+  flex-shrink:0;font-size:clamp(8px,.85cqw,11px);
+  font-weight:900;color:#e5c58f;
+}
+.raid-time-value {
+  display:inline-block;min-width:0;
+  padding:clamp(2px,.25cqw,4px) clamp(3px,.4cqw,6px);
+  border:1px solid #bc8bdf;border-radius:5px;
+  background:linear-gradient(110deg,#52306e,#322045);
+  box-shadow:0 0 8px #a25fe251;
+  color:#fff4cc;font-size:clamp(9px,1cqw,13px);
+  font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;
+}
 .raid-battles-panel .boss-grid {
   margin:3px 0 0;
   gap:clamp(2px,.4cqw,6px);
@@ -1904,10 +1928,12 @@ td { background:#1c1428 }
 
     <div class="panel raid-status-panel">
       <h2>RAID IN PROGRESS</h2>
-      <div class="muted">
-        VCard locked during raid · 🪨 Raid Stones: <b id="raidCarriedStones">0</b>
+      <div class="raid-lock-note">VCard locked during raid ·</div>
+      <div class="raid-stones-line">🪨 Raid Stones: <b id="raidCarriedStones">0</b></div>
+      <div class="raid-time-row">
+        <span class="raid-time-label">TIME STAMP |</span>
+        <time class="raid-time-value" id="timer">--:--:-- --</time>
       </div>
-      <div class="clock" id="timer">00:00</div>
     </div>
 
     <div class="panel raid-battles-panel">
@@ -2821,7 +2847,9 @@ function startRaid(restoredRecord=null) {
   flipInProgress=false;
   towerTransitioning=false;
 
-  $("timer").textContent=new Date().toLocaleTimeString();
+  $("timer").textContent=new Date().toLocaleTimeString("en-US",{
+    hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true
+  });
   $("battleCaption").textContent="BOSS "+raid.boss+" — "+currentTurn.toUpperCase();
   $("battleLog").textContent=restoredRecord?"RAID RESUMED":"Entering tower…";
   $("raidCarriedStones").textContent=String(Math.max(0,Number(record.card_snapshot?.raidLuckyStones)||0));
@@ -3000,7 +3028,9 @@ async function observeRaid(){
     if(!data)throw Error("RAID_NOT_FOUND");
     if(!raid||raid.id!==id||raidAuth.getUser()?.id!==owner)return;
 
-    $("timer").textContent=new Date().toLocaleTimeString();
+    $("timer").textContent=new Date().toLocaleTimeString("en-US",{
+    hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true
+  });
     const previousTurn=raidSavedTurnCount;
     const oldBossResults=raidSeenBossResults;
     const history=data.turn_history||[];
