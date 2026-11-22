@@ -1609,6 +1609,22 @@ td { background:#1c1428 }
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:4px;
 }
+/* Player identity/raid total and last Raid outcomes are distinct groups. */
+.raid-last-heading {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(4px,.6cqw,8px);
+  margin:clamp(2px,.35dvh,4px) 0 0;
+  font-size:clamp(9px,1.4dvh,12px);
+  font-weight:900;
+  color:#f2cd8c;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+.raid-last-heading::before,.raid-last-heading::after {
+  content:"";height:1px;background:#a67baf;flex:1;min-width:0;
+}
 .raid-record-metric {
   display:flex;
   flex-direction:column;
@@ -1705,10 +1721,13 @@ td { background:#1c1428 }
       <div class="raid-choice-preview" id="raidCardPreview"></div>
       <div class="raid-records" aria-label="Selected VCard Raid results">
         <h3 class="raid-records-title">RAID RESULTS TABLE</h3>
-        <div class="raid-records-grid">
+        <div class="raid-records-grid" aria-label="Total Raids, player and selected VCard">
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatRaids">—</span><span class="raid-record-label">TOTAL RAIDS</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatPlayer">—</span><span class="raid-record-label">PLAYER</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatVCard">—</span><span class="raid-record-label">VCARD</span></div>
+        </div>
+        <h3 class="raid-last-heading">LAST RAID</h3>
+        <div class="raid-records-grid" aria-label="Latest Raid results for selected VCard">
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatBattles">0</span><span class="raid-record-label">BATTLES</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatWins">0</span><span class="raid-record-label">WINS</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatLosses">0</span><span class="raid-record-label">LOSSES</span></div>
