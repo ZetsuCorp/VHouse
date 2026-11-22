@@ -238,7 +238,7 @@ let shopStatus = "";
 
 const boosts = [
   { name:"Lucky Charm", icon:"🍀", price:600, desc:"Journey only. Each charm grants 1 Lucky Retry and +1% to player stats. Maximum 5. Consumed when a retry is used." },
-  { name:"Lucky Stone", icon:"🪨", price:600, desc:"Raid only. Each stone grants 1 Lucky Retry and +1% to Raid stats. Maximum 5. Consumed when a Raid retry is used." },
+  { name:"Lucky Stone", label:"Raid Stones", icon:"🪨", price:600, desc:"Raid only. Each stone grants 1 Lucky Retry and +1% to Raid stats. Maximum 5. Consumed when a Raid retry is used." },
   { name:"Swift Boots", icon:"🥾", price:1200, desc:"Each pair in inventory grants +1 SPEED. Use a pair to reduce Journey time by 15 seconds, once per Stage. Used boots are consumed, reducing SPEED by 1." },
   { name:"Hunt Lantern", icon:"🏮", price:1800, desc:"Nullifies the Stage's RPS advantage for one encounter, once. The lantern is consumed after use." },
   { name:"Stage Ticket", icon:"🎟️", price:2400, desc:"Enter one Stage without paying its entry fee. One ticket is consumed per entry." }
@@ -331,7 +331,7 @@ async function buyShopItem(item){
   }
   if((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&
       (shopInventory.get(item.name)||0)+(item.name==="Lucky Stone"?shopReservedStones:0)>=5){
-    shopStatus=item.name==="Lucky Stone"?"Maximum 5 Lucky Stones.":"Maximum 5 Lucky Charms.";
+    shopStatus=item.name==="Lucky Stone"?"Maximum 5 Raid Stones.":"Maximum 5 Lucky Charms.";
     renderShop();
     return;
   }
@@ -351,14 +351,14 @@ async function buyShopItem(item){
     if(!Number.isFinite(balance)||!Number.isInteger(quantity))throw Error("Invalid purchase receipt.");
     shopCash=balance;
     shopInventory.set(item.name,quantity);
-    shopStatus=item.name+" purchased.";
+    shopStatus=(item.label||item.name)+" purchased.";
     window.dispatchEvent(new Event("vhouse:cash-updated"));
     window.dispatchEvent(new Event("vhouse:inventory-updated"));
   }catch(error){
     console.error("Shop purchase:",error);
     const message=String(error?.message||"");
     shopStatus=message.includes("INSUFFICIENT_IGM")?"Insufficient VCARD CASH.":
-      message.includes("LUCKY_STONE_LIMIT_5")?"Maximum 5 Lucky Stones.":
+      message.includes("LUCKY_STONE_LIMIT_5")?"Maximum 5 Raid Stones.":
        message.includes("LUCKY_CHARM_LIMIT_5")?"Maximum 5 Lucky Charms.":
       message.includes("SIGN_IN_REQUIRED")?"Sign in to buy items.":
       "Purchase unsuccessful. No items granted.";
@@ -409,7 +409,7 @@ function shopItem(item,subtitle,extra,action,index,selected,disabled=false){
     '" data-shop-action="'+action+'" data-index="'+index+'" aria-pressed="'+selected+'"'+
     (disabled?' disabled':'')+'>'+
     '<span class="zshop-icon">'+item.icon+'</span>'+
-    '<span class="zshop-item-name">'+item.name+'</span>'+
+    '<span class="zshop-item-name">'+(item.label||item.name)+'</span>'+
     '<span class="zshop-item-cost">'+subtitle+'</span>'+
     (extra?'<span class="zshop-item-owned">'+extra+'</span>':'')+
     '</button>';
@@ -443,7 +443,7 @@ function renderShop(){
         '</div></div>':'';
     const detail='<div class="zshop-details">'+
       '<div class="zshop-detail-icon">'+item.icon+'</div>'+
-      '<strong class="zshop-detail-name">'+item.name+'</strong>'+
+      '<strong class="zshop-detail-name">'+(item.label||item.name)+'</strong>'+
       '<p class="zshop-detail-description">'+item.desc+'</p>'+
       (item.name==="Lucky Stone"&&shopReservedStones>0
         ?'<small>🪨 ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(item.name)||0)+'</small>':'')+
