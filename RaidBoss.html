@@ -3369,7 +3369,8 @@ $("confirmButton").addEventListener("click",async()=>{
         }
       }catch(error){
         const reason=error?.message||"UNKNOWN ERROR";
-        setRaidTransfer(symbol,symbol+" TRANSFER FAILED: "+reason);
+        setRaidTransfer(symbol,symbol+" TRANSFER FAILED: "+reason,
+          raidTransferState.transfers[symbol]?.signature||"");
         $("receiptRaidPayoutText").textContent=symbol+" FAILED";
         $("resultDescription").textContent=symbol+" TRANSFER FAILED · TRY AGAIN";
         return;
