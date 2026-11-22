@@ -2237,23 +2237,6 @@ function raidEntryStatus(message,signature=raidEntrySignature){
     host.append(document.createTextNode(" · "),link);
   }
 }
-function raidPaymentKey(playerId){
-  return "vhouse:raid-entry-payment:"+playerId;
-}
-function raidReadPendingPayment(playerId){
-  try{
-    const saved=JSON.parse(localStorage.getItem(raidPaymentKey(playerId))||"null");
-    return saved?.playerId===playerId&&
-      /^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(saved.signature||"")&&
-      /^[0-9a-f-]{36}$/i.test(saved.quoteId||"") ?saved:null;
-  }catch{return null;}
-}
-function raidSavePendingPayment(value){
-  localStorage.setItem(raidPaymentKey(value.playerId),JSON.stringify(value));
-}
-function raidClearPendingPayment(playerId){
-  localStorage.removeItem(raidPaymentKey(playerId));
-}
 function raidPaymentErrorReason(error){
   return error?.message||"PAYMENT_VERIFICATION_FAILED";
 }
@@ -2273,75 +2256,69 @@ async function payRaidEntry(cardId,level=1){
   if(!player)throw Error("SIGN_IN_REQUIRED");
   const playerId=player.id;
   const client=raidAuth.getClient();
-  const pending=raidReadPendingPayment(playerId);
-  if(pending&&(pending.cardId!==cardId||pending.level!==level))
-    throw Error("Finish the previously paid Raid entry with its original VCard.");
-  let signature=pending?.signature||"";
-  let quoteId=pending?.quoteId||"";
-  raidEntrySignature=signature;
-  if(!signature){
-    const phantom=window.phantom?.solana||window.solana;
-    if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)
-      throw Error("Connect Phantom to pay the $0.75 Raid entry.");
-    const connection=await phantom.connect();
-    const address=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
-    if(!address)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
-    const {data:account,error:linkedError}=await client.from("vhouse_accounts")
-      .select("wallet_address").eq("id",playerId).maybeSingle();
-    if(linkedError||account?.wallet_address!==address)
-      throw Error("Connect the Phantom wallet linked to your VHouse account.");
+  let signature="";
+  let quoteId="";
+  raidEntrySignature="";
+  const phantom=window.phantom?.solana||window.solana;
+  if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)
+    throw Error("Connect Phantom to pay the $0.75 Raid entry.");
+  const connection=await phantom.connect();
+  const address=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
+  if(!address)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
+  const {data:account,error:linkedError}=await client.from("vhouse_accounts")
+    .select("wallet_address").eq("id",playerId).maybeSingle();
+  if(linkedError||account?.wallet_address!==address)
+    throw Error("Connect the Phantom wallet linked to your VHouse account.");
 
-    raidEntryStatus("Checking Raid entry for $0.75...");
-    const quote=await raidEntryRequest({action:"quote",cardId,level});
-    if(!quote||quote.error)throw Error(quote?.error||"RAID_ENTRY_QUOTE_FAILED");
-    if(quote.verified){
-      raidEntrySignature=quote.signature||"";
-      raidEntryStatus("Raid entry payment verified.",raidEntrySignature);
-      return raidEntrySignature;
-    }
-    quoteId=quote.quoteId;
-    if(!quoteId||!Number.isSafeInteger(Number(quote.lamports))||Number(quote.lamports)<=0)
-      throw Error("RAID_ENTRY_QUOTE_INVALID");
-    if(quote.walletAddress!==address)throw Error("RAID_ENTRY_WALLET_MISMATCH");
-
-    const {Connection,PublicKey,Transaction,SystemProgram,TransactionInstruction}=
-      await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
-    const rpcEndpoints=[
-      "https://solana-rpc.publicnode.com",
-      "https://api.mainnet-beta.solana.com"
-    ];
-    let latest=null;
-    for(const endpoint of rpcEndpoints){
-      try{
-        const rpc=new Connection(endpoint,"confirmed");
-        latest=await rpc.getLatestBlockhash("confirmed");
-        if(latest)break;
-      }catch(error){console.warn("Journey blockhash lookup:",endpoint,error);}
-    }
-    if(!latest)throw Error("Solana RPC unavailable for Journey payment.");
-    const owner=new PublicKey(address);
-    const tx=new Transaction();
-    tx.add(SystemProgram.transfer({
-      fromPubkey:owner,
-      toPubkey:new PublicKey(quote.treasury),
-      lamports:Number(quote.lamports)
-    }));
-    tx.add(new TransactionInstruction({
-      programId:new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      keys:[],
-      data:new TextEncoder().encode("VHOUSE:RAID:"+quoteId)
-    }));
-    tx.feePayer=owner;
-    tx.recentBlockhash=latest.blockhash;
-    raidEntryStatus("Approve $0.75 Raid entry ("+(Number(quote.lamports)/1e9).toFixed(9)+" SOL) in Phantom.");
-    const receipt=await phantom.signAndSendTransaction(tx,{
-      skipPreflight:false,preflightCommitment:"confirmed"
-    });
-    signature=typeof receipt==="string"?receipt:receipt?.signature;
-    if(!signature)throw Error("Phantom did not return the payment transaction.");
-    raidEntrySignature=signature;
-    raidSavePendingPayment({playerId,cardId,level,quoteId,signature});
+  raidEntryStatus("Checking Raid entry for $0.75...");
+  const quote=await raidEntryRequest({action:"quote",cardId,level});
+  if(!quote||quote.error)throw Error(quote?.error||"RAID_ENTRY_QUOTE_FAILED");
+  if(quote.verified){
+    raidEntrySignature=quote.signature||"";
+    raidEntryStatus("Raid entry payment verified.",raidEntrySignature);
+    return raidEntrySignature;
   }
+  quoteId=quote.quoteId;
+  if(!quoteId||!Number.isSafeInteger(Number(quote.lamports))||Number(quote.lamports)<=0)
+    throw Error("RAID_ENTRY_QUOTE_INVALID");
+  if(quote.walletAddress!==address)throw Error("RAID_ENTRY_WALLET_MISMATCH");
+
+  const {Connection,PublicKey,Transaction,SystemProgram,TransactionInstruction}=
+    await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+  const rpcEndpoints=[
+    "https://solana-rpc.publicnode.com",
+    "https://api.mainnet-beta.solana.com"
+  ];
+  let latest=null;
+  for(const endpoint of rpcEndpoints){
+    try{
+      const rpc=new Connection(endpoint,"confirmed");
+      latest=await rpc.getLatestBlockhash("confirmed");
+      if(latest)break;
+    }catch(error){console.warn("Journey blockhash lookup:",endpoint,error);}
+  }
+  if(!latest)throw Error("Solana RPC unavailable for Journey payment.");
+  const owner=new PublicKey(address);
+  const tx=new Transaction();
+  tx.add(SystemProgram.transfer({
+    fromPubkey:owner,
+    toPubkey:new PublicKey(quote.treasury),
+    lamports:Number(quote.lamports)
+  }));
+  tx.add(new TransactionInstruction({
+    programId:new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+    keys:[],
+    data:new TextEncoder().encode("VHOUSE:RAID:"+quoteId)
+  }));
+  tx.feePayer=owner;
+  tx.recentBlockhash=latest.blockhash;
+  raidEntryStatus("Approve $0.75 Raid entry ("+(Number(quote.lamports)/1e9).toFixed(9)+" SOL) in Phantom.");
+  const receipt=await phantom.signAndSendTransaction(tx,{
+    skipPreflight:false,preflightCommitment:"confirmed"
+  });
+  signature=typeof receipt==="string"?receipt:receipt?.signature;
+  if(!signature)throw Error("Phantom did not return the payment transaction.");
+  raidEntrySignature=signature;
   raidEntryStatus("Verifying Raid entry payment on Solana.",signature);
   // A submitted payment is verified automatically. Never request another
   // Phantom approval and never make the player press START to check it.
@@ -2788,7 +2765,6 @@ $("confirmRaidCard").addEventListener("click",async()=>{
       p_card_id:String(card.id),p_level:1
     });
     if(raidAuth.getUser()?.id!==paidForPlayer)throw Error("RAID_PAYMENT_ACCOUNT_CHANGED");
-    raidClearPendingPayment(paidForPlayer);
     raidPendingRecord=record;
     showRaidEntryPayment(entrySignature);
     selectedRaidCard={...record.card_snapshot};
