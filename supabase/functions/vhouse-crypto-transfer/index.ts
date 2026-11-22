@@ -8,9 +8,9 @@ import {
   createTransferCheckedInstruction,
 } from "npm:@solana/spl-token@0.4.14";
 
-/* Same signed-before-sending, one-receipt payout lifecycle as vhouse-scrap-transfer.
-   The authoritative Journey encounter results determine both bag count and token.
-   SOL and AWT can be owed by the same Journey; each has a separate durable record. */
+/* Signed-once, recorded-once SOL/AWT payouts for both Journey and Tower Raid.
+   Journey still uses 10-cent bags; Raid uses its independently recorded
+   $0.10–$0.25 SOL/AWT bags, never a client-supplied payout amount. */
 const AWT_MINT = "ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump";
 const CORS = {
   "Access-Control-Allow-Origin": "https://zetsucorp.github.io",
@@ -42,8 +42,8 @@ function atomic(value: unknown) {
   if (!/^[0-9]+$/.test(String(value ?? ""))) throw Error("ONCHAIN_AMOUNT_INVALID");
   return BigInt(String(value));
 }
-function unitsForBags(bags: number, price: number, decimals: number) {
-  // Same integer conversion as Scrap transfer; CRYPTO bags are 10 cents, not 25.
+function unitsForUsdCents(usdCents: bigint, price: number, decimals: number) {
+  // Exact integer unit conversion; round up by less than one token atomic unit.
   const m = String(price).match(/^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i);
   if (!m) throw Error("CRYPTO_MARKET_UNAVAILABLE");
   const digits = BigInt(m[1] + (m[2] || ""));
@@ -52,8 +52,12 @@ function unitsForBags(bags: number, price: number, decimals: number) {
   const num = exponent > 0 ? digits * 10n ** BigInt(exponent) : digits;
   const den = exponent < 0 ? 10n ** BigInt(-exponent) : 1n;
   if (num <= 0n) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  return (BigInt(bags) * 10n * den * 10n ** BigInt(decimals) +
+  return (usdCents * den * 10n ** BigInt(decimals) +
     100n * num - 1n) / (100n * num);
+}
+function unitsForBags(bags: number, price: number, decimals: number) {
+  // Preserve the Journey payment calculation: exactly 10 USD cents per bag.
+  return unitsForUsdCents(BigInt(bags) * 10n, price, decimals);
 }
 async function priceUsd(symbol: string, awtMint?: string) {
   if (symbol === "SOL") {
@@ -85,38 +89,60 @@ function connection() {
     "https://api.mainnet-beta.solana.com", "confirmed");
 }
 type Payout = {
-  player_id: string; mission_id: string; token_symbol: "SOL" | "AWT";
-  token_mint: string | null; bags: number;
+  player_id: string; mission_id?: string; raid_id?: string;
+  token_symbol: "SOL" | "AWT";
+  token_mint: string | null; bags: number; usd_cents?: number;
   source_wallet: string; recipient_wallet: string;
   amount_atomic: string; token_decimals: number;
   signature: string; signed_transaction_base64: string;
   blockhash: string; last_valid_block_height: number;
   status: string;
 };
-async function existingPayout(db: ReturnType<typeof createClient>, playerId: string, missionId: string, symbol: string) {
-  const { data, error } = await db.from("vhouse_crypto_transfers")
-    .select("*").eq("player_id", playerId).eq("mission_id", missionId)
+function payoutTable(raidMode: boolean) {
+  return raidMode ? "vhouse_raid_crypto_transfers" : "vhouse_crypto_transfers";
+}
+async function existingPayout(db: ReturnType<typeof createClient>,
+  playerId: string, referenceId: string, symbol: string, raidMode = false) {
+  const { data, error } = await db.from(payoutTable(raidMode))
+    .select("*").eq("player_id", playerId)
+    .eq(raidMode ? "raid_id" : "mission_id", referenceId)
     .eq("token_symbol", symbol).maybeSingle();
   if (error) throw Error("PAYOUT_RECORD_UNAVAILABLE");
   return data as Payout | null;
 }
+async function markRaidBagsTransferred(db: ReturnType<typeof createClient>, row: Payout) {
+  if (!row.raid_id) return;
+  const { error } = await db.from("vhouse_raid_crypto_bags")
+    .update({payout_status:"TRANSFERRED",transfer_signature:row.signature,
+      updated_at:new Date().toISOString()})
+    .eq("player_id",row.player_id).eq("raid_id",row.raid_id)
+    .eq("token_symbol",row.token_symbol);
+  if (error) throw Error("PAYOUT_STATUS_SAVE_FAILED");
+}
 async function updateStatus(db: ReturnType<typeof createClient>, row: Payout, status: string) {
   const fields: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (status === "CONFIRMED") fields.confirmed_at = new Date().toISOString();
-  const { error } = await db.from("vhouse_crypto_transfers")
-    .update(fields).eq("player_id", row.player_id).eq("mission_id", row.mission_id)
+  const raidMode=!!row.raid_id;
+  const { error } = await db.from(payoutTable(raidMode))
+    .update(fields).eq("player_id", row.player_id)
+    .eq(raidMode?"raid_id":"mission_id", raidMode?row.raid_id:row.mission_id)
     .eq("token_symbol", row.token_symbol).eq("signature", row.signature);
   if (error) throw Error("PAYOUT_STATUS_SAVE_FAILED");
+  if (raidMode && status==="CONFIRMED") await markRaidBagsTransferred(db,row);
 }
 async function continueSignedTransfer(db: ReturnType<typeof createClient>, rpc: Connection, row: Payout) {
   const result = () => ({
     token: row.token_symbol,
     bags: row.bags,
+    ...(row.raid_id?{usdCents:row.usd_cents}:{}),
     tokenAmount: display(atomic(row.amount_atomic), row.token_decimals),
     signature: row.signature,
     recipientWallet: row.recipient_wallet,
   });
-  if (row.status === "CONFIRMED") return { status: "TRANSFERRED", ...result() };
+  if (row.status === "CONFIRMED") {
+    if (row.raid_id) await markRaidBagsTransferred(db,row);
+    return { status: "TRANSFERRED", ...result() };
+  }
   if (row.status === "FAILED_REVIEW" || row.status === "EXPIRED_REVIEW") {
     return { status: row.status, ...result() };
   }
@@ -177,10 +203,37 @@ function earnedBags(snapshot: any, symbol: string) {
   }
   return bags;
 }
+async function earnedRaidBags(db: ReturnType<typeof createClient>,
+  playerId: string, raidId: string, symbol: string, results: any[]) {
+  // Revalidate DB-stored rewards against authoritative results. Never trust client counts.
+  const {data,error}=await db.from("vhouse_raid_crypto_bags")
+    .select("boss,token_symbol,usd_cents,payout_status")
+    .eq("player_id",playerId).eq("raid_id",raidId)
+    .eq("token_symbol",symbol);
+  if(error) throw Error("PAYOUT_RECORD_UNAVAILABLE");
+  const awarded=data||[];
+  if(awarded.length>10) throw Error("INVALID_CRYPTO_BAGS");
+  const bossResults=new Map(results.map(x=>[x.boss,x]));
+  let usdCents=0;
+  for(const bag of awarded) {
+    const recorded=bossResults.get(bag.boss);
+    const detail=recorded?.raidCryptoBag;
+    if(recorded?.win!==true || detail?.token!==symbol ||
+      detail?.label!=="RAID CRYPTO BAG" ||
+      detail?.usdCents!==bag.usd_cents ||
+      !Number.isSafeInteger(bag.usd_cents) ||
+      bag.usd_cents<10 || bag.usd_cents>25 ||
+      bag.payout_status!=="EARNED")
+      throw Error("INVALID_RAID_CRYPTO_BAGS");
+    usdCents+=bag.usd_cents;
+  }
+  return {bags:awarded.length,usdCents};
+}
 async function prepareSignedTransfer(
   db: ReturnType<typeof createClient>, rpc: Connection,
-  sender: Keypair, playerId: string, missionId: string,
+  sender: Keypair, playerId: string, referenceId: string,
   symbol: "SOL" | "AWT", bags: number, wallet: string,
+  raidUsdCents?: number,
 ) {
   const recipient = new PublicKey(wallet);
   const isSol = symbol === "SOL";
@@ -218,7 +271,9 @@ async function prepareSignedTransfer(
     }
   }
   const price = await priceUsd(symbol, mintAddress || undefined);
-  const amount = unitsForBags(bags, price, decimals);
+  const amount = raidUsdCents===undefined
+    ?unitsForBags(bags,price,decimals)
+    :unitsForUsdCents(BigInt(raidUsdCents),price,decimals);
   if (amount <= 0n) throw Error("INVALID_CRYPTO_BAGS");
   if (isSol) {
     if (amount > BigInt(Number.MAX_SAFE_INTEGER)) throw Error("INVALID_CRYPTO_BAGS");
@@ -256,7 +311,10 @@ async function prepareSignedTransfer(
   const signature = bs58.encode(tx.signature);
   const signed = btoa(String.fromCharCode(...tx.serialize()));
   const row = {
-    player_id: playerId, mission_id: missionId, token_symbol: symbol,
+    player_id: playerId,
+    ...(raidUsdCents===undefined ? { mission_id: referenceId } : {
+      raid_id: referenceId, usd_cents: raidUsdCents
+    }),token_symbol: symbol,
     token_mint: mintAddress, bags, amount_atomic: amount.toString(), token_decimals: decimals,
     source_wallet: sender.publicKey.toBase58(),
     recipient_wallet: recipient.toBase58(), signature,
@@ -264,16 +322,17 @@ async function prepareSignedTransfer(
     blockhash: recent.blockhash, last_valid_block_height: recent.lastValidBlockHeight,
     status: "SIGNED",
   };
-  // The unique (player, mission, token) constraint prevents second payout.
-  const { error } = await db.from("vhouse_crypto_transfers").insert(row);
+  // Separate unique (Raid,token) / (Journey,token) prevents duplicate transfers.
+  const isRaid=raidUsdCents!==undefined;
+  const { error } = await db.from(payoutTable(isRaid)).insert(row);
   if (error) {
     if (error.code === "23505") {
-      const already = await existingPayout(db, playerId, missionId, symbol);
-      if (already) return continueSignedTransfer(db, rpc, already);
+      const already = await existingPayout(db,playerId,referenceId,symbol,isRaid);
+      if (already) return continueSignedTransfer(db,rpc,already);
     }
     throw Error("PAYOUT_RECORD_UNAVAILABLE");
   }
-  return continueSignedTransfer(db, rpc, row as Payout);
+  return continueSignedTransfer(db,rpc,row as Payout);
 }
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
@@ -293,17 +352,42 @@ Deno.serve(async (req: Request) => {
       return response({ error: "SIGN_IN_REQUIRED" }, 401);
     const body = await req.json().catch(() => null);
     const missionId = typeof body?.missionId === "string" ? body.missionId.trim() : "";
+    const raidId = typeof body?.raidId === "string" ? body.raidId.trim() : "";
+    const raidMode=raidId.length>0 || body?.raidId!==undefined;
     const symbol = body?.token === "SOL" || body?.token === "AWT" ? body.token : null;
-    if (!missionId || missionId.length > 200 || !symbol) {
+    if (!symbol || (raidMode
+      ? !!missionId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raidId)
+      : !missionId || missionId.length>200)) {
       return response({ error: "INVALID_CRYPTO_REQUEST" }, 400);
     }
     const playerId = verified.data.user.id;
     const db = createClient(url, service, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const existing = await existingPayout(db, playerId, missionId, symbol);
+    const referenceId=raidMode?raidId:missionId;
+    const existing = await existingPayout(db,playerId,referenceId,symbol,raidMode);
     const rpc = connection();
     if (existing) return response(await continueSignedTransfer(db, rpc, existing));
+    if(raidMode) {
+      const [raid,account]=await Promise.all([
+        db.from("vhouse_raid_records").select("status,boss_results")
+          .eq("player_id",playerId).eq("id",raidId).maybeSingle(),
+        db.from("vhouse_accounts").select("wallet_address")
+          .eq("id",playerId).maybeSingle(),
+      ]);
+      if(raid.error||account.error) throw Error("PAYOUT_RECORD_UNAVAILABLE");
+      if(raid.data?.status!=="RESULTS_READY")
+        return response({error:"RESULTS_NOT_READY"},409);
+      if(!Array.isArray(raid.data.boss_results))
+        throw Error("INVALID_RAID_CRYPTO_BAGS");
+      const award=await earnedRaidBags(db,playerId,raidId,symbol,raid.data.boss_results);
+      if(!award.bags) return response({status:"NO BAGS",token:symbol,bags:0});
+      if(!account.data?.wallet_address)
+        return response({error:"PLAYER_WALLET_NOT_LINKED"},409);
+      const sender=senderFromSecret();
+      return response(await prepareSignedTransfer(db,rpc,sender,playerId,raidId,
+        symbol,award.bags,account.data.wallet_address,award.usdCents));
+    }
     const [journey, account] = await Promise.all([
       db.from("vhouse_journey_records").select("status,snapshot")
         .eq("player_id", playerId).eq("mission_id", missionId).maybeSingle(),
@@ -331,7 +415,8 @@ Deno.serve(async (req: Request) => {
       "AWT_MINT_UNAVAILABLE",
       "AWT_DECIMALS_UNAVAILABLE", "CRYPTO_MARKET_UNAVAILABLE",
       "NETWORK_FEE_UNAVAILABLE", "INVALID_CRYPTO_BAGS",
-      "INVALID_JOURNEY_RESULTS", "SUPABASE_NOT_CONFIGURED",
+      "INVALID_JOURNEY_RESULTS", "INVALID_RAID_CRYPTO_BAGS",
+      "SUPABASE_NOT_CONFIGURED",
     ]);
     return response({ error: allowed.has(message) ? message : "CRYPTO_TRANSFER_UNAVAILABLE" }, 503);
   }
