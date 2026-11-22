@@ -2041,8 +2041,16 @@ td { background:#1c1428 }
     </div>
 
     <div class="line">
-      <span>REWARDS</span>
-      <strong>—</strong>
+      <span>RAID CRYPTO BAGS</span>
+      <strong id="receiptRaidBags">0</strong>
+    </div>
+    <div class="line">
+      <span>ENCOUNTER EARNINGS</span>
+      <strong id="receiptRaidRewards">$0.00</strong>
+    </div>
+    <div class="line" id="receiptRaidPayoutStatus" hidden>
+      <span>CRYPTO PAYOUT</span>
+      <strong id="receiptRaidPayoutText">PENDING</strong>
     </div>
 
     <button
@@ -2065,6 +2073,7 @@ td { background:#1c1428 }
             <th>RESULT</th>
             <th>EGG DAMAGE</th>
             <th>EGG HP</th>
+            <th>RAID CRYPTO BAG</th>
           </tr>
         </thead>
 
@@ -3176,10 +3185,15 @@ function finishRaid() {
     raid.eggMax;
 
   $("resultDescription").textContent =
-    raid.defeated
-      ? "VCARD DEFEATED"
-      : "RAID RUN FINISHED";
+    raid.defeated ? "VCARD DEFEATED" : "RAID RUN FINISHED";
 
+  const earned = raid.results.filter(result=>result.win && result.raidCryptoBag);
+  const totalCents = earned.reduce((sum,result)=>
+    sum+Number(result.raidCryptoBag.usdCents||0),0);
+  $("receiptRaidBags").textContent=String(earned.length);
+  $("receiptRaidRewards").textContent="$"+(totalCents/100).toFixed(2);
+  $("receiptRaidPayoutStatus").hidden=earned.length===0;
+  $("receiptRaidPayoutText").textContent=earned.length?"AWAITING CONFIRM":"—";
   const rows = $("resultRows");
   rows.replaceChildren();
 
@@ -3191,7 +3205,11 @@ function finishRaid() {
       "BOSS " + result.boss,
       result.win ? "WIN" : "LOSS",
       result.damage,
-      result.eggHp
+      result.eggHp,
+      result.win&&result.raidCryptoBag
+        ? "RAID CRYPTO BAG · "+result.raidCryptoBag.token+
+          " · $"+(Number(result.raidCryptoBag.usdCents)/100).toFixed(2)
+        : "—"
     ];
 
     values.forEach((value,index) => {
@@ -3220,6 +3238,23 @@ $("confirmButton").addEventListener("click",async()=>{
   if(!raid||raidSaveFailed||$("confirmButton").disabled)return;
   $("confirmButton").disabled=true;
   try{
+    // Each earned Raid Bag retains its random token and cents in Supabase.
+    // The separate Raid transfer service totals cents independently for SOL/AWT,
+    // quotes the current market price, and saves signed transactions once.
+    const awarded=raid.results.filter(result=>result.win&&result.raidCryptoBag);
+    const symbols=[...new Set(awarded.map(result=>result.raidCryptoBag.token))];
+    for(const symbol of symbols){
+      const {data,error}=await raidAuth.getClient().functions.invoke(
+        "vhouse-raid-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
+      if(error||data?.status!=="TRANSFERRED"){
+        const status=String(data?.status||"PENDING");
+        $("receiptRaidPayoutText").textContent=symbol+" · "+status;
+        $("resultDescription").textContent=
+          "RAID CRYPTO TRANSFER "+status+" — CONFIRM AGAIN TO RETRY";
+        throw error||new Error("RAID_CRYPTO_PAYOUT_"+status);
+      }
+    }
+    if(symbols.length)$("receiptRaidPayoutText").textContent="TRANSFERRED";
     const record=await raidRpc("vhouse_confirm_raid",{p_raid_id:raid.id});
     if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
     clearTimeout(towerTransitionTimer);
@@ -3236,7 +3271,8 @@ $("confirmButton").addEventListener("click",async()=>{
     renderRaidRoster();
   }catch(error){
     console.error("Tower Raid confirm:",error);
-    $("resultDescription").textContent="RAID CONFIRMATION FAILED — TRY AGAIN";
+    if(!$("resultDescription").textContent.includes("RAID CRYPTO TRANSFER"))
+      $("resultDescription").textContent="RAID CONFIRMATION FAILED — TRY AGAIN";
   }finally{
     $("confirmButton").disabled=false;
   }
