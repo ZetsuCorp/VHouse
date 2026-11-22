@@ -1734,6 +1734,9 @@ td { background:#1c1428 }
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatBosses">0</span><span class="raid-record-label">BOSSES DEFEATED</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidRewardType">—</span><span class="raid-record-label">REWARD TYPE</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidEarnedEncounter">$0.00</span><span class="raid-record-label">ENCOUNTER EARNINGS</span></div>
+        </div>
+        <h3 class="raid-last-heading">OVERALL</h3>
+        <div class="raid-records-grid" aria-label="Overall results across all Raids for selected VCard">
           <div class="raid-record-metric"><span class="raid-record-value" id="raidStatEggs">0</span><span class="raid-record-label">EGGS BROKEN</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidEarnedEgg">$0.00</span><span class="raid-record-label">TOTAL EGG REWARDS</span></div>
           <div class="raid-record-metric"><span class="raid-record-value" id="raidEarnedTotal">$0.00</span><span class="raid-record-label">TOTAL EARNED</span></div>
@@ -2314,6 +2317,15 @@ function renderRaidRoster(){
     String(entry.vcard_id)===String(card?.id)):null;
   const number=key=>result?String(result[key]??0):"—";
   const money=key=>result?"$"+Number(result[key]??0).toFixed(2):"—";
+  // OVERALL values are cumulative for the selected VCard, not just its latest Raid.
+  const overallResults=card&&loaded?savedResults.filter(entry=>
+    String(entry.vcard_id)===String(card.id)):[];
+  const overallSum=key=>overallResults.reduce((total,entry)=>{
+    const value=Number(entry[key]??0);
+    return total+(Number.isFinite(value)?value:0);
+  },0);
+  const overallNumber=key=>card&&loaded?String(Math.round(overallSum(key))):"—";
+  const overallMoney=key=>card&&loaded?"$"+overallSum(key).toFixed(2):"—";
   const values={
     raidStatRaids:raidCount===null?"—":String(raidCount),
     raidStatPlayer:signedInPlayer?(raidAuth.getLoginIdentity()||"—"):"—",
@@ -2324,9 +2336,9 @@ function renderRaidRoster(){
     raidStatBosses:number("bosses_defeated"),
     raidRewardType:result?.reward_type||"—",
     raidEarnedEncounter:money("encounter_earnings"),
-    raidStatEggs:number("eggs_broken"),
-    raidEarnedEgg:money("total_egg_rewards"),
-    raidEarnedTotal:money("total_earned")
+    raidStatEggs:overallNumber("eggs_broken"),
+    raidEarnedEgg:overallMoney("total_egg_rewards"),
+    raidEarnedTotal:overallMoney("total_earned")
   };
   for(const [id,value] of Object.entries(values)){
     $(id).textContent=value;
