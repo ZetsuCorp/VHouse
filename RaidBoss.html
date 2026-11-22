@@ -1275,10 +1275,11 @@ select {
   grid-column:1/-1;
   text-align:center;
 }
-.complete-title #resultDescription.is-confirm-prompt {
+.complete-title #resultDescription {
   color:#fff;
   font-weight:900;
-  text-shadow:0 0 6px #fff,0 0 14px #d9baff,0 0 24px #9f6edd;
+  font-size:clamp(12px,1.3cqw,18px);
+  text-shadow:0 0 5px #fff,0 0 12px #fff,0 0 22px #cc91ff;
 }
 
 .receipt {
@@ -2084,7 +2085,7 @@ td { background:#1c1428 }
 
   <div class="complete-title">
     <h2>RAID RESULTS</h2>
-    <span class="muted" id="resultDescription"></span>
+    <span id="resultDescription"></span>
   </div>
 
   <div class="receipt">
