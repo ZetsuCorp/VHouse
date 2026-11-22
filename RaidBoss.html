@@ -745,6 +745,29 @@ select {
   object-fit:contain;
 }
 
+/* Visual playback of previously verified Supabase Lucky Stone events. */
+#raidStoneEffect{
+  position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);
+  z-index:15;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:.3cqw;min-width:clamp(190px,27cqw,360px);
+  max-width:72%;padding:.8cqw 1.2cqw;text-align:center;
+  border:2px solid #f4d18a;border-radius:12px;
+  background:linear-gradient(135deg,#21142df5,#40205bea);
+  box-shadow:0 0 25px #b96aff9c,inset 0 0 12px #e8c08550;
+  pointer-events:none;animation:raidStoneFlash .48s ease-out both;
+}
+#raidStoneEffect[hidden]{display:none}
+#raidStoneEffect .raid-stone-icon{
+  font-size:clamp(27px,4.5cqw,54px);line-height:1;
+  filter:drop-shadow(0 0 9px #daa4ff);
+}
+#raidStoneEffect .raid-stone-title{font-size:clamp(12px,1.6cqw,20px);font-weight:900;color:#ffe3a9}
+#raidStoneEffect .raid-stone-detail{font-size:clamp(11px,1.3cqw,16px);font-weight:800;color:#f3d9ff}
+#raidStoneEffect .raid-stone-count{font-size:clamp(10px,1.1cqw,14px);font-weight:800;color:#eac8ff}
+@keyframes raidStoneFlash{
+  from{opacity:0;transform:translate(-50%,-50%) scale(.65);filter:brightness(2)}
+  to{opacity:1;transform:translate(-50%,-50%) scale(1);filter:brightness(1)}
+}
 /* Every attack moves once after its coin flip; no idle fighter movement. */
 .fighter.player {
   --raid-recoil:-10px;
@@ -1745,6 +1768,12 @@ td { background:#1c1428 }
       BOSS 1
     </div>
     <p class="battle-status" id="battleLog" aria-live="polite">Entering tower…</p>
+    <div id="raidStoneEffect" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <span class="raid-stone-icon" aria-hidden="true">🪨</span>
+      <strong class="raid-stone-title" id="raidStoneTitle">LUCKY STONE USED</strong>
+      <span class="raid-stone-detail" id="raidStoneDetail"></span>
+      <span class="raid-stone-count" id="raidStoneCount"></span>
+    </div>
 
     <div class="fighter player"><div id="battlePlayerCard"></div></div>
     <div class="fighter boss"><img class="battle-boss-image" id="battleBossImage" src="assets/TowerBoss1.png" alt="Tower Boss 1"></div>
@@ -2297,6 +2326,7 @@ function clearRaidForAccountChange(){
   clearBattleMotion();
   clearBattleFinish();
   hideTowerStamp();
+  hideRaidStoneEffect();
   showScreen("cardSelectScreen");
 }
 async function restoreUnfinishedRaid(){
@@ -2631,6 +2661,7 @@ function startRaid(restoredRecord=null) {
   $("battleCaption").textContent="BOSS "+raid.boss+" — "+currentTurn.toUpperCase();
   $("battleLog").textContent=restoredRecord?"RAID RESUMED":"Entering tower…";
   hideTowerStamp();
+  hideRaidStoneEffect();
   renderTowerClimb(raid.boss);
   renderEgg();
   renderBossGrid();
@@ -2656,6 +2687,54 @@ const BATTLE_HIT_ACTION_MS=1500;
 const BATTLE_SCORE_MS=500;
 const BATTLE_FINISH_MS=2200;
 const battlePause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function hideRaidStoneEffect(){
+  $("raidStoneEffect").hidden=true;
+}
+function showRaidStoneEffect(title,detail,remaining){
+  const panel=$("raidStoneEffect");
+  $("raidStoneTitle").textContent=title;
+  $("raidStoneDetail").textContent=detail;
+  $("raidStoneCount").textContent=remaining===null?"":"STONES REMAINING: "+remaining;
+  panel.hidden=false;
+  panel.style.animation="none";
+  void panel.offsetWidth;
+  panel.style.animation="";
+}
+// UI playback only: all retry outcomes and inventory deductions come from Supabase.
+async function playRecordedLuckyStoneRetries(event,run){
+  const count=Math.min(5,Math.max(0,Number(event.luckyStonesUsed)||0));
+  if(event.actor!=="player"||count===0||!run||raid!==run)return;
+  const outcomes=Array.isArray(event.luckyRetryResults)?event.luckyRetryResults:[];
+  const remaining=event.luckyStonesRemaining!==null
+    && Number.isInteger(Number(event.luckyStonesRemaining))
+    ?Number(event.luckyStonesRemaining):null;
+  $("battleLog").textContent="VCARD FLIPPED TAILS — MISS";
+  await battlePause(450);
+  for(let i=0;i<count;i++){
+    if(raid!==run||run.completed||document.hidden){
+      hideRaidStoneEffect();
+      return;
+    }
+    const after=remaining===null?null:remaining+count-i-1;
+    showRaidStoneEffect("🪨 LUCKY STONE USED",
+      "STONE "+(i+1)+" OF "+count+" — CONSUMED",after);
+    $("battleLog").textContent="LUCKY STONE "+(i+1)+" CONSUMED — AUTOMATIC RETRY";
+    await battlePause(650);
+    if(raid!==run||run.completed||document.hidden){
+      hideRaidStoneEffect();
+      return;
+    }
+    const outcome=typeof outcomes[i]==="boolean"
+      ?(outcomes[i]?"HEADS — HIT":"TAILS — MISS")
+      :"RETRY RECORDED";
+    showRaidStoneEffect("🪨 LUCKY RETRY "+(i+1),outcome,after);
+    $("battleLog").textContent="LUCKY RETRY "+(i+1)+" — "+outcome;
+    await battlePause(750);
+  }
+  hideRaidStoneEffect();
+  // The server already decremented inventory before these events were read.
+  void refreshRaidInventory();
+}
 
 function clearBattleMotion(){
   for(const fighter of $("travelScreen").querySelectorAll(".fighter")){
