@@ -3247,10 +3247,10 @@ $("confirmButton").addEventListener("click",async()=>{
       const {data,error}=await raidAuth.getClient().functions.invoke(
         "vhouse-raid-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
       if(error||data?.status!=="TRANSFERRED"){
-        const status=String(data?.status||"PENDING");
+        const status=error?"UNAVAILABLE":String(data?.status||"PENDING");
         $("receiptRaidPayoutText").textContent=symbol+" · "+status;
         $("resultDescription").textContent=
-          "RAID CRYPTO TRANSFER "+status+" — CONFIRM AGAIN TO RETRY";
+          "RAID CRYPTO TRANSFER "+status+" — REWARDS NOT YET PAID";
         throw error||new Error("RAID_CRYPTO_PAYOUT_"+status);
       }
     }
