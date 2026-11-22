@@ -2538,10 +2538,19 @@ async function refreshRaidWallet(){
     address.title=wallet;
     check.hidden=connected;
     if(!connected)panel.classList.remove("is-revealed");
-    else if(firstReveal){
-      panel.classList.remove("is-revealed");
-      void panel.offsetWidth;
-      panel.classList.add("is-revealed");
+    else {
+      if(firstReveal){
+        panel.classList.remove("is-revealed");
+        void panel.offsetWidth;
+        panel.classList.add("is-revealed");
+      }
+      // Account changed in Phantom: remove a previous warning once it is resolved.
+      if(rosterLoadError==="CHECK CONNECTED WALLET"){
+        rosterLoadError="";
+        renderRaidRoster();
+      }
+      if($("raidEntryStatus").textContent.trim()==="CHECK CONNECTED WALLET")
+        raidEntryStatus("");
     }
     return connected;
   }catch(error){
@@ -2563,12 +2572,7 @@ $("raidWalletCheck").addEventListener("click",async()=>{
       raidEntryStatus("CHECK CONNECTED WALLET — PHANTOM NOT AVAILABLE");
       return;
     }
-    const current=phantom.publicKey?.toBase58?.()||"";
-    if(phantom.isConnected&&current!==raidLinkedWalletAddress){
-      raidEntryStatus("CHECK CONNECTED WALLET — SWITCH TO YOUR LINKED WALLET IN PHANTOM");
-      return;
-    }
-    // Explicit click by the player is the only reconnect action.
+    // Player controls account selection in Phantom; never block its connect request.
     await phantom.connect();
     if(await refreshRaidWallet()){
       raidEntryStatus("");
@@ -2766,12 +2770,7 @@ async function loadRaidRoster(){
 $("confirmRaidCard").addEventListener("click",async()=>{
   const card=rosterCard();
   if(!card||raidStore.isLocked(card.id)||raidStarting||raidRestoring||raid||raidPendingRecord)return;
-  // Show a player-actionable wallet check before any entry quote or charge.
-  if(!await refreshRaidWallet()){
-    raidEntryStatus("CHECK CONNECTED WALLET");
-    $("raidWalletCheck").focus();
-    return;
-  }
+  // Journey handles Phantom connection inside its payment flow, not before START.
   raidStarting=true;
   $("confirmRaidCard").disabled=true;
   try{
