@@ -3245,7 +3245,7 @@ $("confirmButton").addEventListener("click",async()=>{
     const symbols=[...new Set(awarded.map(result=>result.raidCryptoBag.token))];
     for(const symbol of symbols){
       const {data,error}=await raidAuth.getClient().functions.invoke(
-        "vhouse-raid-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
+        "vhouse-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
       if(error||data?.status!=="TRANSFERRED"){
         const status=error?"UNAVAILABLE":String(data?.status||"PENDING");
         $("receiptRaidPayoutText").textContent=symbol+" · "+status;
