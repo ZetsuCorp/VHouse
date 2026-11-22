@@ -258,6 +258,7 @@ const ownedScraps={scrap:12,copper:5,relic:2,crystal:0,repair:0,token:0};
 const shopStock={scrap:0,copper:0,relic:0,crystal:6,repair:4,token:3};
 let selectedBoost=0,selectedService=0,tradeFrom="scrap",tradeTo="crystal";
 let shopCash=null, shopInventory=new Map(), shopBusy=false, shopLoading=false;
+let shopReservedStones=0;
 let shopReadId=0, shopPlayerId=null;
 let shopActiveJourneys=[];
 const shopSafe=value=>String(value??"").replace(/[&<>"']/g,c=>({
@@ -269,6 +270,7 @@ async function loadShopPlayer(){
   const readId=++shopReadId;
   shopCash=null;
   shopInventory=new Map();
+  shopReservedStones=0;
   shopPlayerId=null;
   shopActiveJourneys=[];
   shopLoading=true;
@@ -290,16 +292,23 @@ async function loadShopPlayer(){
         shopInventory.set(item.thing,Number(item.quantity)||0);
       }
     }
-    const {data:journeys,error:journeyError}=await auth.getClient()
-      .from("vhouse_journey_records")
-      .select("card_id,snapshot")
-      .eq("player_id",player.playerId)
-      .eq("status","ON_JOURNEY");
-    if(journeyError)throw journeyError;
+    const [journeyResult,raidResult]=await Promise.all([
+      auth.getClient().from("vhouse_journey_records")
+        .select("card_id,snapshot").eq("player_id",player.playerId)
+        .eq("status","ON_JOURNEY"),
+      auth.getClient().from("vhouse_raid_records")
+        .select("card_snapshot").eq("player_id",player.playerId)
+        .in("status",["ACTIVE","RESULTS_READY"]).limit(1).maybeSingle()
+    ]);
+    if(journeyResult.error)throw journeyResult.error;
+    if(raidResult.error)throw raidResult.error;
     if(readId!==shopReadId||auth.getUser()?.id!==player.playerId)return;
-    shopActiveJourneys=(journeys||[]).map(journey=>({
+    shopActiveJourneys=(journeyResult.data||[]).map(journey=>({
       id:journey.card_id,name:journey.snapshot?.card?.name||"VCard"
     }));
+    const raidSnapshot=raidResult.data?.card_snapshot;
+    shopReservedStones=raidSnapshot?.raidLuckyStonesReserved===true
+      ?Math.max(0,Math.floor(Number(raidSnapshot.raidLuckyStones)||0)):0;
   }catch(error){
     if(readId!==shopReadId)return;
     console.error("Shop account load:",error);
@@ -320,7 +329,8 @@ async function buyShopItem(item){
     renderShop();
     return;
   }
-  if((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&(shopInventory.get(item.name)||0)>=5){
+  if((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&
+      (shopInventory.get(item.name)||0)+(item.name==="Lucky Stone"?shopReservedStones:0)>=5){
     shopStatus=item.name==="Lucky Stone"?"Maximum 5 Lucky Stones.":"Maximum 5 Lucky Charms.";
     renderShop();
     return;
@@ -435,10 +445,13 @@ function renderShop(){
       '<div class="zshop-detail-icon">'+item.icon+'</div>'+
       '<strong class="zshop-detail-name">'+item.name+'</strong>'+
       '<p class="zshop-detail-description">'+item.desc+'</p>'+
+      (item.name==="Lucky Stone"&&shopReservedStones>0
+        ?'<small>🪨 ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(item.name)||0)+'</small>':'')+
       '<strong class="zshop-detail-price">'+(item.price?item.price.toLocaleString()+" IGM":"FREE")+'</strong>'+
       '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
       '"'+(shopBusy||shopLoading||shopCash===null||shopCash<item.price||
-        ((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&(shopInventory.get(item.name)||0)>=5)?' disabled':'')+
+        ((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&
+         (shopInventory.get(item.name)||0)+(item.name==="Lucky Stone"?shopReservedStones:0)>=5)?' disabled':'')+
       '>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button>'+recallControls+'</div>';
     body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"TICKETS","AVAILABLE",
       '<div class="zshop-grid'+(isBoost?' boost-grid':' service-grid')+'">'+list+'</div>')+
@@ -511,7 +524,7 @@ document.querySelectorAll(".shop-hotspot").forEach(button=>{
 });
 window.VHouseAuth?.subscribe(()=>{
   ++shopReadId;
-  shopCash=null;shopInventory=new Map();shopPlayerId=null;shopActiveJourneys=[];
+  shopCash=null;shopInventory=new Map();shopReservedStones=0;shopPlayerId=null;shopActiveJourneys=[];
   if(!shopMenuOverlay.hidden&&activeShop!=="Trade Scraps")void loadShopPlayer();
 });
 window.addEventListener("pageshow",()=>{
