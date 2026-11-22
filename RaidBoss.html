@@ -1306,6 +1306,16 @@ select {
   border-bottom:1px solid #6f557844;
   padding-bottom:8px;
 }
+/* Keep the egg-result labels clear of the fixed BACK button at the container edge. */
+.receipt .receipt-back-clearance {
+  padding-left:clamp(34px,3cqw,50px);
+  gap:4px;
+}
+.receipt .receipt-back-clearance span,
+.receipt .receipt-back-clearance strong {
+  white-space:nowrap;
+  font-size:clamp(10px,.85cqw,13px);
+}
 /* Existing Raid palette: green earnings/wins, red losses, gold statistics. */
 #receiptRaidRewards,#raidEarnedEncounter,#raidEarnedEgg,#raidEarnedTotal,
 .raid-money-value {color:var(--green);font-weight:900;}
@@ -2086,12 +2096,12 @@ td { background:#1c1428 }
       <strong id="receiptWins">0</strong>
     </div>
 
-    <div class="line">
+    <div class="line receipt-back-clearance">
       <span>RAID EGG DAMAGE</span>
       <strong id="receiptDamage">0</strong>
     </div>
 
-    <div class="line">
+    <div class="line receipt-back-clearance">
       <span>RAID EGG HP</span>
       <strong id="receiptEggHp">20</strong>
     </div>
@@ -3608,11 +3618,12 @@ function finishConfirmedRaidView(){
     .catch(error=>console.error("Raid confirmed refresh:",error));
 }
 $("confirmButton").addEventListener("click",async()=>{
-  if(!raid||raidSaveFailed||raidConfirmationStarted||$("confirmButton").disabled)return;
+  if(!raid||raidSaveFailed||$("confirmButton").disabled)return;
   if(raid.serverStatus==="CONFIRMED"){
     finishConfirmedRaidView();
     return;
   }
+  if(raidConfirmationStarted)return;
   raidConfirmationStarted=true;
   $("confirmButton").disabled=true;
   $("confirmButton").textContent="PROCESSING...";
