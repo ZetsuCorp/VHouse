@@ -2271,11 +2271,8 @@ async function payRaidEntry(cardId,level=1){
   await raidAuth.ready;
   const player=raidAuth.getUser();
   if(!player)throw Error("SIGN_IN_REQUIRED");
-  const client=raidAuth.getClient();
   const playerId=player.id;
-
-  // Journey's payment rule: if Phantom already submitted the payment,
-  // keep verifying that signature. Never reconnect or charge it twice.
+  const client=raidAuth.getClient();
   const pending=raidReadPendingPayment(playerId);
   if(pending&&(pending.cardId!==cardId||pending.level!==level))
     throw Error("Finish the previously paid Raid entry with its original VCard.");
@@ -2294,7 +2291,6 @@ async function payRaidEntry(cardId,level=1){
     if(linkedError||account?.wallet_address!==address)
       throw Error("Connect the Phantom wallet linked to your VHouse account.");
 
-    // Raid has a server-priced $0.75 entry instead of Journey's fixed SOL amount.
     raidEntryStatus("Checking Raid entry for $0.75...");
     const quote=await raidEntryRequest({action:"quote",cardId,level});
     if(!quote||quote.error)throw Error(quote?.error||"RAID_ENTRY_QUOTE_FAILED");
@@ -2308,7 +2304,6 @@ async function payRaidEntry(cardId,level=1){
       throw Error("RAID_ENTRY_QUOTE_INVALID");
     if(quote.walletAddress!==address)throw Error("RAID_ENTRY_WALLET_MISMATCH");
 
-    // Same Solana transaction and Phantom approval sequence as Journey.
     const {Connection,PublicKey,Transaction,SystemProgram,TransactionInstruction}=
       await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
     const rpcEndpoints=[
@@ -2321,9 +2316,9 @@ async function payRaidEntry(cardId,level=1){
         const rpc=new Connection(endpoint,"confirmed");
         latest=await rpc.getLatestBlockhash("confirmed");
         if(latest)break;
-      }catch(error){console.warn("Raid blockhash lookup:",endpoint,error);}
+      }catch(error){console.warn("Journey blockhash lookup:",endpoint,error);}
     }
-    if(!latest)throw Error("Solana RPC unavailable for Raid payment.");
+    if(!latest)throw Error("Solana RPC unavailable for Journey payment.");
     const owner=new PublicKey(address);
     const tx=new Transaction();
     tx.add(SystemProgram.transfer({
@@ -2338,43 +2333,40 @@ async function payRaidEntry(cardId,level=1){
     }));
     tx.feePayer=owner;
     tx.recentBlockhash=latest.blockhash;
-    raidEntryStatus("Approve $0.75 Raid entry ("+
-      (Number(quote.lamports)/1e9).toFixed(9)+" SOL) in Phantom.");
+    raidEntryStatus("Approve $0.75 Raid entry ("+(Number(quote.lamports)/1e9).toFixed(9)+" SOL) in Phantom.");
     const receipt=await phantom.signAndSendTransaction(tx,{
       skipPreflight:false,preflightCommitment:"confirmed"
     });
     signature=typeof receipt==="string"?receipt:receipt?.signature;
-    if(!signature)throw Error("Phantom did not return the Raid payment transaction.");
+    if(!signature)throw Error("Phantom did not return the payment transaction.");
     raidEntrySignature=signature;
     raidSavePendingPayment({playerId,cardId,level,quoteId,signature});
   }
-
-  // Same as Journey: verify a submitted signature automatically.
-  // Only the server-side verification uses Raid's quote ID and amount.
+  raidEntryStatus("Verifying Raid entry payment on Solana.",signature);
+  // A submitted payment is verified automatically. Never request another
+  // Phantom approval and never make the player press START to check it.
   let unavailable=0;
   while(raidAuth.getUser()?.id===playerId){
-    raidEntryStatus("Verifying Raid entry payment on Solana.",signature);
     try{
-      const result=await raidEntryRequest({action:"verify",quoteId,signature});
-      if(result?.verified===true){
-        raidEntryStatus("Raid entry payment verified.",signature);
+      const data=await raidEntryRequest({action:"verify",quoteId,signature});
+      if(data?.verified===true){
+        raidEntryStatus("Raid payment verified.");
         return signature;
       }
-      if(result?.error&&result.error!=="PAYMENT_CONFIRMATION_PENDING")
-        throw Error(result.error);
+      if(data?.error!=="PAYMENT_CONFIRMATION_PENDING")
+        throw Error(data?.error||"PAYMENT_VERIFICATION_FAILED");
       unavailable=0;
-      raidEntryStatus("Payment submitted. Checking blockchain confirmation.",signature);
+      raidEntryStatus("Payment submitted. Checking blockchain confirmation.");
     }catch(error){
-      const reason=raidPaymentErrorReason(error);
-      if(!["RAID_ENTRY_VERIFICATION_UNAVAILABLE","PAYMENT_VERIFICATION_UNAVAILABLE",
-        "SOLANA_RPC_UNAVAILABLE","PAYMENT_LOOKUP_FAILED","PAYMENT_RECORD_FAILED",
-        "Failed to send a request to the Edge Function","Failed to fetch",
-        "PAYMENT_CONFIRMATION_PENDING"].includes(reason)){
-        raidEntryStatus("Raid payment verification failed: "+reason,signature);
+      const message=error?.message||"PAYMENT_VERIFICATION_UNAVAILABLE";
+      if(!["PAYMENT_VERIFICATION_UNAVAILABLE","SOLANA_RPC_UNAVAILABLE",
+            "PAYMENT_LOOKUP_FAILED","PAYMENT_RECORD_FAILED","Failed to send a request to the Edge Function",
+            "Failed to fetch","PAYMENT_CONFIRMATION_PENDING"].includes(message)){
+        raidEntryStatus("Payment verification needs attention: "+message+".");
         throw error;
       }
       unavailable++;
-      raidEntryStatus("Payment submitted. Blockchain verification is temporarily unavailable; checking automatically.",signature);
+      raidEntryStatus("Payment submitted. Blockchain verification is temporarily unavailable; checking automatically.");
     }
     await new Promise(resolve=>setTimeout(resolve,unavailable?Math.min(10000,1800+unavailable*1000):1800));
   }
@@ -2787,6 +2779,7 @@ $("confirmRaidCard").addEventListener("click",async()=>{
   raidStarting=true;
   $("confirmRaidCard").disabled=true;
   try{
+    await window.VHouseScrapStats.refresh();
     const paidForPlayer=raidAuth.getUser()?.id;
     const entrySignature=await payRaidEntry(String(card.id),1);
     // Supabase requires one verified unspent payment before it can create a Raid.
