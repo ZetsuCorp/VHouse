@@ -1094,7 +1094,17 @@ select {
   margin:3px 0 0;
   gap:clamp(2px,.4cqw,6px);
 }
-.raid-battles-panel .boss-dot {padding:clamp(7px,1.15cqw,13px) 0;font-size:clamp(10px,1.2cqw,14px);font-weight:900;}
+.raid-battles-panel .boss-dot {
+  padding:clamp(2px,.25cqw,4px) clamp(3px,.4cqw,6px);
+  border:1px solid #bc8bdf;
+  border-radius:5px;
+  background:linear-gradient(110deg,#52306e,#322045);
+  box-shadow:0 0 8px #a25fe251;
+  color:#fff4cc;
+  font-size:clamp(10px,1.2cqw,14px);
+  font-weight:900;
+  line-height:1.2;
+}
 /* One Egg panel, centered over the Stage 3 game at the end of a boss match. */
 .raid-egg-overlay {
   position:absolute;inset:0;z-index:25;
@@ -1215,6 +1225,10 @@ select {
   border-color:var(--light);
   color:var(--light);
 }
+/* Keep win/loss/current state colors on top of the shared timestamp styling. */
+.raid-battles-panel .boss-dot.win {border-color:var(--green);color:var(--green);}
+.raid-battles-panel .boss-dot.loss {border-color:var(--red);color:var(--red);}
+.raid-battles-panel .boss-dot.current {border-color:var(--light);color:var(--light);}
 
 /* SCREEN 3 — RAID RECEIPT */
 
