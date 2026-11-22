@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VHouse | Raid Egg Stage 3 Concept Demo</title>
+<style>
+:root{--gold:#f6c878;--gold-dark:#9b6a35;--violet:#b76af9;--ink:#0f091b;--cream:#ffedcc}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#07050e;color:var(--cream);font-family:Arial,Helvetica,sans-serif}
+.demo{width:min(1200px,100%);margin:0 auto;padding:12px}
+.heading{font:700 clamp(14px,2vw,21px) Georgia,serif;letter-spacing:.08em;color:var(--gold);margin:5px 0 12px;text-align:center}
+.controls{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:0 0 12px}
+.controls button{background:#24132f;border:1px solid var(--gold-dark);border-radius:8px;color:#ffe1a5;font-weight:900;font-size:clamp(11px,1.3vw,14px);padding:10px 17px;cursor:pointer}
+.controls button:hover,.controls button:focus-visible{background:#4a285d;border-color:var(--gold);outline:none}
+.controls button:disabled{opacity:.5;cursor:default}
+.arena{position:relative;aspect-ratio:2/1;width:100%;overflow:hidden;border:2px solid var(--gold);background:#140b23 url("assets/TOWERSELECT.png") center/cover no-repeat;isolation:isolate}
+.arena:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#15082297,#14072448,#15082297)}
+.arena-title{position:absolute;left:2%;top:3%;z-index:2;font-size:clamp(10px,1.25vw,15px);font-weight:900;color:var(--gold);letter-spacing:.12em;text-shadow:0 2px 6px black}
+.arena-status{position:absolute;right:2%;top:3%;z-index:2;font-size:clamp(9px,1.1vw,14px);font-weight:800;text-shadow:0 2px 6px black}
+.arena-status span{color:#c5ffcf}
+.faint-frame{position:absolute;top:17%;width:21%;height:57%;border:1px solid #f8cb7e6b;background:#1b0b2c4a;box-shadow:0 0 15px #b960f82a}
+.faint-frame.left{left:6%}.faint-frame.right{right:6%}
+.faint-frame b{position:absolute;bottom:10px;left:0;right:0;text-align:center;letter-spacing:.13em;color:#ffdfb3a8;font-size:clamp(10px,1.2vw,14px)}
+.bottom-status{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;z-index:2;padding:1% 2%;background:#0d071bc9;border-top:1px solid #d8a75c66;font-size:clamp(9px,1.15vw,13px);font-weight:800}
+.bottom-status .dim{color:#c9a2df}
+.veil{position:absolute;inset:0;z-index:4;background:#090412b8;display:grid;place-items:center;padding:3.5%}
+.egg-window{position:relative;display:flex;flex-direction:column;justify-content:space-between;width:min(67%,760px);height:95%;min-width:0;border:2px solid var(--gold);border-radius:13px;background:linear-gradient(145deg,#30143eea,#100c1ef7 63%,#241535ec);box-shadow:0 0 0 5px #2f18457d,0 0 38px #be6fff77,0 12px 45px #000c;overflow:hidden}
+.egg-window:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 40%,#b964e92a,transparent 55%);pointer-events:none}
+.egg-title{text-align:center;position:relative;z-index:1;flex:0 0 auto;padding:2.3% 4% 0}
+.egg-title h2{margin:0;font:900 clamp(16px,2.65vw,31px) Georgia,serif;color:#ffe4ac;letter-spacing:.06em;text-shadow:0 2px 12px #000}
+.egg-title p{margin:3px 0 0;color:#d6b6e9;font-size:clamp(9px,1.2vw,14px);font-weight:800;letter-spacing:.14em}
+.egg-main{min-height:0;flex:1;display:flex;align-items:center;justify-content:center;gap:1.8%;padding:0 5%}
+.egg-image-wrap{width:46%;height:100%;display:grid;place-items:center;position:relative;overflow:visible}
+.egg-image-wrap:after{content:"";position:absolute;left:11%;right:11%;bottom:5%;height:15%;border-radius:50%;background:#bc75ff77;filter:blur(18px);z-index:0}
+.egg-image{position:relative;z-index:1;max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 0 15px #be7bff88);transition:transform .45s,filter .45s}
+.egg-image.is-cracking{animation:crack .55s ease-in-out 3}
+.egg-image.is-open{filter:drop-shadow(0 0 21px #ffca7188);animation:reveal .65s ease both}
+.egg-values{width:52%;display:flex;flex-direction:column;gap:clamp(6px,.8vw,11px);text-align:left;position:relative;z-index:1}
+.egg-values .label{font-size:clamp(9px,1.15vw,13px);font-weight:900;letter-spacing:.11em;color:#ceb2e7}
+.egg-values .damage{font-weight:900;color:#ffc87b;font-size:clamp(17px,2.6vw,32px);line-height:1.1}
+.egg-values .total{font-size:clamp(12px,1.8vw,23px);font-weight:900;color:#f0ceff}
+.egg-values .break-state{font-size:clamp(10px,1.45vw,18px);font-weight:900;color:#ffdd95}
+.egg-footer{position:relative;z-index:1;flex:0 0 auto;padding:0 5% 4%;text-align:center}
+.hp-labels{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:5px;font-size:clamp(9px,1.13vw,14px);font-weight:900;color:#f7dfad}
+.hp-track{height:clamp(10px,1.45vw,18px);width:100%;border-radius:20px;border:1px solid #f3c976;background:#0a0613;overflow:hidden;box-shadow:0 0 8px #130a21 inset}
+.hp-fill{height:100%;width:100%;background:linear-gradient(90deg,#8557cc,#e5b975);border-radius:20px;box-shadow:0 0 16px #c58afd95;transition:none}
+.hp-summary{margin-top:5px;color:#fff2dc;font-size:clamp(11px,1.5vw,19px);font-weight:900;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.caption{color:#cfb6dd;font-size:11px;text-align:center;margin:10px 0 0}
+@keyframes crack{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,0) rotate(-2deg)}75%{transform:translate(3px,1px) rotate(2deg)}}
+@keyframes reveal{from{opacity:.2;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+@media(max-width:640px){
+.demo{padding:5px}.heading{margin:5px 0}.controls{gap:4px;margin-bottom:6px}.controls button{padding:6px 8px;font-size:10px}
+.egg-window{width:79%;height:98%}.veil{padding:2%}.egg-title{padding-top:2%}.egg-main{padding:0 3%}
+.egg-values{gap:4px}.egg-footer{padding-bottom:2%}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="demo">
+<h1 class="heading">VH HOUSE / STAGE 3 — RAID EGG CONCEPT</h1>
+<div class="controls">
+<button type="button" id="win">BOSS DEFEATED · DAMAGE</button>
+<button type="button" id="break">BREAK EGG</button>
+<button type="button" id="reset">RESET DEMO</button>
+</div>
+<section class="arena" aria-label="Stage 3 Raid Egg mockup">
+<div class="arena-title">TOWER RAID / STAGE 3</div>
+<div class="arena-status">BOSS MATCH <span id="bossNumber">01</span> COMPLETE</div>
+<div class="faint-frame left"><b>VCARD</b></div>
+<div class="faint-frame right"><b>BOSS</b></div>
+<div class="bottom-status"><span>VCARD LOCKED DURING RAID</span><span class="dim">EGG RESULT · MATCH END</span></div>
+<div class="veil" id="eggOverlay">
+<div class="egg-window" role="status" aria-live="polite">
+<header class="egg-title"><h2 id="eggHeading">RAID EGG</h2><p id="eggSubheading">BOSS DEFEATED · EGG DAMAGE</p></header>
+<div class="egg-main">
+<div class="egg-image-wrap"><img class="egg-image" id="eggImage" src="assets/Egg.png" alt="Raid egg"></div>
+<div class="egg-values">
+<div class="label">THIS MATCH</div>
+<div class="damage" id="matchDamage">−0 HP</div>
+<div class="label">TOTAL EGG REDUCTION</div>
+<div class="total" id="totalDamage">0 HP</div>
+<div class="break-state" id="breakState">EGG STILL INTACT</div>
+</div>
+</div>
+<div class="egg-footer">
+<div class="hp-labels"><span>RAID EGG HP</span><span id="percentLabel">100%</span></div>
+<div class="hp-track"><div class="hp-fill" id="eggBar"></div></div>
+<div class="hp-summary" id="eggHp">23,107,920 / 23,107,920 HP</div>
+</div>
+</div>
+</div>
+</section>
+<p class="caption">STANDALONE VISUAL DEMO · Sample HP only · No connection to the Raid game or Supabase</p>
+</main>
+<script>
+(function(){
+"use strict";
+var MAX=23107920, DAMAGE=2243487, hp=MAX, boss=0, animation=0;
+var byId=function(id){return document.getElementById(id)};
+var format=function(n){return Math.round(n).toLocaleString("en-US")};
+var image=byId("eggImage"),bar=byId("eggBar"),summary=byId("eggHp");
+var win=byId("win"),breakButton=byId("break"),reset=byId("reset");
+function controls(disabled){win.disabled=disabled;breakButton.disabled=disabled}
+function render(current){
+bar.style.width=Math.max(0,current/MAX*100)+"%";
+summary.textContent=format(current)+" / "+format(MAX)+" HP";
+byId("percentLabel").textContent=Math.round(current/MAX*100)+"%";
+byId("totalDamage").textContent=format(MAX-current)+" HP";
+}
+function applyDamage(amount){
+if(hp===0)return;
+animation++;
+var token=animation, old=hp;
+var target=Math.max(0,old-amount);
+hp=target;boss=Math.min(10,boss+1);
+byId("bossNumber").textContent=String(boss).padStart(2,"0");
+byId("eggHeading").textContent="RAID EGG";
+byId("eggSubheading").textContent="BOSS DEFEATED · EGG DAMAGE";
+byId("matchDamage").textContent="−"+format(old-target)+" HP";
+byId("breakState").textContent="EGG TAKING DAMAGE";
+image.src="assets/Egg.png";image.alt="Raid egg";image.className="egg-image";
+controls(true);
+render(old);
+var start=null, duration=1600;
+function tick(now){
+if(token!==animation)return;
+if(start===null)start=now;
+var t=Math.min(1,(now-start)/duration);
+var ease=1-Math.pow(1-t,3);
+render(old+(target-old)*ease);
+if(t<1){requestAnimationFrame(tick)}
+else{
+render(target);
+if(target===0){
+byId("eggHeading").textContent="EGG BROKEN";
+byId("eggSubheading").textContent="RAID EGG DESTROYED";
+byId("breakState").textContent="THE EGG HAS OPENED";
+image.src="assets/Eggopen.png";image.alt="Open Raid egg";image.className="egg-image is-open";
+}else{
+byId("breakState").textContent="EGG REMAINING: "+Math.round(target/MAX*100)+"%";
+image.classList.add("is-cracking");
+}
+controls(false);
+}
+}
+requestAnimationFrame(tick);
+}
+win.addEventListener("click",function(){applyDamage(DAMAGE)});
+breakButton.addEventListener("click",function(){applyDamage(hp)});
+reset.addEventListener("click",function(){
+animation++;hp=MAX;boss=0;image.src="assets/Egg.png";image.alt="Raid egg";image.className="egg-image";
+byId("bossNumber").textContent="01";byId("eggHeading").textContent="RAID EGG";
+byId("eggSubheading").textContent="READY FOR NEXT BOSS RESULT";
+byId("matchDamage").textContent="−0 HP";
+byId("breakState").textContent="EGG STILL INTACT";
+render(hp);controls(false);
+});
+render(hp);
+setTimeout(function(){applyDamage(DAMAGE)},300);
+})();
+</script>
+</body>
+</html>
