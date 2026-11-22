@@ -2857,32 +2857,39 @@ async function observeRaid(){
     renderEgg();
     renderBossGrid();
 
-    if(data.status==="RESULTS_READY"&&oldBossResults===results.length){
+    if(data.status==="RESULTS_READY"&&oldBossResults===results.length
+      &&history.length===previousTurn){
       finishRaid();
       return;
     }
     if(document.hidden)return; // Only visual playback is hidden; the server never pauses.
 
-    if(results.length>oldBossResults){
-      const result=results.at(-1);
-      await playRecordedBossResult(
-        result,data.status==="RESULTS_READY"?null:Number(data.current_boss)
-      );
-      return;
-    }
+    // Replay all newly recorded flips in order, including automatic Stone use.
+    // The authoritative battle and inventory changes are already committed.
+    const run=raid;
     if(history.length>previousTurn&&!towerTransitioning){
-      const event=history.at(-1);
-      const bossNumber=Number(event.boss);
-      if(bossNumber===raid.boss){
+      for(const event of history.slice(previousTurn)){
+        if(raid!==run||run.completed||document.hidden)return;
+        const bossNumber=Number(event.boss);
         $("battleCaption").textContent="BOSS "+bossNumber+" — "+event.actor.toUpperCase();
+        await playRecordedLuckyStoneRetries(event,run);
+        if(raid!==run||run.completed||document.hidden)return;
         $("battleLog").textContent=(event.actor==="player"?"VCARD":"BOSS")+
           " FLIPPED "+(event.heads?"HEADS — HIT":"TAILS — MISS");
-        // Animate an actual recorded outcome, not a locally generated flip.
+        // Only animate the result actually saved by Supabase.
         animateBattleAttack(event.actor,!!event.heads,
           !!event.heads&&(event.actor==="player"?Number(event.playerHits):Number(event.bossHits))===3);
         await battlePause(event.heads?BATTLE_HIT_ACTION_MS:BATTLE_ACTION_MS);
         clearBattleMotion();
       }
+    }
+    // Do not cover the Stone sequence with the boss transition.
+    if(results.length>oldBossResults&&raid===run&&!run.completed){
+      const result=results.at(-1);
+      await playRecordedBossResult(
+        result,data.status==="RESULTS_READY"?null:Number(data.current_boss)
+      );
+      return;
     }
   }catch(error){
     if(raid?.id===id)haltRaidSave(error);
