@@ -2357,6 +2357,7 @@ let raidSavedTurnCount = 0;
 let raidSeenBossResults = 0;
 let raidPolling = false;
 let raidSaveFailed = false;
+let raidConfirmationStarted = false;
 // Retain the result and Solscan signature separately for each token.
 let raidTransferState={raidId:null,transfers:{}};
 function clearRaidTransfers(){
@@ -3521,7 +3522,9 @@ function finishRaid() {
   $("receiptRaidRewards").textContent="$"+(totalCents/100).toFixed(2);
   $("receiptRaidPayoutStatus").hidden=earned.length===0;
   $("receiptRaidPayoutText").textContent=earned.length?"AWAITING CONFIRM":"—";
-  $("confirmButton").textContent=raid.serverStatus==="CONFIRMED"?"DONE":"CONFIRM";
+  $("confirmButton").textContent=raid.serverStatus==="CONFIRMED"
+    ?"DONE":raidConfirmationStarted?"PROCESSING...":"CONFIRM";
+  $("confirmButton").disabled=raidConfirmationStarted&&raid.serverStatus!=="CONFIRMED";
   if(raidTransferState.raidId!==raid.id)clearRaidTransfers();
   void loadRaidTransferStatus(raid.id);
   const rows = $("resultRows");
@@ -3574,6 +3577,8 @@ function finishConfirmedRaidView(){
   raid=null;
   selectedRaidCard=null;
   raidCheckedPlayerId=raidAuth.getUser()?.id||null;
+  raidConfirmationStarted=false;
+  $("confirmButton").disabled=false;
   $("confirmButton").textContent="CONFIRM";
   showScreen("cardSelectScreen");
   void raidStore.refresh({includeRaid:true}).then(()=>refreshRaidHistory())
@@ -3581,12 +3586,16 @@ function finishConfirmedRaidView(){
     .catch(error=>console.error("Raid confirmed refresh:",error));
 }
 $("confirmButton").addEventListener("click",async()=>{
-  if(!raid||raidSaveFailed||$("confirmButton").disabled)return;
+  if(!raid||raidSaveFailed||raidConfirmationStarted||$("confirmButton").disabled)return;
   if(raid.serverStatus==="CONFIRMED"){
     finishConfirmedRaidView();
     return;
   }
+  raidConfirmationStarted=true;
   $("confirmButton").disabled=true;
+  $("confirmButton").textContent="PROCESSING...";
+  $("resultDescription").textContent=
+    "CONFIRM RECEIVED · WATCH TRANSFERS AND SOLSCAN LINKS UNDER BOSS BATTLE RESULTS";
   try{
     // Paid only on CONFIRM, one signed transaction per cryptocurrency.
     const awarded=raid.results.filter(result=>result.win&&result.raidCryptoBag);
@@ -3595,34 +3604,42 @@ $("confirmButton").addEventListener("click",async()=>{
     for(const symbol of symbols){
       const previous=raidTransferState.transfers[symbol];
       setRaidTransfer(symbol,symbol+" TRANSFER: CHECKING...",previous?.signature||"");
-      try{
-        if(!raidAuth.getUser())throw Error("SIGN_IN_REQUIRED");
-        const {data,error}=await raidAuth.getClient().functions.invoke(
-          "vhouse-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
-        if(error){
-          let reason=error.message||"CRYPTO_TRANSFER_FAILED";
-          try{const details=await error.context?.json?.();reason=details?.error||reason;}catch{}
-          throw Error(reason);
-        }
-        const signature=data?.signature||"";
-        const message=symbol+" TRANSFER: "+(data?.status==="TRANSFERRED"
-          ?data.tokenAmount+" "+symbol+" SENT"
-          :(data?.status||"FAILED")+(data?.reason?" · "+data.reason:""));
-        setRaidTransfer(symbol,message,signature);
-        $("receiptRaidPayoutText").textContent=data?.status==="TRANSFERRED"
-          ?symbol+" PAID":symbol+" "+(data?.status||"FAILED");
-        if(data?.status!=="TRANSFERRED"){
-          $("resultDescription").textContent=symbol+" TRANSFER "+
-            (data?.status==="NOT ENOUGH"?"NOT SENT":"PENDING · TRY CONFIRM AGAIN");
+      // A pending treasury transfer is checked automatically after the one press.
+      // The existing transfer service continues the SAME signed transaction.
+      while(true){
+        try{
+          if(!raidAuth.getUser())throw Error("SIGN_IN_REQUIRED");
+          const {data,error}=await raidAuth.getClient().functions.invoke(
+            "vhouse-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
+          if(error){
+            let reason=error.message||"CRYPTO_TRANSFER_FAILED";
+            try{const details=await error.context?.json?.();reason=details?.error||reason;}catch{}
+            throw Error(reason);
+          }
+          const signature=data?.signature||"";
+          const message=symbol+" TRANSFER: "+(data?.status==="TRANSFERRED"
+            ?data.tokenAmount+" "+symbol+" SENT"
+            :(data?.status||"FAILED")+(data?.reason?" · "+data.reason:""));
+          setRaidTransfer(symbol,message,signature);
+          $("receiptRaidPayoutText").textContent=data?.status==="TRANSFERRED"
+            ?symbol+" PAID":symbol+" "+(data?.status||"FAILED");
+          if(data?.status==="TRANSFERRED")break;
+          if(data?.status==="PENDING"){
+            await new Promise(resolve=>setTimeout(resolve,1800));
+            continue;
+          }
+          $("resultDescription").textContent=symbol+
+            " TRANSFER NOT COMPLETED · SEE BOSS BATTLE RESULTS";
+          return;
+        }catch(error){
+          const reason=error?.message||"UNKNOWN ERROR";
+          setRaidTransfer(symbol,symbol+" TRANSFER FAILED: "+reason,
+            raidTransferState.transfers[symbol]?.signature||"");
+          $("receiptRaidPayoutText").textContent=symbol+" FAILED";
+          $("resultDescription").textContent=symbol+
+            " TRANSFER FAILED · SEE BOSS BATTLE RESULTS";
           return;
         }
-      }catch(error){
-        const reason=error?.message||"UNKNOWN ERROR";
-        setRaidTransfer(symbol,symbol+" TRANSFER FAILED: "+reason,
-          raidTransferState.transfers[symbol]?.signature||"");
-        $("receiptRaidPayoutText").textContent=symbol+" FAILED";
-        $("resultDescription").textContent=symbol+" TRANSFER FAILED · TRY AGAIN";
-        return;
       }
     }
     const record=await raidRpc("vhouse_confirm_raid",{p_raid_id:raid.id});
@@ -3639,7 +3656,9 @@ $("confirmButton").addEventListener("click",async()=>{
     $("resultDescription").textContent="RAID CONFIRMATION FAILED: "+
       (error?.message||"UNKNOWN ERROR");
   }finally{
-    $("confirmButton").disabled=false;
+    const completed=raid?.serverStatus==="CONFIRMED";
+    $("confirmButton").disabled=!completed;
+    $("confirmButton").textContent=completed?"DONE":"CONFIRM RECEIVED";
   }
 });
 
