@@ -125,6 +125,7 @@ html, body {
   grid-template-rows:repeat(2,minmax(0,1fr));min-height:0;min-width:0;
   gap:.45cqw;padding:.55cqw;align-content:stretch}
 .zshop-grid.service-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.zshop-grid.boost-grid{grid-template-rows:repeat(3,minmax(0,1fr))}
 .zshop-item{min-height:0;min-width:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:.22cqw;padding:.25cqw;
   background:linear-gradient(145deg,#342d42,#191827);border:1px solid #696075;
@@ -236,7 +237,8 @@ let activeShop = "Mission Boosts";
 let shopStatus = "";
 
 const boosts = [
-  { name:"Lucky Charm", icon:"🍀", price:600, desc:"Each charm in inventory grants 1 Lucky Retry and +1% to player stats. Maximum 5. Using a retry consumes a charm and reduces its stat bonus." },
+  { name:"Lucky Charm", icon:"🍀", price:600, desc:"Journey only. Each charm grants 1 Lucky Retry and +1% to player stats. Maximum 5. Consumed when a retry is used." },
+  { name:"Lucky Stone", icon:"🪨", price:600, desc:"Raid only. Each stone grants 1 Lucky Retry and +1% to Raid stats. Maximum 5. Consumed when a Raid retry is used." },
   { name:"Swift Boots", icon:"🥾", price:1200, desc:"Each pair in inventory grants +1 SPEED. Use a pair to reduce Journey time by 15 seconds, once per Stage. Used boots are consumed, reducing SPEED by 1." },
   { name:"Hunt Lantern", icon:"🏮", price:1800, desc:"Nullifies the Stage's RPS advantage for one encounter, once. The lantern is consumed after use." },
   { name:"Stage Ticket", icon:"🎟️", price:2400, desc:"Enter one Stage without paying its entry fee. One ticket is consumed per entry." }
@@ -318,8 +320,8 @@ async function buyShopItem(item){
     renderShop();
     return;
   }
-  if(item.name==="Lucky Charm"&&(shopInventory.get(item.name)||0)>=5){
-    shopStatus="Maximum 5 Lucky Charms.";
+  if((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&(shopInventory.get(item.name)||0)>=5){
+    shopStatus=item.name==="Lucky Stone"?"Maximum 5 Lucky Stones.":"Maximum 5 Lucky Charms.";
     renderShop();
     return;
   }
@@ -346,7 +348,8 @@ async function buyShopItem(item){
     console.error("Shop purchase:",error);
     const message=String(error?.message||"");
     shopStatus=message.includes("INSUFFICIENT_IGM")?"Insufficient VCARD CASH.":
-      message.includes("LUCKY_CHARM_LIMIT_5")?"Maximum 5 Lucky Charms.":
+      message.includes("LUCKY_STONE_LIMIT_5")?"Maximum 5 Lucky Stones.":
+       message.includes("LUCKY_CHARM_LIMIT_5")?"Maximum 5 Lucky Charms.":
       message.includes("SIGN_IN_REQUIRED")?"Sign in to buy items.":
       "Purchase unsuccessful. No items granted.";
     // Fetch authoritative state again if the connection failed after the server processed a purchase.
@@ -435,10 +438,10 @@ function renderShop(){
       '<strong class="zshop-detail-price">'+(item.price?item.price.toLocaleString()+" IGM":"FREE")+'</strong>'+
       '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
       '"'+(shopBusy||shopLoading||shopCash===null||shopCash<item.price||
-        (item.name==="Lucky Charm"&&(shopInventory.get(item.name)||0)>=5)?' disabled':'')+
+        ((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&(shopInventory.get(item.name)||0)>=5)?' disabled':'')+
       '>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button>'+recallControls+'</div>';
     body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"TICKETS","AVAILABLE",
-      '<div class="zshop-grid'+(isBoost?'':' service-grid')+'">'+list+'</div>')+
+      '<div class="zshop-grid'+(isBoost?' boost-grid':' service-grid')+'">'+list+'</div>')+
       shopPanel("DETAILS","SELECTED",detail)+'</div>';
   }else{
     if(!ownedScraps[tradeFrom]){
