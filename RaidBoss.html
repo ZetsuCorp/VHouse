@@ -2702,40 +2702,31 @@ function showRaidStoneEffect(title,detail,remaining){
 }
 // UI playback only: all retry outcomes and inventory deductions come from Supabase.
 async function playRecordedLuckyStoneRetries(event,run){
-  const count=Math.min(5,Math.max(0,Number(event.luckyStonesUsed)||0));
-  if(event.actor!=="player"||count===0||!run||raid!==run)return;
-  const outcomes=Array.isArray(event.luckyRetryResults)?event.luckyRetryResults:[];
-  const remaining=event.luckyStonesRemaining!==null
-    && Number.isInteger(Number(event.luckyStonesRemaining))
+  if(event.type!=="LUCKY_STONE_RETRY"||event.actor!=="system"||
+     Number(event.luckyStonesUsed)!==1||raid!==run)return false;
+  const remaining=Number.isInteger(Number(event.luckyStonesRemaining))
     ?Number(event.luckyStonesRemaining):null;
-  $("battleLog").textContent="VCARD FLIPPED TAILS — MISS";
-  await battlePause(450);
-  for(let i=0;i<count;i++){
-    if(raid!==run||run.completed||document.hidden){
-      hideRaidStoneEffect();
-      return;
-    }
-    const after=remaining===null?null:remaining+count-i-1;
-    showRaidStoneEffect("🪨 LUCKY STONE USED",
-      "STONE "+(i+1)+" OF "+count+" — CONSUMED",after);
-    $("battleLog").textContent="LUCKY STONE "+(i+1)+" CONSUMED — AUTOMATIC RETRY";
-    await battlePause(650);
-    if(raid!==run||run.completed||document.hidden){
-      hideRaidStoneEffect();
-      return;
-    }
-    const outcome=typeof outcomes[i]==="boolean"
-      ?(outcomes[i]?"HEADS — HIT":"TAILS — MISS")
-      :"RETRY RECORDED";
-    showRaidStoneEffect("🪨 LUCKY RETRY "+(i+1),outcome,after);
-    $("battleLog").textContent="LUCKY RETRY "+(i+1)+" — "+outcome;
-    await battlePause(750);
-  }
+  // The third boss hit was already displayed. This is a new match retry,
+  // never a second chance at a missed individual coin flip.
+  $("battleLog").textContent="VCARD LOST — LUCKY STONE ACTIVATED";
+  showRaidStoneEffect("🪨 LUCKY STONE USED",
+    "BOSS FIGHT LOST · STONE CONSUMED",remaining);
+  await battlePause(850);
+  if(raid!==run||run.completed||document.hidden){hideRaidStoneEffect();return true;}
+  showRaidStoneEffect("🪨 BOSS FIGHT RETRY",
+    "RESTARTING BOSS "+event.boss+" — FIRST TO 3 HITS",remaining);
+  $("battleLog").textContent="LUCKY STONE CONSUMED — RETRYING BOSS "+event.boss;
+  await battlePause(950);
+  if(raid!==run||run.completed||document.hidden){hideRaidStoneEffect();return true;}
+  playerHits=0;
+  bossHits=0;
+  currentTurn="player";
+  updateHits();
   hideRaidStoneEffect();
-  // The server already decremented inventory before these events were read.
   void refreshRaidInventory();
+  $("battleLog").textContent="BOSS "+event.boss+" — REMATCH";
+  return true;
 }
-
 function clearBattleMotion(){
   for(const fighter of $("travelScreen").querySelectorAll(".fighter")){
     fighter.classList.remove("is-turn","is-attacking","is-hit","is-finishing-hit","is-dodging");
@@ -2844,7 +2835,7 @@ async function observeRaid(){
     raidSeenBossResults=results.length;
     raid.eggHp=Number(data.egg_hp);
     raid.results=results;
-    // The Raid server persists any consumed Lucky Stones with the actual flip.
+    // The Raid server saves a retry event only after the full boss battle is lost.
     const usedStones=history.slice(previousTurn).reduce((count,event)=>count+(Number(event.luckyStonesUsed)||0),0);
     if(usedStones>0)void refreshRaidInventory();
     raid.boss=Number(data.current_boss);
@@ -2871,9 +2862,16 @@ async function observeRaid(){
       for(const event of history.slice(previousTurn)){
         if(raid!==run||run.completed||document.hidden)return;
         const bossNumber=Number(event.boss);
+        if(event.type==="LUCKY_STONE_RETRY"){
+          await playRecordedLuckyStoneRetries(event,run);
+          if(raid!==run||run.completed||document.hidden)return;
+          continue;
+        }
+        if(event.actor!=="player"&&event.actor!=="boss")continue;
         $("battleCaption").textContent="BOSS "+bossNumber+" — "+event.actor.toUpperCase();
-        await playRecordedLuckyStoneRetries(event,run);
-        if(raid!==run||run.completed||document.hidden)return;
+        playerHits=Number(event.playerHits)||0;
+        bossHits=Number(event.bossHits)||0;
+        updateHits();
         $("battleLog").textContent=(event.actor==="player"?"VCARD":"BOSS")+
           " FLIPPED "+(event.heads?"HEADS — HIT":"TAILS — MISS");
         // Only animate the result actually saved by Supabase.
