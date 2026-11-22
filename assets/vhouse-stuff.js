@@ -2,7 +2,8 @@
 (function(){
   "use strict";
   const catalog={
-    "Lucky Charm":{icon:"🍀",desc:"1 Lucky Retry and +1% player stats per charm. Maximum 5. Consumed on retry."},
+    "Lucky Charm":{icon:"🍀",desc:"Journey only: 1 Lucky Retry and +1% stats per charm. Maximum 5. Consumed on retry."},
+  "Lucky Stone":{icon:"🪨",desc:"Raid only: 1 Lucky Retry and +1% Raid stats per stone. Maximum 5. Consumed on retry."},
     "Swift Boots":{icon:"🥾",desc:"+1 SPEED per pair held. Using one removes 15 seconds from a Journey, once per Stage."},
     "Hunt Lantern":{icon:"🏮",desc:"Nullifies one Stage RPS advantage for one encounter. Consumed on use."},
     "Stage Ticket":{icon:"🎟️",desc:"Enter a Stage without paying its entry fee. Consumed on entry."},
