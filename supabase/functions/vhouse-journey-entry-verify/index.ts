@@ -76,6 +76,27 @@ async function raidEntry(reqBody:any, db:ReturnType<typeof createClient>, player
   if(action==="quote") {
     if(!cardId || cardId.length>200 || !Number.isInteger(level) || level<1 || level>3)
       return reply({error:"INVALID_RAID_ENTRY"},400);
+    // Check eligibility BEFORE asking Phantom for money.
+    const [active,journey,inventory,profile]=await Promise.all([
+      db.from("vhouse_raid_records").select("id").eq("player_id",playerId)
+        .in("status",["ACTIVE","RESULTS_READY"]).limit(1),
+      db.from("vhouse_vcard_journey_states").select("card_id")
+        .eq("player_id",playerId).eq("card_id",cardId)
+        .in("status",["ON_JOURNEY","RESULTS_READY"]).limit(1),
+      db.from("vhouse_player_inventory").select("quantity")
+        .eq("player_id",playerId).eq("type","VCard").eq("thing",cardId)
+        .gt("quantity",0).limit(1),
+      db.from("vhouse_accounts").select("active_vcard_id,active_vcard_snapshot")
+        .eq("id",playerId).maybeSingle(),
+    ]);
+    if(active.error||journey.error||inventory.error||profile.error)
+      throw Error("RAID_ENTRY_LOOKUP_FAILED");
+    if(active.data?.length)return reply({error:"RAID_ALREADY_ACTIVE"},409);
+    if(journey.data?.length)return reply({error:"VCARD_ON_JOURNEY"},409);
+    const external=profile.data?.active_vcard_id===cardId &&
+      profile.data?.active_vcard_snapshot?.id===cardId &&
+      profile.data?.active_vcard_snapshot?.external===true;
+    if(!inventory.data?.length&&!external)return reply({error:"VCARD_NOT_OWNED"},409);
     // One unused verified entry remains spendable, preventing an accidental second payment.
     const {data:paid,error:paidError}=await db.from("vhouse_raid_entry_payments")
       .select("id,card_id,raid_level,amount_lamports,signature,verified_at,consumed_at,expires_at")
