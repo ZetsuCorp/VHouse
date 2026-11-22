@@ -1313,6 +1313,22 @@ select {
   color:#111;
 }
 
+/* Compact Journey-style payout messages; Solscan links remain with the receipt. */
+.raid-transfer-notice {
+  border:1px solid #bc9357;
+  border-radius:6px;
+  padding:clamp(4px,.65cqw,8px);
+  background:#211329cc;
+  color:#f5e7ff;
+  font-size:clamp(10px,1.15cqw,13px);
+  line-height:1.35;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.raid-transfer-notice[hidden] {display:none}
+.raid-transfer-notice > div+div {margin-top:4px}
+.raid-transfer-notice a {color:#ffe2a6;text-decoration:underline}
+
 .result-panel {
   display:flex;
   flex-direction:column;
@@ -2063,6 +2079,7 @@ td { background:#1c1428 }
 
   <div class="panel result-panel">
     <h3>BOSS BATTLE RESULTS</h3>
+    <div id="raidTransferNotice" class="raid-transfer-notice" role="status" aria-live="polite" hidden></div>
 
     <div class="result-table-wrap">
       <table>
@@ -2156,6 +2173,66 @@ let raidSavedTurnCount = 0;
 let raidSeenBossResults = 0;
 let raidPolling = false;
 let raidSaveFailed = false;
+// Retain the result and Solscan signature separately for each token.
+let raidTransferState={raidId:null,transfers:{}};
+function clearRaidTransfers(){
+  raidTransferState={raidId:null,transfers:{}};
+  $("raidTransferNotice").replaceChildren();
+  $("raidTransferNotice").hidden=true;
+}
+function setRaidTransfer(symbol,message,signature=""){
+  if(!raid||!["SOL","AWT"].includes(symbol))return;
+  if(raidTransferState.raidId!==raid.id)
+    raidTransferState={raidId:raid.id,transfers:{}};
+  raidTransferState.transfers[symbol]={message,signature};
+  const notice=$("raidTransferNotice");
+  notice.replaceChildren();
+  for(const key of ["SOL","AWT"]){
+    const entry=raidTransferState.transfers[key];
+    if(!entry?.message)continue;
+    const line=document.createElement("div");
+    line.textContent=entry.message;
+    if(entry.signature&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(entry.signature)){
+      const link=document.createElement("a");
+      link.href="https://solscan.io/tx/"+encodeURIComponent(entry.signature);
+      link.target="_blank";
+      link.rel="noopener noreferrer";
+      link.textContent="VIEW TRANSACTION ON SOLSCAN";
+      line.append(document.createTextNode(" · "),link);
+    }
+    notice.append(line);
+  }
+  notice.hidden=!notice.childElementCount;
+}
+async function loadRaidTransferStatus(raidId){
+  try{
+    await raidAuth.ready;
+    if(raid?.id!==raidId)return;
+    const {data,error}=await raidAuth.getClient().from("vhouse_raid_crypto_transfers")
+      .select("token_symbol,status,amount_atomic,token_decimals,signature")
+      .eq("raid_id",raidId);
+    if(error)throw error;
+    if(raid?.id!==raidId)return;
+    for(const transfer of data||[]){
+      const symbol=transfer.token_symbol;
+      if(!["SOL","AWT"].includes(symbol)||
+        raidTransferState.transfers[symbol])continue;
+      let amount="";
+      const decimals=Number(transfer.token_decimals);
+      if(Number.isSafeInteger(decimals)&&decimals>=0&&decimals<=18&&
+        /^\d+$/.test(String(transfer.amount_atomic))){
+        const raw=String(transfer.amount_atomic).padStart(decimals+1,"0");
+        amount=decimals?raw.slice(0,-decimals)+"."+raw.slice(-decimals):raw;
+      }
+      const message=transfer.status==="CONFIRMED"
+        ?symbol+" TRANSFER: "+amount+" "+symbol+" SENT"
+        :symbol+" TRANSFER: "+transfer.status;
+      setRaidTransfer(symbol,message,transfer.signature||"");
+    }
+  }catch(error){
+    console.warn("Raid crypto transfer status:",error);
+  }
+}
 async function raidRpc(name,args){
   await raidAuth.ready;
   if(!raidAuth.getUser())throw Error("SIGN_IN_REQUIRED");
@@ -2515,6 +2592,7 @@ function clearRaidForAccountChange(){
   selectedRaidCard=null;
   raidSaveFailed=false;
   raidPolling=false;
+  clearRaidTransfers();
   raidCheckedPlayerId=null;
   raidRestoreRequestedForId=null;
   clearBattleMotion();
@@ -3194,6 +3272,9 @@ function finishRaid() {
   $("receiptRaidRewards").textContent="$"+(totalCents/100).toFixed(2);
   $("receiptRaidPayoutStatus").hidden=earned.length===0;
   $("receiptRaidPayoutText").textContent=earned.length?"AWAITING CONFIRM":"—";
+  $("confirmButton").textContent=raid.serverStatus==="CONFIRMED"?"DONE":"CONFIRM";
+  if(raidTransferState.raidId!==raid.id)clearRaidTransfers();
+  void loadRaidTransferStatus(raid.id);
   const rows = $("resultRows");
   rows.replaceChildren();
 
@@ -3234,45 +3315,79 @@ function finishRaid() {
 
 /* BUTTONS */
 
+function finishConfirmedRaidView(){
+  clearTimeout(towerTransitionTimer);
+  hideTowerStamp();
+  hideRaidEggOverlay();
+  towerTransitioning=false;
+  clearInterval(raidInterval);
+  clearRaidTransfers();
+  raid=null;
+  selectedRaidCard=null;
+  raidCheckedPlayerId=raidAuth.getUser()?.id||null;
+  $("confirmButton").textContent="CONFIRM";
+  showScreen("cardSelectScreen");
+  void raidStore.refresh({includeRaid:true}).then(()=>refreshRaidHistory())
+    .then(()=>renderRaidRoster())
+    .catch(error=>console.error("Raid confirmed refresh:",error));
+}
 $("confirmButton").addEventListener("click",async()=>{
   if(!raid||raidSaveFailed||$("confirmButton").disabled)return;
+  if(raid.serverStatus==="CONFIRMED"){
+    finishConfirmedRaidView();
+    return;
+  }
   $("confirmButton").disabled=true;
   try{
-    // Each earned Raid Bag retains its random token and cents in Supabase.
-    // The separate Raid transfer service totals cents independently for SOL/AWT,
-    // quotes the current market price, and saves signed transactions once.
+    // Paid only on CONFIRM, one signed transaction per cryptocurrency.
     const awarded=raid.results.filter(result=>result.win&&result.raidCryptoBag);
-    const symbols=[...new Set(awarded.map(result=>result.raidCryptoBag.token))];
+    const symbols=["SOL","AWT"].filter(symbol=>
+      awarded.some(result=>result.raidCryptoBag.token===symbol));
     for(const symbol of symbols){
-      const {data,error}=await raidAuth.getClient().functions.invoke(
-        "vhouse-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
-      if(error||data?.status!=="TRANSFERRED"){
-        const status=error?"UNAVAILABLE":String(data?.status||"PENDING");
-        $("receiptRaidPayoutText").textContent=symbol+" · "+status;
-        $("resultDescription").textContent=
-          "RAID CRYPTO TRANSFER "+status+" — REWARDS NOT YET PAID";
-        throw error||new Error("RAID_CRYPTO_PAYOUT_"+status);
+      const previous=raidTransferState.transfers[symbol];
+      setRaidTransfer(symbol,symbol+" TRANSFER: CHECKING...",previous?.signature||"");
+      try{
+        if(!raidAuth.getUser())throw Error("SIGN_IN_REQUIRED");
+        const {data,error}=await raidAuth.getClient().functions.invoke(
+          "vhouse-crypto-transfer",{body:{raidId:raid.id,token:symbol}});
+        if(error){
+          let reason=error.message||"CRYPTO_TRANSFER_FAILED";
+          try{const details=await error.context?.json?.();reason=details?.error||reason;}catch{}
+          throw Error(reason);
+        }
+        const signature=data?.signature||"";
+        const message=symbol+" TRANSFER: "+(data?.status==="TRANSFERRED"
+          ?data.tokenAmount+" "+symbol+" SENT"
+          :(data?.status||"FAILED")+(data?.reason?" · "+data.reason:""));
+        setRaidTransfer(symbol,message,signature);
+        $("receiptRaidPayoutText").textContent=data?.status==="TRANSFERRED"
+          ?symbol+" PAID":symbol+" "+(data?.status||"FAILED");
+        if(data?.status!=="TRANSFERRED"){
+          $("resultDescription").textContent=symbol+" TRANSFER "+
+            (data?.status==="NOT ENOUGH"?"NOT SENT":"PENDING · TRY CONFIRM AGAIN");
+          return;
+        }
+      }catch(error){
+        const reason=error?.message||"UNKNOWN ERROR";
+        setRaidTransfer(symbol,symbol+" TRANSFER FAILED: "+reason);
+        $("receiptRaidPayoutText").textContent=symbol+" FAILED";
+        $("resultDescription").textContent=symbol+" TRANSFER FAILED · TRY AGAIN";
+        return;
       }
     }
-    if(symbols.length)$("receiptRaidPayoutText").textContent="TRANSFERRED";
     const record=await raidRpc("vhouse_confirm_raid",{p_raid_id:raid.id});
     if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
-    clearTimeout(towerTransitionTimer);
-    hideTowerStamp();
-    hideRaidEggOverlay();
-    towerTransitioning=false;
-    clearInterval(raidInterval);
-    raid=null;
-    selectedRaidCard=null;
-    raidCheckedPlayerId=raidAuth.getUser()?.id||null;
-    showScreen("cardSelectScreen");
+    raid.serverStatus="CONFIRMED";
+    $("receiptRaidPayoutText").textContent=symbols.length?"TRANSFERRED":"NO CRYPTO BAGS";
+    $("resultDescription").textContent="RAID CONFIRMED · TRANSACTION RECEIPTS BELOW";
+    $("confirmButton").textContent="DONE";
+    // Keep the receipt and Solscan links on-screen until DONE.
     await raidStore.refresh({includeRaid:true});
     await refreshRaidHistory();
-    renderRaidRoster();
   }catch(error){
     console.error("Tower Raid confirm:",error);
-    if(!$("resultDescription").textContent.includes("RAID CRYPTO TRANSFER"))
-      $("resultDescription").textContent="RAID CONFIRMATION FAILED — TRY AGAIN";
+    $("resultDescription").textContent="RAID CONFIRMATION FAILED: "+
+      (error?.message||"UNKNOWN ERROR");
   }finally{
     $("confirmButton").disabled=false;
   }
