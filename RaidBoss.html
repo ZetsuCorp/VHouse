@@ -1225,10 +1225,42 @@ select {
   border-color:var(--light);
   color:var(--light);
 }
-/* Keep win/loss/current state colors on top of the shared timestamp styling. */
-.raid-battles-panel .boss-dot.win {border-color:var(--green);color:var(--green);}
-.raid-battles-panel .boss-dot.loss {border-color:var(--red);color:var(--red);}
+/* Entire Tower Battle bricks display their outcomes; shine plays once on each win. */
+.raid-battles-panel .boss-dot {
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+}
+.raid-battles-panel .boss-dot.win {
+  border-color:#ffe8a1;
+  background:linear-gradient(145deg,#ffe69a 0%,#e4aa42 47%,#b6761e 100%);
+  color:#261405;
+  box-shadow:0 0 13px #e9b553aa,inset 0 1px 0 #fff2be;
+}
+.raid-battles-panel .boss-dot.win::after {
+  content:"";
+  position:absolute;
+  inset:-40% auto -40% -65%;
+  width:42%;
+  transform:skewX(-22deg);
+  background:linear-gradient(90deg,transparent,#fff9d7e6,transparent);
+  pointer-events:none;
+  animation:raidWinBrickShine 1.2s ease-out 1 both;
+}
+.raid-battles-panel .boss-dot.loss {
+  border-color:#ff8888;
+  background:linear-gradient(145deg,#ea5656,#a61d28 65%,#63101d);
+  color:#fff3f3;
+  box-shadow:0 0 9px #e6404799,inset 0 1px 0 #ffb2b244;
+}
 .raid-battles-panel .boss-dot.current {border-color:var(--light);color:var(--light);}
+@keyframes raidWinBrickShine {
+  from {left:-65%;}
+  to {left:135%;}
+}
+@media(prefers-reduced-motion:reduce){
+  .raid-battles-panel .boss-dot.win::after {animation:none;opacity:0;}
+}
 
 /* SCREEN 3 — RAID RECEIPT */
 
@@ -2775,27 +2807,23 @@ async function showRecordedRaidEggResult(result,run){
 
 function renderBossGrid() {
   const grid = $("bossGrid");
-  grid.replaceChildren();
+  // Keep existing bricks so the gold shine runs only when a win is first recorded,
+  // rather than restarting during each Supabase poll.
+  if(grid.children.length!==10)grid.replaceChildren();
 
   for(let i=1;i<=10;i++) {
-    const dot = document.createElement("div");
-
-    dot.className = "boss-dot";
-    dot.textContent = i;
-
-    const result = raid.results.find(
-      r => r.boss === i
-    );
-
-    if(result) {
-      dot.classList.add(
-        result.win ? "win" : "loss"
-      );
-    } else if(i===raid.boss) {
-      dot.classList.add("current");
+    let dot=grid.children[i-1];
+    if(!dot){
+      dot=document.createElement("div");
+      dot.className="boss-dot";
+      dot.textContent=i;
+      grid.append(dot);
     }
 
-    grid.append(dot);
+    const result=raid.results.find(r=>r.boss===i);
+    dot.classList.toggle("win",!!result?.win);
+    dot.classList.toggle("loss",!!result&&!result.win);
+    dot.classList.toggle("current",!result&&i===raid.boss);
   }
 }
 
