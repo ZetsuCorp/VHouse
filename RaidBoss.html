@@ -2446,10 +2446,10 @@ function setTowerClimbEffects(state) {
   });
 }
 
-function updateSetup() {
-  setTowerClimbEffects("idle");
+function updateSetup(bossNumber=1) {
   window.VHouseVCard.render($("towerCardPreview"),selectedRaidCard);
-  renderTowerClimb(1);
+  renderTowerClimb(bossNumber);
+  setTowerClimbEffects("idle");
 }
 
 function renderTowerClimb(bossNumber){
@@ -2663,7 +2663,14 @@ function startRaid(restoredRecord=null) {
   $("raidCarriedStones").textContent=String(Math.max(0,Number(record.card_snapshot?.raidLuckyStones)||0));
   hideTowerStamp();
   hideRaidStoneEffect();
-  renderTowerClimb(raid.boss);
+  if(restoredRecord){
+    // Rebuild the saved tower while its layout is visible: the VCard,
+    // floor measurements and active boss must all be restored together.
+    showScreen("setupScreen");
+    updateSetup(raid.boss);
+  }else{
+    renderTowerClimb(raid.boss);
+  }
   renderEgg();
   renderBossGrid();
   updateHits();
