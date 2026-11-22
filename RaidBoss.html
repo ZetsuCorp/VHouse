@@ -1624,8 +1624,7 @@ td { background:#1c1428 }
     <details id="raidUseItems">
       <summary>USE ITEMS</summary>
       <div class="raid-use-item-options" aria-label="Owned items">
-        <div class="use-item-option">🥾 <strong>Swift Boots</strong><small>−15 seconds · Owned: <b id="raidBootsOwned">0</b></small></div>
-        <div class="use-item-option">🎟️ <strong>Stage Ticket</strong><small>Free Stage entry · Owned: <b id="raidTicketOwned">0</b></small></div>
+        <div class="use-item-option">🪨 <strong>Lucky Stone</strong><small>Raid Lucky Retry · +1% per stone · Owned: <b id="raidStonesOwned">0</b></small></div>
       </div>
     </details>
     <div id="raidConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden>
@@ -1989,14 +1988,12 @@ function showScreen(name) {
   if(name==="travelScreen" && raid)renderBattleFighters();
 }
 
-/* The same account inventory and linked-Phantom wallet sources used by Journey.
-   Raid consumable behavior is not defined, so the menu displays owned quantities
-   without consuming or assigning Journey-only items to a Raid. */
+/* Use the authenticated account inventory. The server Raid engine owns
+   Lucky Stone retry decisions, consumption, and verification. */
 async function refreshRaidInventory(){
   const auth=window.VHouseAuth;
-  const boots=$("raidBootsOwned"),ticket=$("raidTicketOwned");
-  boots.textContent="0";
-  ticket.textContent="0";
+  const stones=$("raidStonesOwned");
+  stones.textContent="0";
   if(!auth)return;
   try{
     await auth.ready;
@@ -2007,8 +2004,7 @@ async function refreshRaidInventory(){
     const counts=new Map((data.inventory||[])
       .filter(row=>row.type==="Item"&&Number(row.quantity)>0)
       .map(row=>[String(row.thing),Math.max(0,Math.floor(Number(row.quantity)||0))]));
-    boots.textContent=String(counts.get("Swift Boots")||0);
-    ticket.textContent=String(counts.get("Stage Ticket")||0);
+    stones.textContent=String(counts.get("Lucky Stone")||0);
   }catch(error){
     console.warn("Raid inventory:",error);
   }
@@ -2769,6 +2765,9 @@ async function observeRaid(){
     raidSeenBossResults=results.length;
     raid.eggHp=Number(data.egg_hp);
     raid.results=results;
+    // The Raid server persists any consumed Lucky Stones with the actual flip.
+    const usedStones=history.slice(previousTurn).reduce((count,event)=>count+(Number(event.luckyStonesUsed)||0),0);
+    if(usedStones>0)void refreshRaidInventory();
     raid.boss=Number(data.current_boss);
     raid.serverStatus=data.status;
     raid.defeated=results.at(-1)?.win===false;
