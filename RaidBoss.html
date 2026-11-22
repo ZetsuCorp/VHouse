@@ -1306,6 +1306,13 @@ select {
   border-bottom:1px solid #6f557844;
   padding-bottom:8px;
 }
+/* Existing Raid palette: green earnings/wins, red losses, gold statistics. */
+#receiptRaidRewards,#raidEarnedEncounter,#raidEarnedEgg,#raidEarnedTotal,
+.raid-money-value {color:var(--green);font-weight:900;}
+#receiptWins,#raidStatWins {color:var(--green);}
+#raidStatLosses {color:var(--red);}
+#receiptDamage,#receiptEggHp,#receiptRaidBags {color:var(--light);}
+#receiptRaidPayoutText.is-transferred {color:var(--green);}
 
 .confirm {
   margin-top:auto;
@@ -1327,6 +1334,8 @@ select {
 }
 .raid-transfer-notice[hidden] {display:none}
 .raid-transfer-notice > div+div {margin-top:4px}
+.raid-transfer-notice .transfer-sent {color:var(--green);font-weight:900;}
+.raid-transfer-notice .transfer-failed {color:var(--red);font-weight:800;}
 .raid-transfer-notice a {color:#ffe2a6;text-decoration:underline}
 
 .result-panel {
@@ -2377,6 +2386,10 @@ function setRaidTransfer(symbol,message,signature=""){
     if(!entry?.message)continue;
     const line=document.createElement("div");
     line.textContent=entry.message;
+    if(/\bSENT\b|\bCONFIRMED\b/.test(entry.message))
+      line.classList.add("transfer-sent");
+    else if(/\bFAILED\b|\bNOT ENOUGH\b|\bEXPIRED_REVIEW\b/.test(entry.message))
+      line.classList.add("transfer-failed");
     if(entry.signature&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(entry.signature)){
       const link=document.createElement("a");
       link.href="https://solscan.io/tx/"+encodeURIComponent(entry.signature);
@@ -3522,6 +3535,8 @@ function finishRaid() {
   $("receiptRaidRewards").textContent="$"+(totalCents/100).toFixed(2);
   $("receiptRaidPayoutStatus").hidden=earned.length===0;
   $("receiptRaidPayoutText").textContent=earned.length?"AWAITING CONFIRM":"—";
+  $("receiptRaidPayoutText").classList.toggle("is-transferred",
+    raid.serverStatus==="CONFIRMED");
   $("confirmButton").textContent=raid.serverStatus==="CONFIRMED"
     ?"DONE":raidConfirmationStarted?"PROCESSING...":"CONFIRM";
   $("confirmButton").disabled=raidConfirmationStarted&&raid.serverStatus!=="CONFIRMED";
@@ -3540,14 +3555,21 @@ function finishRaid() {
       result.damage,
       result.eggHp,
       result.win&&result.raidCryptoBag
-        ? "RAID CRYPTO BAG · "+result.raidCryptoBag.token+
-          " · $"+(Number(result.raidCryptoBag.usdCents)/100).toFixed(2)
+        ? "RAID CRYPTO BAG · "+result.raidCryptoBag.token
         : "—"
     ];
 
     values.forEach((value,index) => {
       const td = document.createElement("td");
-      td.textContent = value;
+      if(index===5&&result.win&&result.raidCryptoBag){
+        td.append(document.createTextNode(value+" · "));
+        const money=document.createElement("span");
+        money.className="raid-money-value";
+        money.textContent="$"+(Number(result.raidCryptoBag.usdCents)/100).toFixed(2);
+        td.append(money);
+      }else{
+        td.textContent=value;
+      }
 
       if(index===2) {
         td.className =
@@ -3623,6 +3645,8 @@ $("confirmButton").addEventListener("click",async()=>{
           setRaidTransfer(symbol,message,signature);
           $("receiptRaidPayoutText").textContent=data?.status==="TRANSFERRED"
             ?symbol+" PAID":symbol+" "+(data?.status||"FAILED");
+          $("receiptRaidPayoutText").classList.toggle("is-transferred",
+            data?.status==="TRANSFERRED");
           if(data?.status==="TRANSFERRED")break;
           if(data?.status==="PENDING"){
             await new Promise(resolve=>setTimeout(resolve,1800));
@@ -3636,6 +3660,7 @@ $("confirmButton").addEventListener("click",async()=>{
           setRaidTransfer(symbol,symbol+" TRANSFER FAILED: "+reason,
             raidTransferState.transfers[symbol]?.signature||"");
           $("receiptRaidPayoutText").textContent=symbol+" FAILED";
+          $("receiptRaidPayoutText").classList.remove("is-transferred");
           $("resultDescription").textContent=symbol+
             " TRANSFER FAILED · SEE BOSS BATTLE RESULTS";
           return;
@@ -3646,6 +3671,7 @@ $("confirmButton").addEventListener("click",async()=>{
     if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
     raid.serverStatus="CONFIRMED";
     $("receiptRaidPayoutText").textContent=symbols.length?"TRANSFERRED":"NO CRYPTO BAGS";
+    $("receiptRaidPayoutText").classList.toggle("is-transferred",symbols.length>0);
     $("resultDescription").textContent="RAID CONFIRMED · TRANSACTION RECEIPTS BELOW";
     $("confirmButton").textContent="DONE";
     // Keep the receipt and Solscan links on-screen until DONE.
