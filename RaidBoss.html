@@ -1054,31 +1054,111 @@ select {
 
 .raid-bottom {
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
+  grid-template-columns:minmax(170px,24%) minmax(0,1fr);
+  gap:clamp(5px,.8cqw,10px);
+  align-items:stretch;
+}
+.raid-bottom > .panel {padding:clamp(6px,.8cqw,10px);min-width:0;}
+.raid-bottom > .panel h2 {
+  margin:0 0 clamp(4px,.5cqw,7px);
+  font-size:clamp(11px,1.45cqw,16px);
+}
+.raid-status-panel {display:flex;flex-direction:column;justify-content:center;gap:3px;}
+.raid-status-panel .muted {font-size:clamp(10px,1.1cqw,13px);line-height:1.2;}
+.raid-status-panel .clock {font-size:clamp(17px,2.2cqw,27px);}
+.raid-battles-panel .boss-grid {
+  margin:3px 0 0;
+  gap:clamp(2px,.4cqw,6px);
+}
+.raid-battles-panel .boss-dot {padding:clamp(7px,1.15cqw,13px) 0;font-size:clamp(10px,1.2cqw,14px);font-weight:900;}
+/* One Egg panel, centered over the Stage 3 game at the end of a boss match. */
+.raid-egg-overlay {
+  position:absolute;inset:0;z-index:25;
+  display:grid;place-items:center;
+  background:rgba(7,3,16,.78);
+  pointer-events:none;
+}
+.raid-egg-panel {
+  width:min(62%,680px);height:88%;min-width:0;min-height:0;
+  display:flex;flex-direction:column;align-items:center;
+  border:2px solid #f0be73;border-radius:12px;
+  background:radial-gradient(ellipse at 50% 38%,rgba(99,36,153,.78),rgba(17,8,30,.97) 78%);
+  box-shadow:0 0 30px #b974fa7a,inset 0 0 25px #bb6be529;
+  overflow:hidden;
+}
+.raid-egg-title {
+  flex:none;margin:2.5% 0 0;
+  font:900 clamp(19px,3.4cqw,39px) Georgia,serif;
+  letter-spacing:.16em;color:#ffe3ae;
+  text-shadow:0 3px 9px #100619;
+}
+.raid-egg-art {
+  flex:1;min-height:0;position:relative;width:90%;
+  display:grid;place-items:center;
+}
+.raid-egg-art img {
+  max-height:100%;max-width:72%;object-fit:contain;
+  filter:drop-shadow(0 0 15px #c87bffb8);
+}
+.raid-egg-art img.is-impact {animation:raidEggImpact .75s ease both;}
+.raid-egg-art img.is-open {animation:raidEggOpen .75s ease both;}
+.raid-egg-damage {
+  position:absolute;top:18%;left:50%;opacity:0;
+  transform:translateX(-50%);
+  font-size:clamp(16px,2.8cqw,36px);font-weight:1000;
+  color:#ffdd8e;white-space:nowrap;
+  text-shadow:0 2px 5px #000,0 0 15px #be6efc;
+}
+.raid-egg-damage.is-active {animation:raidEggDamage 1.6s ease-out both;}
+.raid-egg-label {
+  flex:none;margin:0;font-size:clamp(12px,1.95cqw,23px);
+  color:#ffdea2;font-weight:900;letter-spacing:.18em;
+}
+.raid-egg-bar {
+  position:relative;flex:none;width:87%;height:clamp(26px,4.35cqw,50px);
+  margin:1.1% 0 4%;
+  border:3px solid #f6cd81;border-radius:35px;
+  overflow:hidden;background:#0a0516;box-shadow:0 0 17px #b273f78a,inset 0 0 8px #000;
+}
+.raid-egg-fill {
+  position:absolute;inset:0 auto 0 0;width:100%;
+  border-radius:35px;
+  background:linear-gradient(180deg,#e9b6f7 0%,#a65bd2 38%,#692690 85%);
+  box-shadow:inset 0 2px 8px #ffffff77;
+}
+.raid-egg-hp {
+  position:absolute;inset:0;display:grid;place-items:center;
+  padding:0 5px;color:#fff4e2;
+  font-size:clamp(10px,1.8cqw,23px);
+  font-weight:900;font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-shadow:0 2px 5px #000,0 0 5px #000;
+}
+@keyframes raidEggImpact{
+  0%,100%{transform:translateX(0) scale(1)}
+  20%{transform:translateX(-5px) scale(.96);filter:brightness(1.7)}
+  48%{transform:translateX(6px) scale(1.03)}
+  75%{transform:translateX(-3px)}
+}
+@keyframes raidEggDamage{
+  0%{opacity:0;transform:translate(-50%,12px) scale(.8)}
+  20%{opacity:1;transform:translate(-50%,-8px) scale(1.15)}
+  75%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-45px)}
+}
+@keyframes raidEggOpen{
+  from{opacity:.25;transform:scale(.76)}
+  to{opacity:1;transform:scale(1)}
+}
+@media(max-width:650px){
+  .raid-bottom{grid-template-columns:minmax(145px,33%) minmax(0,1fr);}
+  .raid-egg-panel{width:82%;height:94%;}
+  .raid-egg-bar{width:92%;}
 }
 
 .clock {
   font-size:27px;
   font-weight:900;
   color:var(--light);
-}
-
-.track {
-  width:100%;
-  height:12px;
-  border:1px solid #a08458;
-  border-radius:9px;
-  background:#100c1b;
-  overflow:hidden;
-  margin:10px 0;
-}
-
-.fill {
-  height:100%;
-  width:100%;
-  background:linear-gradient(90deg,#8e5ccc,#dfb76b);
-  transition:width .25s;
 }
 
 .boss-grid {
@@ -1800,29 +1880,15 @@ td { background:#1c1428 }
 
   <div class="raid-bottom">
 
-    <div class="panel">
+    <div class="panel raid-status-panel">
       <h2>RAID IN PROGRESS</h2>
-
       <div class="muted">
         VCard locked during raid · 🪨 Raid Stones: <b id="raidCarriedStones">0</b>
       </div>
-
-      <div class="clock" id="timer">
-        00:00
-      </div>
-
-      <h3>RAID EGG</h3>
-
-      <div class="track">
-        <div class="fill" id="eggFill"></div>
-      </div>
-
-      <strong id="eggHealth">
-        20 / 20 HP
-      </strong>
+      <div class="clock" id="timer">00:00</div>
     </div>
 
-    <div class="panel">
+    <div class="panel raid-battles-panel">
       <h2>TOWER BATTLES</h2>
 
       <div class="boss-grid" id="bossGrid"></div>
@@ -1830,6 +1896,22 @@ td { background:#1c1428 }
 
   </div>
 </section>
+
+<!-- Match-end Egg reveal: the only Egg container on Stage 3. -->
+<div id="raidEggOverlay" class="raid-egg-overlay" hidden role="status" aria-live="off">
+  <div class="raid-egg-panel">
+    <h2 class="raid-egg-title">EGG</h2>
+    <div class="raid-egg-art">
+      <img id="raidEggArt" src="assets/Egg.png" alt="Raid egg">
+      <span id="raidEggDamage" class="raid-egg-damage" aria-hidden="true"></span>
+    </div>
+    <div class="raid-egg-label">HEALTH</div>
+    <div id="raidEggBar" class="raid-egg-bar" role="progressbar" aria-label="Raid egg health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+      <div id="raidEggFill" class="raid-egg-fill"></div>
+      <div id="raidEggHealth" class="raid-egg-hp">0 / 0</div>
+    </div>
+  </div>
+</div>
 
 <!-- SCREEN 3 — RAID RESULTS -->
 
@@ -2327,6 +2409,7 @@ function clearRaidForAccountChange(){
   clearBattleFinish();
   hideTowerStamp();
   hideRaidStoneEffect();
+  hideRaidEggOverlay();
   showScreen("cardSelectScreen");
 }
 async function restoreUnfinishedRaid(){
@@ -2550,21 +2633,71 @@ async function secureCoinFlip() {
   return (hash[0] & 1) === 1;
 }
 
-/* RAID EGG DISPLAY */
-
-function renderEgg() {
-  const percent = raid.eggMax > 0
-    ? (raid.eggHp / raid.eggMax) * 100
-    : 0;
-
-  $("eggFill").style.width =
-    percent + "%";
-
-  $("eggHealth").textContent =
-    raid.eggHp +
-    " / " +
-    raid.eggMax +
-    " HP";
+/* RAID EGG — render only server-recorded match-end HP totals. */
+const raidEggFormat=n=>Math.round(n).toLocaleString("en-US");
+let raidEggAnimationId=0;
+function hideRaidEggOverlay(){
+  raidEggAnimationId++;
+  $("raidEggOverlay").hidden=true;
+}
+function drawRaidEggHp(current,total){
+  const clamped=Math.max(0,Math.min(total,current));
+  const percent=total>0?100*clamped/total:0;
+  $("raidEggFill").style.width=percent+"%";
+  const text=raidEggFormat(clamped)+" / "+raidEggFormat(total);
+  const display=$("raidEggHealth");
+  display.textContent=text;
+  display.style.fontSize=text.length>25?"clamp(9px,1.25cqw,15px)":
+    text.length>19?"clamp(10px,1.5cqw,19px)":"clamp(10px,1.8cqw,23px)";
+  $("raidEggBar").setAttribute("aria-valuemax",String(total));
+  $("raidEggBar").setAttribute("aria-valuenow",String(Math.round(clamped)));
+}
+async function showRecordedRaidEggResult(result,run){
+  if(raid!==run||document.hidden)return;
+  // Supabase supplies eggHp and damage for THIS boss; there is no client RNG.
+  const total=Math.max(0,Number(run.eggMax)||0);
+  const after=Math.max(0,Math.min(total,Number(result.eggHp)||0));
+  const damage=Math.max(0,Number(result.damage)||0);
+  const before=Math.min(total,after+damage);
+  const id=++raidEggAnimationId;
+  const panel=$("raidEggOverlay"),art=$("raidEggArt"),hit=$("raidEggDamage");
+  art.src=before<=0?"assets/Eggopen.png":"assets/Egg.png";
+  art.alt=before<=0?"Opened raid egg":"Raid egg";
+  art.className="";
+  hit.className="raid-egg-damage";
+  hit.textContent=damage>0?"−"+raidEggFormat(before-after):"";
+  panel.hidden=false;
+  drawRaidEggHp(before,total);
+  if(damage>0){
+    void art.offsetWidth;
+    art.className="is-impact";
+    hit.className="raid-egg-damage is-active";
+  }
+  const duration=1750;
+  await new Promise(resolve=>{
+    let started=null;
+    function tick(now){
+      if(id!==raidEggAnimationId||raid!==run||document.hidden){resolve();return;}
+      if(started===null)started=now;
+      const progress=Math.min(1,(now-started)/duration);
+      const eased=1-Math.pow(1-progress,3);
+      drawRaidEggHp(before+(after-before)*eased,total);
+      if(progress<1)requestAnimationFrame(tick);else resolve();
+    }
+    requestAnimationFrame(tick);
+  });
+  if(id!==raidEggAnimationId||raid!==run||document.hidden){
+    if(id===raidEggAnimationId)hideRaidEggOverlay();
+    return;
+  }
+  drawRaidEggHp(after,total);
+  if(after===0){
+    art.src="assets/Eggopen.png";
+    art.alt="Opened raid egg";
+    art.className="is-open";
+  }
+  await battlePause(after===0?1250:750);
+  if(id===raidEggAnimationId)hideRaidEggOverlay();
 }
 
 /* BOSS GRID */
@@ -2663,6 +2796,7 @@ function startRaid(restoredRecord=null) {
   $("raidCarriedStones").textContent=String(Math.max(0,Number(record.card_snapshot?.raidLuckyStones)||0));
   hideTowerStamp();
   hideRaidStoneEffect();
+  hideRaidEggOverlay();
   if(restoredRecord){
     // Rebuild the saved tower while its layout is visible: the VCard,
     // floor measurements and active boss must all be restored together.
@@ -2671,7 +2805,6 @@ function startRaid(restoredRecord=null) {
   }else{
     renderTowerClimb(raid.boss);
   }
-  renderEgg();
   renderBossGrid();
   updateHits();
 
@@ -2805,6 +2938,9 @@ async function playRecordedBossResult(result,nextBoss){
   await battlePause(TOWER_LOSS_MS);
   if(!raid)return;
   hideTowerStamp();
+  // Reveal the one Egg container after the completed match and before climbing.
+  await showRecordedRaidEggResult(result,raid);
+  if(!raid)return;
   if(nextBoss===null){
     finishRaid();
     return;
@@ -2853,7 +2989,6 @@ async function observeRaid(){
     bossHits=Number(data.boss_hits);
     currentTurn=data.current_turn;
     updateHits();
-    renderEgg();
     renderBossGrid();
 
     if(data.status==="RESULTS_READY"&&oldBossResults===results.length
@@ -2911,6 +3046,7 @@ function finishRaid() {
   clearTimeout(towerTransitionTimer);
   setTowerClimbEffects("idle");
   hideTowerStamp();
+  hideRaidEggOverlay();
   towerTransitioning=false;
 
   raid.completed = true;
@@ -2985,6 +3121,7 @@ $("confirmButton").addEventListener("click",async()=>{
     if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
     clearTimeout(towerTransitionTimer);
     hideTowerStamp();
+    hideRaidEggOverlay();
     towerTransitioning=false;
     clearInterval(raidInterval);
     raid=null;
