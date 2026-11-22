@@ -1769,6 +1769,9 @@ td { background:#1c1428 }
   font-weight:800;
   text-decoration:underline;
 }
+.raid-entry-proof {font-size:clamp(9px,.85cqw,12px);color:#f9e7ae;text-align:center}
+.raid-entry-proof a {color:#ffe1a1;text-decoration:underline;font-weight:800}
+.raid-entry-proof[hidden] {display:none}
 .raid-selected-name {
   border:1px solid var(--gold);
   border-radius:6px;
@@ -2007,6 +2010,7 @@ td { background:#1c1428 }
       <h2>RAID IN PROGRESS</h2>
       <div class="raid-lock-note">VCard locked during raid ·</div>
       <div class="raid-stones-line">🪨 Raid Stones: <b id="raidCarriedStones">0</b></div>
+      <div id="raidEntryProof" class="raid-entry-proof" hidden></div>
       <div class="raid-time-row">
         <span class="raid-time-label">TIME STAMP |</span>
         <time class="raid-time-value" id="timer">--:--:-- --</time>
@@ -2071,6 +2075,7 @@ td { background:#1c1428 }
       <strong id="receiptEggHp">20</strong>
     </div>
 
+    <div id="raidEntryReceiptProof" class="raid-entry-proof" hidden></div>
     <div class="line">
       <span>RAID CRYPTO BAGS</span>
       <strong id="receiptRaidBags">0</strong>
@@ -2181,6 +2186,33 @@ let raidInterval = null;
 let raidStarting = false;
 let raidPendingRecord = null;
 let raidEntrySignature="";
+function showRaidEntryPayment(signature){
+  for(const id of ["raidEntryProof","raidEntryReceiptProof"]){
+    const host=$(id);
+    host.replaceChildren();
+    if(!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature||"")){
+      host.hidden=true;continue;
+    }
+    const link=document.createElement("a");
+    link.href="https://solscan.io/tx/"+encodeURIComponent(signature);
+    link.target="_blank";
+    link.rel="noopener noreferrer";
+    link.textContent="VIEW RAID ENTRY PAYMENT ON SOLSCAN";
+    host.append(link);
+    host.hidden=false;
+  }
+}
+async function loadRaidEntryPayment(raidId){
+  try{
+    const {data,error}=await raidAuth.getClient()
+      .from("vhouse_raid_entry_payments").select("signature")
+      .eq("raid_id",raidId).eq("player_id",raidAuth.getUser()?.id)
+      .not("verified_at","is",null).maybeSingle();
+    if(error)throw error;
+    if(raid?.id===raidId&&data?.signature)
+      showRaidEntryPayment(data.signature);
+  }catch(error){console.warn("Raid entry receipt lookup:",error);}
+}
 function raidEntryStatus(message,signature=raidEntrySignature){
   const host=$("raidEntryStatus");
   host.replaceChildren(document.createTextNode(message));
@@ -2693,6 +2725,7 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     if(raidAuth.getUser()?.id!==paidForPlayer)throw Error("RAID_PAYMENT_ACCOUNT_CHANGED");
     raidClearPendingPayment(paidForPlayer);
     raidPendingRecord=record;
+    showRaidEntryPayment(entrySignature);
     selectedRaidCard={...record.card_snapshot};
     await raidStore.refresh({includeRaid:true});
     await refreshRaidHistory();
@@ -2757,6 +2790,7 @@ function clearRaidForAccountChange(){
   raidPolling=false;
   raidEntrySignature="";
   $("raidEntryStatus").replaceChildren();
+  showRaidEntryPayment("");
   clearRaidTransfers();
   raidCheckedPlayerId=null;
   raidRestoreRequestedForId=null;
@@ -3132,6 +3166,8 @@ function startRaid(restoredRecord=null) {
 
   raidSavedTurnCount=(record.turn_history||[]).length;
   raidSeenBossResults=(record.boss_results||[]).length;
+  if(restoredRecord)showRaidEntryPayment("");
+  void loadRaidEntryPayment(record.id);
   raidSaveFailed=false;
   raidPolling=false;
   seconds=0;
