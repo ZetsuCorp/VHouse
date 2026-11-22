@@ -1804,7 +1804,7 @@ td { background:#1c1428 }
       <h2>RAID IN PROGRESS</h2>
 
       <div class="muted">
-        VCard locked during raid
+        VCard locked during raid · 🪨 Raid Stones: <b id="raidCarriedStones">0</b>
       </div>
 
       <div class="clock" id="timer">
@@ -2660,6 +2660,7 @@ function startRaid(restoredRecord=null) {
   $("timer").textContent=new Date().toLocaleTimeString();
   $("battleCaption").textContent="BOSS "+raid.boss+" — "+currentTurn.toUpperCase();
   $("battleLog").textContent=restoredRecord?"RAID RESUMED":"Entering tower…";
+  $("raidCarriedStones").textContent=String(Math.max(0,Number(record.card_snapshot?.raidLuckyStones)||0));
   hideTowerStamp();
   hideRaidStoneEffect();
   renderTowerClimb(raid.boss);
@@ -2835,9 +2836,9 @@ async function observeRaid(){
     raidSeenBossResults=results.length;
     raid.eggHp=Number(data.egg_hp);
     raid.results=results;
-    // The Raid server saves a retry event only after the full boss battle is lost.
-    const usedStones=history.slice(previousTurn).reduce((count,event)=>count+(Number(event.luckyStonesUsed)||0),0);
-    if(usedStones>0)void refreshRaidInventory();
+    $("raidCarriedStones").textContent=String(Math.max(0,Number(data.card_snapshot?.raidLuckyStones)||0));
+    // Raid Stones and main inventory are now separate. Consuming a carried
+    // Stone never subtracts from purchases made during this Raid.
     raid.boss=Number(data.current_boss);
     raid.serverStatus=data.status;
     raid.defeated=results.at(-1)?.win===false;
