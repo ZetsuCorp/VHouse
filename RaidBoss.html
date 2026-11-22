@@ -1515,6 +1515,17 @@ td { background:#1c1428 }
   font:clamp(9px,.69cqw,12px) monospace;
   color:#e8cfff;
 }
+#raidWalletCheck {
+  margin-left:auto;
+  flex-shrink:0;
+  padding:.25cqw .55cqw;
+  font-size:clamp(9px,.69cqw,11px);
+  white-space:nowrap;
+  background:#30203d;
+  color:#ffe3ad;
+}
+#raidWalletCheck[hidden]{display:none!important;}
+#raidWalletCheck:disabled{opacity:.6;cursor:default;}
 .raid-select-layout {
   display:grid;
   grid-template-columns:minmax(0,1.55fr) minmax(180px,.8fr);
@@ -1856,9 +1867,10 @@ td { background:#1c1428 }
         <div class="use-item-option">🪨 <strong>Lucky Stone</strong><small>Raid Lucky Retry · +1% per stone · Owned: <b id="raidStonesOwned">0</b></small></div>
       </div>
     </details>
-    <div id="raidConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden>
+    <div id="raidConnectedWallet" role="group" aria-label="VHouse connected wallet">
       <span class="wallet-label">CONNECTED WALLET</span>
       <span id="raidWalletAddress"></span>
+      <button type="button" id="raidWalletCheck" hidden>CHECK CONNECTED WALLET</button>
     </div>
   </div>
 </section>
@@ -2490,43 +2502,87 @@ async function refreshRaidInventory(){
     console.warn("Raid inventory:",error);
   }
 }
+let raidLinkedWalletAddress="";
 async function refreshRaidWallet(){
   const panel=$("raidConnectedWallet"),address=$("raidWalletAddress");
-  const hideWallet=()=>{
-    panel.hidden=true;
-    panel.classList.remove("is-revealed");
-    address.textContent="";
-    address.title="";
-  };
+  const check=$("raidWalletCheck");
   const auth=window.VHouseAuth;
-  if(!auth){hideWallet();return;}
+  panel.hidden=false;
+  if(!auth){
+    address.textContent="WALLET STATUS UNAVAILABLE";
+    check.hidden=false;
+    return false;
+  }
   try{
     await auth.ready;
     const user=auth.getUser?.();
-    if(!user){hideWallet();return;}
+    if(!user){
+      raidLinkedWalletAddress="";
+      address.textContent="SIGN IN TO VIEW WALLET";
+      address.title="";
+      check.hidden=true;
+      panel.classList.remove("is-revealed");
+      return false;
+    }
     const {data,error}=await auth.getClient().from("vhouse_accounts")
       .select("wallet_address").eq("id",user.id).maybeSingle();
     if(error)throw error;
-    if(auth.getUser?.()?.id!==user.id)return;
+    if(auth.getUser?.()?.id!==user.id)return false;
     const wallet=String(data?.wallet_address||"");
     const phantom=window.phantom?.solana||window.solana;
-    const connected=phantom?.isPhantom&&phantom.isConnected&&
+    const connected=!!wallet&&!!phantom?.isPhantom&&!!phantom.isConnected&&
       phantom.publicKey?.toBase58?.()===wallet;
-    if(!connected){hideWallet();return;}
-    const firstReveal=panel.hidden||address.textContent!==wallet;
-    address.textContent=wallet;
+    const firstReveal=connected&&(check.hidden===false||address.textContent!==wallet);
+    raidLinkedWalletAddress=wallet;
+    address.textContent=wallet||"NO WALLET LINKED";
     address.title=wallet;
-    panel.hidden=false;
-    if(firstReveal){
+    check.hidden=connected;
+    if(!connected)panel.classList.remove("is-revealed");
+    else if(firstReveal){
       panel.classList.remove("is-revealed");
       void panel.offsetWidth;
       panel.classList.add("is-revealed");
     }
+    return connected;
   }catch(error){
     console.warn("Raid connected wallet:",error);
-    hideWallet();
+    address.textContent=raidLinkedWalletAddress||"WALLET STATUS UNAVAILABLE";
+    address.title=raidLinkedWalletAddress;
+    check.hidden=false;
+    panel.classList.remove("is-revealed");
+    return false;
   }
 }
+$("raidWalletCheck").addEventListener("click",async()=>{
+  const check=$("raidWalletCheck");
+  if(check.disabled)return;
+  check.disabled=true;
+  try{
+    const phantom=window.phantom?.solana||window.solana;
+    if(!phantom?.isPhantom||typeof phantom.connect!=="function"){
+      raidEntryStatus("CHECK CONNECTED WALLET — PHANTOM NOT AVAILABLE");
+      return;
+    }
+    const current=phantom.publicKey?.toBase58?.()||"";
+    if(phantom.isConnected&&current!==raidLinkedWalletAddress){
+      raidEntryStatus("CHECK CONNECTED WALLET — SWITCH TO YOUR LINKED WALLET IN PHANTOM");
+      return;
+    }
+    // Explicit click by the player is the only reconnect action.
+    await phantom.connect();
+    if(await refreshRaidWallet()){
+      raidEntryStatus("");
+    }else{
+      raidEntryStatus("CHECK CONNECTED WALLET");
+    }
+  }catch(error){
+    console.warn("Raid Phantom reconnect:",error);
+    raidEntryStatus("CHECK CONNECTED WALLET");
+  }finally{
+    check.disabled=false;
+    void refreshRaidWallet();
+  }
+});
 window.addEventListener("load",()=>{
   void refreshRaidInventory();
   void refreshRaidWallet();
@@ -2710,6 +2766,12 @@ async function loadRaidRoster(){
 $("confirmRaidCard").addEventListener("click",async()=>{
   const card=rosterCard();
   if(!card||raidStore.isLocked(card.id)||raidStarting||raidRestoring||raid||raidPendingRecord)return;
+  // Show a player-actionable wallet check before any entry quote or charge.
+  if(!await refreshRaidWallet()){
+    raidEntryStatus("CHECK CONNECTED WALLET");
+    $("raidWalletCheck").focus();
+    return;
+  }
   raidStarting=true;
   $("confirmRaidCard").disabled=true;
   try{
@@ -2732,14 +2794,21 @@ $("confirmRaidCard").addEventListener("click",async()=>{
   }catch(error){
     console.error("Tower Raid start:",error);
     const reason=String(error.message||"TRY AGAIN");
-    rosterLoadError=reason.includes("RAID_ALREADY_ACTIVE")
+    const walletIssue=/Connect the Phantom wallet linked|Connect Phantom to pay|PHANTOM_WALLET_NOT_CONNECTED|RAID_ENTRY_WALLET_MISMATCH/i.test(reason);
+    rosterLoadError=walletIssue
+      ?"CHECK CONNECTED WALLET"
+      :reason.includes("RAID_ALREADY_ACTIVE")
       ?"RAID ALREADY ACTIVE — RETURN TO YOUR EXISTING RAID"
       :reason.includes("SCRAP_STATS_OUTDATED")||reason.includes("SCRAP_STATS_UNAVAILABLE")
       ?"VERIFIED SCRAP STATS UNAVAILABLE — CHECK WALLET AND RETRY"
       :"RAID START FAILED — "+reason;
-    if(!raidEntrySignature)raidEntryStatus(rosterLoadError);
+    if(!raidEntrySignature||walletIssue)raidEntryStatus(rosterLoadError);
     raidStarting=false;
     renderRaidRoster();
+    if(walletIssue){
+      void refreshRaidWallet();
+      $("raidWalletCheck").focus();
+    }
     return;
   }
   raidStarting=false;
