@@ -1275,6 +1275,11 @@ select {
   grid-column:1/-1;
   text-align:center;
 }
+.complete-title #resultDescription.is-confirm-prompt {
+  color:#fff;
+  font-weight:900;
+  text-shadow:0 0 6px #fff,0 0 14px #d9baff,0 0 24px #9f6edd;
+}
 
 .receipt {
   border:3px solid var(--gold);
@@ -3535,6 +3540,7 @@ function finishRaid() {
     " / " +
     raid.eggMax;
 
+  $("resultDescription").classList.remove("is-confirm-prompt");
   $("resultDescription").textContent =
     raid.defeated ? "VCARD DEFEATED" : "RAID RUN FINISHED";
 
@@ -3627,6 +3633,7 @@ $("confirmButton").addEventListener("click",async()=>{
   raidConfirmationStarted=true;
   $("confirmButton").disabled=true;
   $("confirmButton").textContent="PROCESSING...";
+  $("resultDescription").classList.add("is-confirm-prompt");
   $("resultDescription").textContent=
     "CONFIRM RECEIVED · WATCH TRANSFERS AND SOLSCAN LINKS UNDER BOSS BATTLE RESULTS";
   try{
@@ -3693,6 +3700,7 @@ $("confirmButton").addEventListener("click",async()=>{
     $("resultDescription").textContent="RAID CONFIRMATION FAILED: "+
       (error?.message||"UNKNOWN ERROR");
   }finally{
+    $("resultDescription").classList.remove("is-confirm-prompt");
     const completed=raid?.serverStatus==="CONFIRMED";
     $("confirmButton").disabled=!completed;
     $("confirmButton").textContent=completed?"DONE":"CONFIRM RECEIVED";
