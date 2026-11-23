@@ -208,7 +208,7 @@ Deno.serve(async(req:Request)=>{
   const {data:raid,error:raidError}=await db.from("vhouse_raid_records")
     .select("status,egg_hp,player_id").eq("id",raidId).eq("player_id",player).maybeSingle();
   if(raidError)throw Error("EGG_RAID_LOOKUP_FAILED");
-  if(!raid||raid.status!=="RESULTS_READY"||Number(raid.egg_hp)!==0)
+  if(!raid||!["RESULTS_READY","CONFIRMED"].includes(raid.status)||Number(raid.egg_hp)!==0)
     return response({error:"EGG_RAID_NOT_PAYABLE"},409);
   const signer=walletKey();
   const connection=rpc();
