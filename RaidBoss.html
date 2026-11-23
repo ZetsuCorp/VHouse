@@ -3673,6 +3673,10 @@ function finishConfirmedRaidView(){
   towerTransitioning=false;
   clearInterval(raidInterval);
   clearRaidTransfers();
+  // Clear the previous entry message and its Solscan display on DONE.
+  raidEntrySignature="";
+  raidEntryStatus("");
+  showRaidEntryPayment("");
   raid=null;
   selectedRaidCard=null;
   raidCheckedPlayerId=raidAuth.getUser()?.id||null;
