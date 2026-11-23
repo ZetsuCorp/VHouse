@@ -1265,6 +1265,7 @@ select {
 /* SCREEN 3 — RAID RECEIPT */
 
 .complete-screen {
+  position:relative;
   display:grid;
   grid-template-columns:minmax(160px,30%) minmax(0,1fr);
   grid-template-rows:auto minmax(0,1fr);
@@ -1345,6 +1346,19 @@ select {
 }
 .free-raid-retry[disabled] {opacity:.65;cursor:wait}
 .receipt:has(.free-raid-retry:not([hidden])) .confirm {margin-top:0;}
+.paid-retry-offer {position:absolute;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;background:#090511d9;padding:clamp(8px,1.5cqw,20px);}
+.paid-retry-card {width:min(100%,480px);max-height:100%;overflow:hidden;border:3px solid var(--gold);border-radius:12px;background:linear-gradient(145deg,#391b4d,#150d23);box-shadow:0 0 24px #a677cc88;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:clamp(5px,.7cqw,11px);padding:clamp(12px,2cqw,25px);}
+.paid-retry-card h3 {margin:0;font-size:clamp(17px,2cqw,26px);color:#fff;text-shadow:0 0 7px #fff,0 0 16px #ae7fe5;}
+.paid-retry-card p {margin:0;color:#f5e8f5;font-size:clamp(11px,1.3cqw,16px);}
+.paid-retry-price {font-size:clamp(27px,3.6cqw,46px);font-weight:900;color:var(--light);}
+.paid-retry-actions {display:flex;gap:clamp(5px,.8cqw,12px);width:100%;}
+.paid-retry-actions button {flex:1;min-width:0;padding:clamp(7px,.9cqw,12px) clamp(4px,.7cqw,9px);font-size:clamp(10px,1.1cqw,14px);}
+#paidRetryContinue {background:var(--gold);color:#14101d;}
+#paidRetryDecline {background:#261831;color:#fff;}
+.paid-retry-status {color:#fff;font-size:clamp(10px,1.05cqw,13px);font-weight:800;overflow-wrap:anywhere;}
+.paid-retry-status:empty {display:none;}
+.paid-retry-status a {color:var(--green);text-decoration:underline;}
+.paid-retry-actions button[disabled] {opacity:.6;cursor:wait;}
 
 /* Compact Journey-style payout messages; Solscan links remain with the receipt. */
 .raid-transfer-notice {
@@ -2167,6 +2181,19 @@ td { background:#1c1428 }
     </div>
   </div>
 
+
+  <div id="paidRetryOffer" class="paid-retry-offer" role="dialog" aria-modal="true" aria-labelledby="paidRetryTitle" hidden>
+    <div class="paid-retry-card">
+      <h3 id="paidRetryTitle">CONTINUE YOUR RAID?</h3>
+      <p>Your VCard was defeated. Continue from <strong id="paidRetryBoss">BOSS 1</strong>?</p>
+      <div class="paid-retry-price">$0.50</div>
+      <div class="paid-retry-actions">
+        <button type="button" id="paidRetryContinue">CONTINUE · $0.50</button>
+        <button type="button" id="paidRetryDecline">NO THANKS</button>
+      </div>
+      <div id="paidRetryStatus" class="paid-retry-status" role="status" aria-live="polite"></div>
+    </div>
+  </div>
 </section>
 
     </div>
@@ -2880,6 +2907,7 @@ function clearRaidForAccountChange(){
   raidEntrySignature="";
   $("raidEntryStatus").replaceChildren();
   showRaidEntryPayment("");
+  $("paidRetryOffer").hidden=true;
   clearRaidTransfers();
   $("freeRetryButton").hidden=true;
   raidCheckedPlayerId=null;
@@ -3533,9 +3561,13 @@ async function showFreeRetryIfEligible(raidId){
     if(error)throw error;
     if(raid?.id===raidId && raid.ownerId===playerId && raid.completed &&
        raid.defeated && raid.serverStatus==="RESULTS_READY" &&
-       !raidConfirmationStarted && data?.tower_raid_free_retry_used===false){
-      button.disabled=false;
-      button.hidden=false;
+       !raidConfirmationStarted){
+      if(data?.tower_raid_free_retry_used===false){
+        button.disabled=false;
+        button.hidden=false;
+      }else if(data?.tower_raid_free_retry_used===true){
+        maybeShowPaidRetry(raidId);
+      }
     }
   }catch(error){
     console.error("Free Raid retry eligibility:",error);
@@ -3578,6 +3610,7 @@ function finishRaid() {
 
   raid.completed = true;
   $("freeRetryButton").hidden=true;
+  $("paidRetryOffer").hidden=true;
   void showFreeRetryIfEligible(raid.id);
 
   const wins = raid.results.filter(
@@ -3682,6 +3715,7 @@ function finishConfirmedRaidView(){
   raidCheckedPlayerId=raidAuth.getUser()?.id||null;
   raidConfirmationStarted=false;
   $("freeRetryButton").hidden=true;
+  $("paidRetryOffer").hidden=true;
   $("confirmButton").disabled=false;
   $("confirmButton").textContent="CONFIRM";
   showScreen("cardSelectScreen");
@@ -3698,6 +3732,7 @@ $("confirmButton").addEventListener("click",async()=>{
   if(raidConfirmationStarted)return;
   raidConfirmationStarted=true;
   $("freeRetryButton").hidden=true;
+  $("paidRetryOffer").hidden=true;
   $("confirmButton").disabled=true;
   $("confirmButton").textContent="PROCESSING...";
   $("resultDescription").classList.add("is-confirm-prompt");
@@ -3776,6 +3811,7 @@ $("confirmButton").addEventListener("click",async()=>{
 
 updateSetup();
 </script>
+<script src="assets/vhouse-paid-retry.js"></script>
 
 </body>
 </html>
