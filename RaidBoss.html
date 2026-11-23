@@ -1231,6 +1231,16 @@ select {
 #eggStakeStatus a,#eggPayoutStatus a {color:var(--green);text-decoration:underline;}
 #eggStakeProgress {color:#ffe3ae;font-weight:900;font-size:clamp(10px,1.3cqw,16px);text-align:center;}
 #eggPayoutStatus {font-size:clamp(10px,1.1cqw,14px);color:#fff;overflow-wrap:anywhere;}
+/* Compact Egg reward information and its separate confirmation on Raid receipt. */
+.egg-reward-details {display:flex;flex-direction:column;gap:2px;border:1px solid #805d95;border-radius:6px;padding:clamp(4px,.6cqw,7px);background:#180d25aa;}
+.egg-reward-details .line {padding:0 0 2px;gap:4px;font-size:clamp(10px,1.03cqw,13px);}
+.egg-reward-details .line strong {white-space:nowrap;}
+#eggRewardAmount {color:var(--green);}
+#eggPayoutStatus {font-size:clamp(10px,.99cqw,13px);line-height:1.25;}
+#eggPayoutStatus[hidden],#eggRewardConfirm[hidden],#eggRewardDetails[hidden]{display:none!important;}
+#eggRewardConfirm {width:100%;padding:clamp(5px,.8cqw,10px);background:linear-gradient(120deg,#63378f,#34194b);border:2px solid var(--gold);color:#fff;font-size:clamp(10px,1.1cqw,14px);font-weight:900;}
+#eggRewardConfirm:disabled {opacity:.65;cursor:wait;}
+
 @keyframes raidEggImpact{
   0%,100%{transform:translateX(0) scale(1)}
   20%{transform:translateX(-5px) scale(.96);filter:brightness(1.7)}
@@ -2224,10 +2234,14 @@ td { background:#1c1428 }
       <span>ENCOUNTER EARNINGS</span>
       <strong id="receiptRaidRewards">$0.00</strong>
     </div>
-    <div class="line" id="eggStakeReceipt" hidden>
-      <span>EGG BET</span><strong id="eggStakeReceiptText">—</strong>
+    <div id="eggRewardDetails" class="egg-reward-details" hidden>
+      <div class="line"><span>ORIGINAL EGG STAKE</span><strong id="eggStakeOriginal">—</strong></div>
+      <div class="line"><span>EGG WINS / MULTIPLIER</span><strong id="eggStakeReceiptText">—</strong></div>
+      <div class="line"><span id="eggRewardLabel">EGG REWARD</span><strong id="eggRewardAmount">—</strong></div>
+      <div class="line"><span>EGG OUTCOME</span><strong id="eggRewardOutcome">—</strong></div>
+      <div id="eggPayoutStatus" role="status" aria-live="polite" hidden></div>
+      <button type="button" id="eggRewardConfirm" hidden>CONFIRM EGG REWARD</button>
     </div>
-    <div id="eggPayoutStatus" role="status" aria-live="polite" hidden></div>
     <div class="line" id="receiptRaidPayoutStatus" hidden>
       <span>CRYPTO PAYOUT</span>
       <strong id="receiptRaidPayoutText">PENDING</strong>
@@ -3798,6 +3812,11 @@ function finishConfirmedRaidView(){
   raidEntrySignature="";
   raidEntryStatus("");
   showRaidEntryPayment("");
+  if(window.VHouseEggBet?.hasUnfinishedReward(raid)){
+    $("resultDescription").textContent="EGG REWARD NOT DELIVERED · CONFIRM OR CHECK EGG DELIVERY";
+    return;
+  }
+  window.VHouseEggBet?.clearReceipt();
   raid=null;
   selectedRaidCard=null;
   raidCheckedPlayerId=raidAuth.getUser()?.id||null;
@@ -3875,11 +3894,7 @@ $("confirmButton").addEventListener("click",async()=>{
         }
       }
     }
-    // Egg funds move only after the Egg actually breaks; otherwise they remain with the Egg.
-    if(!(await window.VHouseEggBet.settle(raid))){
-      $("resultDescription").textContent="EGG PAYOUT NOT COMPLETED · SEE EGG BET STATUS";
-      return;
-    }
+    // Egg reward delivery is a separate, player-confirmed action.
     const record=await raidRpc("vhouse_confirm_raid",{p_raid_id:raid.id});
     if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
     raid.serverStatus="CONFIRMED";
