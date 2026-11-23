@@ -2950,6 +2950,8 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     const eggStakeId=await window.VHouseEggBet.offer(String(card.id),1);
     if(raidAuth.getUser()?.id!==paidForPlayer)throw Error("RAID_PAYMENT_ACCOUNT_CHANGED");
     raidEntryStatus("Payment verified. Entering Raid...",entrySignature);
+    // Recheck Amalie immediately before the server freezes Raid stats.
+    await window.VHouseAmalieStats.refresh();
     const record=await raidRpc("vhouse_start_raid_with_egg",{
       p_card_id:String(card.id),p_level:1,p_egg_stake_id:eggStakeId
     });
