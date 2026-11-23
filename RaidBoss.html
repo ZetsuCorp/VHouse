@@ -2321,6 +2321,7 @@ td { background:#1c1428 }
 <script src="assets/vhouse-public-config.js"></script>
 <script src="assets/vhouse-auth.js"></script>
 <script src="assets/vhouse-scrap-stats.js"></script>
+<script src="assets/vhouse-amalie-stats.js"></script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-vcard.js"></script>
 
@@ -2942,6 +2943,7 @@ $("confirmRaidCard").addEventListener("click",async()=>{
   $("confirmRaidCard").disabled=true;
   try{
     await window.VHouseScrapStats.refresh();
+    await window.VHouseAmalieStats.refresh();
     const paidForPlayer=raidAuth.getUser()?.id;
     const entrySignature=await payRaidEntry(String(card.id),1);
     // Offer an optional Egg Stake after entry verification, before Raid creation.
@@ -2967,6 +2969,8 @@ $("confirmRaidCard").addEventListener("click",async()=>{
       ?"RAID ALREADY ACTIVE — RETURN TO YOUR EXISTING RAID"
       :reason.includes("SCRAP_STATS_OUTDATED")||reason.includes("SCRAP_STATS_UNAVAILABLE")
       ?"VERIFIED SCRAP STATS UNAVAILABLE — CHECK WALLET AND RETRY"
+      :reason.includes("AMALIE_STATS_OUTDATED")||reason.includes("AMALIE_STATS_UNAVAILABLE")
+      ?"VERIFIED AMALIE STATS UNAVAILABLE — CHECK WALLET AND RETRY"
       :"RAID START FAILED — "+reason;
     if(!raidEntrySignature||walletIssue)raidEntryStatus(rosterLoadError);
     raidStarting=false;

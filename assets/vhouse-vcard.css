@@ -95,6 +95,11 @@
   margin-bottom: .6cqw;
 }
 .vhouse-vcard-host .stat-value { font-size: 7.1cqw; font-weight: 900; color: #fff; }
+.vhouse-vcard-host .stat-bonus {
+  display:block;color:#f3c66f;font-weight:900;line-height:1.15;
+  white-space:nowrap;max-width:100%;overflow:hidden;
+}
+.vhouse-vcard-host .stat-bonus:empty {display:none;}
 .vhouse-vcard-host .meta-bottom {
   position: relative;
   border-top: .6cqw solid var(--accent);

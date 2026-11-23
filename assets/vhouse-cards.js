@@ -8,7 +8,9 @@ let cards=[], activeId=null,activeSnapshot=null, loadedPlayerId=null;
 let journeyStates=new Map();
 let request=0, loadPromise=Promise.resolve(), assignmentQueue=Promise.resolve();
 const copy=value=>value?{...value}:null;
-const gameStats=card=>window.VHouseScrapStats?.apply?.(card)||copy(card);
+const gameStats=card=>window.VHouseAmalieStats?.apply?.(
+   window.VHouseScrapStats?.apply?.(card)||copy(card)
+ )||copy(card);
 const auth=()=>window.VHouseAuth;
 const playerId=()=>auth()?.getUser()?.id||null;
 const key=id=>String(id??"");
@@ -199,6 +201,7 @@ const api={
 };
 window.VHouseCardStore=api;
 window.addEventListener("vhouse:scrap-stats-updated",notify);
+window.addEventListener("vhouse:amalie-stats-updated",notify);
 window.addEventListener("pageshow",event=>{if(event.persisted&&playerId())void refresh();});
 for(const [event,status] of [
   ["vhouse:journey-started","ON_JOURNEY"],

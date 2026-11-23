@@ -10,8 +10,8 @@
     '<div class="card-info"></div>',
     '<div class="card-description"></div>',
     '<div class="card-stats">',
-    '<div class="stat"><span class="stat-label">ATK</span><span class="stat-value" data-stat="atk"></span></div>',
-    '<div class="stat"><span class="stat-label">DEF</span><span class="stat-value" data-stat="def"></span></div>',
+    '<div class="stat"><span class="stat-label">ATK</span><span class="stat-value" data-stat="atk"></span><span class="stat-bonus" data-bonus="atk"></span></div>',
+    '<div class="stat"><span class="stat-label">DEF</span><span class="stat-value" data-stat="def"></span><span class="stat-bonus" data-bonus="def"></span></div>',
     '</div>',
     '<div class="meta-bottom"><div class="meta-footer-text"></div><div class="rarity"></div></div>',
     '</div></div>'
@@ -39,9 +39,21 @@
     // Scrap balances. cqw keeps the size proportional when the card scales.
     for (const field of ["atk", "def"]) {
       const value = root.querySelector('[data-stat="' + field + '"]');
-      const text = String(card[field] ?? 100);
-      value.textContent = text;
-      value.style.fontSize = Math.min(7.1, 60 / Math.max(1, text.length)) + "cqw";
+      const fieldName=field==="atk"?"Atk":"Def";
+      const isRaid=card["raidAmalieBonus"+fieldName]!==undefined;
+      const raidBonus=Number(card["raidAmalieBonus"+fieldName]);
+      const liveBonus=Number(card["amalieBonus"+fieldName]);
+      const bonus=isRaid?(Number.isFinite(raidBonus)?Math.max(0,raidBonus):0):
+        (Number.isFinite(liveBonus)?Math.max(0,liveBonus):0);
+      const total=Number(card[field]);
+      const base=isRaid&&Number.isFinite(total)?Math.max(0,total-bonus):card[field];
+      const text=String(base??100);
+      value.textContent=text;
+      value.style.fontSize=Math.min(7.1,60/Math.max(1,text.length))+"cqw";
+      const bonusNode=root.querySelector('[data-bonus="'+field+'"]');
+      const bonusText=bonus>0?"+"+bonus.toLocaleString(undefined,{maximumFractionDigits:1})+" AMALIE":"";
+      bonusNode.textContent=bonusText;
+      bonusNode.style.fontSize=bonusText?Math.min(3,72/bonusText.length)+"cqw":"";
       value.style.display = "inline-block";
       value.style.whiteSpace = "nowrap";
       value.style.maxWidth = "100%";
