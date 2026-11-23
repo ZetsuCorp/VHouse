@@ -80,7 +80,7 @@ Deno.serve(async(req:Request)=>{
    const cardId=typeof body?.cardId==="string"?body.cardId.trim():"";
    const level=Number(body?.level||1),cents=Number(body?.usdCents);
    if(cardId.length<1||cardId.length>200||!Number.isInteger(level)||level<1||level>3||
-      !Number.isInteger(cents)||cents<25||cents>250||cents%25!==0)
+      !Number.isSafeInteger(cents)||cents<25||cents%25!==0)
      return response({error:"INVALID_EGG_STAKE"},400);
    const [active,entry,own]=await Promise.all([
     db.from("vhouse_raid_records").select("id").eq("player_id",player)
