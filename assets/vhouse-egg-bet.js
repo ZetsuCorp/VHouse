@@ -129,48 +129,143 @@ async function updateProgress(run){
   label.hidden=false;
  }catch(error){console.warn("Egg growth:",error);}
 }
-async function updateReceipt(run){
- if(!run?.id)return;
- try{
-  const data=await api({action:"status",raidId:run.id});
-  if(run!==raid)return;
-  const line=el("eggStakeReceipt"),proof=el("eggPayoutStatus");
-  line.hidden=!data?.stake;proof.hidden=!data?.stake;
-  if(!data?.stake)return;
-  el("eggStakeReceiptText").textContent="$"+(data.stakeCents/100).toFixed(2)+
-   " · "+Number(data.multiplier).toFixed(2)+"×";
-  showPayoutStatus(data);
- }catch(error){console.warn("Egg receipt:",error);}
+let lastEggReceipt=null;
+let deliveryBusy=false;
+const money=(usd)=>"$"+Number(usd).toFixed(3);
+const solAmount=(lamports)=>(Number(lamports)/1e9).toFixed(9)+" SOL";
+function clearReceipt(){
+ lastEggReceipt=null;
+ el("eggRewardDetails").hidden=true;
+ el("eggRewardConfirm").hidden=true;
+ el("eggPayoutStatus").hidden=true;
+}
+function hasUnfinishedReward(run){
+ if(!run||Number(run.eggHp)>0)return false;
+ if(lastEggReceipt?.raidId!==run.id)return true; // Do not hide an unchecked broken Egg.
+ return !!lastEggReceipt.stake&&lastEggReceipt.status!=="CONFIRMED";
 }
 function showPayoutStatus(data){
  const host=el("eggPayoutStatus");
  if(!data?.stake){host.hidden=true;return;}
- host.hidden=false;host.replaceChildren(document.createTextNode(
-  data.eggBroken?"EGG BROKEN · "+data.status:"EGG SURVIVED · STAKE RETAINED BY EGG"));
+ host.hidden=false;
+ const broken=!!data.eggBroken;
+ let message;
+ if(!broken)message="EGG SURVIVED · NO EGG REWARD";
+ else if(!data.confirmed)message="EGG BROKEN · AWAITING PLAYER CONFIRMATION";
+ else if(data.status==="CONFIRMED")message="EGG SOL TRANSFER: CONFIRMED · "+solAmount(data.payoutLamports);
+ else if(data.status==="NOT ENOUGH")message="EGG SOL TRANSFER: NOT ENOUGH · EGG_WALLET_NOT_ENOUGH";
+ else if(data.status==="PENDING")message="EGG SOL TRANSFER: PENDING · "+solAmount(data.payoutLamports);
+ else if(data.status==="EXPIRED_REVIEW")message="EGG SOL TRANSFER: EXPIRED_REVIEW · "+(data.reason||"CHECK TRANSACTION");
+ else message="EGG SOL TRANSFER: "+(data.status==="READY"?"READY":(data.status||"CHECKING"))+
+  (data.reason?" · "+data.reason:"");
+ host.replaceChildren(document.createTextNode(message));
  if(data.payoutSignature){
-  const a=document.createElement("a");a.href="https://solscan.io/tx/"+
-   encodeURIComponent(data.payoutSignature);a.target="_blank";a.rel="noopener noreferrer";
-  a.textContent="EGG PAYOUT ON SOLSCAN";
-  host.append(document.createTextNode(" · "),a);
+  const link=document.createElement("a");
+  link.href="https://solscan.io/tx/"+encodeURIComponent(data.payoutSignature);
+  link.target="_blank";link.rel="noopener noreferrer";
+  link.textContent="VIEW EGG TRANSFER ON SOLSCAN";
+  host.append(document.createTextNode(" · "),link);
+ }
+}
+function paintReceipt(run,data){
+ if(raid!==run)return;
+ const hasStake=!!data?.stake;
+ const container=el("eggRewardDetails"),button=el("eggRewardConfirm");
+ container.hidden=!hasStake;
+ if(!hasStake){
+  lastEggReceipt={raidId:run.id,stake:false,status:"NONE"};
+  button.hidden=true;el("eggPayoutStatus").hidden=true;
+  return;
+ }
+ lastEggReceipt={raidId:run.id,...data};
+ const usdStake=Number(data.stakeCents)/100;
+ const multiplier=Number(data.multiplier)||0;
+ el("eggStakeOriginal").textContent="$"+usdStake.toFixed(2);
+ el("eggStakeReceiptText").textContent=String(data.wins)+" WINS · "+multiplier.toFixed(2)+"×";
+ el("eggRewardLabel").textContent=data.eggBroken?"EGG REWARD WON":"POTENTIAL EGG REWARD";
+ el("eggRewardAmount").textContent=money(usdStake*multiplier);
+ el("eggRewardOutcome").textContent=data.eggBroken?"EGG BROKEN":"EGG SURVIVED";
+ button.hidden=!data.eggBroken||data.status==="CONFIRMED";
+ if(!button.hidden){
+  button.textContent=!data.confirmed?"CONFIRM EGG REWARD":"CHECK EGG DELIVERY";
+  button.disabled=deliveryBusy;
+ }
+ showPayoutStatus(data);
+}
+async function updateReceipt(run){
+ if(!run?.id)return;
+ try{
+  const data=await api({action:"status",raidId:run.id});
+  paintReceipt(run,data);
+ }catch(error){
+  console.error("Egg receipt unavailable:",error);
+  if(raid===run){
+   el("eggRewardDetails").hidden=false;
+   el("eggRewardConfirm").hidden=true;
+   const host=el("eggPayoutStatus");host.hidden=false;
+   host.textContent="EGG STATUS UNAVAILABLE · "+(error?.message||"RETRY");
+  }
  }
 }
 async function settle(run){
- if(!run?.id)return true;
- const state=await api({action:"status",raidId:run.id});
- if(!state?.stake)return true;
- showPayoutStatus(state);
- if(!state.eggBroken)return true;
+ if(!run?.id||raid!==run)return false;
+ let state=await api({action:"status",raidId:run.id});
+ paintReceipt(run,state);
+ if(!state?.stake||!state.eggBroken)return true;
+ if(!state.confirmed)return false;
  while(window.VHouseAuth.getUser()?.id===run.ownerId&&raid===run){
-  const payout=await api({action:"payout",raidId:run.id});
-  showPayoutStatus({...state,status:payout?.status,payoutSignature:payout?.signature||""});
-  if(payout?.status==="TRANSFERRED"){
-   await updateReceipt(run);
-   return true;
+  let payout;
+  try{payout=await api({action:"payout",raidId:run.id});}
+  catch(error){
+   const reason=error?.message||"EGG_TRANSFER_FAILED";
+   paintReceipt(run,{...state,status:"FAILED",reason});
+   return false;
   }
-  if(payout?.status!=="PENDING")return false;
+  const nextStatus=payout?.status||"FAILED";
+  state={...state,status:nextStatus,
+    payoutSignature:payout.signature||state.payoutSignature,
+    payoutLamports:payout.payoutLamports||state.payoutLamports,
+    reason:payout.reason||payout.error||""};
+  paintReceipt(run,state);
+  if(nextStatus==="CONFIRMED"){await updateReceipt(run);return true;}
+  if(nextStatus!=="PENDING")return false;
   await new Promise(r=>setTimeout(r,1800));
  }
  return false;
 }
-window.VHouseEggBet={offer,cancel,updateProgress,updateReceipt,settle};
+el("eggRewardConfirm").addEventListener("click",async()=>{
+ const run=raid;
+ if(!run||!run.completed||Number(run.eggHp)!==0||deliveryBusy)return;
+ deliveryBusy=true;
+ el("eggRewardConfirm").disabled=true;
+ try{
+  const state=await api({action:"status",raidId:run.id});
+  if(!state?.stake||!state.eggBroken)throw Error("EGG_REWARD_NOT_READY");
+  if(!state.confirmed){
+   const {data,error}=await window.VHouseAuth.getClient().rpc(
+     "vhouse_confirm_egg_reward",{p_raid_id:run.id});
+   if(error)throw Error(error.message||"EGG_CONFIRMATION_FAILED");
+   if(data?.confirmed!==true)throw Error("EGG_CONFIRMATION_FAILED");
+  }
+  await updateReceipt(run);
+  const success=await settle(run);
+  if(!success&&raid===run){
+   el("eggRewardConfirm").textContent="CHECK EGG DELIVERY";
+  }
+ }catch(error){
+  console.error("Egg confirm and delivery:",error);
+  if(raid===run){
+   const host=el("eggPayoutStatus");
+   host.hidden=false;
+   host.textContent="EGG TRANSFER FAILED: "+(error?.message||"UNKNOWN ERROR");
+  }
+ }finally{
+  deliveryBusy=false;
+  if(raid===run){
+   await updateReceipt(run);
+   el("eggRewardConfirm").disabled=false;
+  }
+ }
+});
+window.VHouseEggBet={offer,cancel,updateProgress,updateReceipt,settle,hasUnfinishedReward,clearReceipt};
 })();
