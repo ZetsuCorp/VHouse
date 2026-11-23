@@ -1167,6 +1167,25 @@ select {
   font-weight:900;font-variant-numeric:tabular-nums;
   white-space:nowrap;text-shadow:0 2px 5px #000,0 0 5px #000;
 }
+
+/* Pre-Raid Egg Stake reuses the original Egg HP container. */
+.raid-egg-overlay.is-stake-choice {pointer-events:auto;z-index:32;}
+.raid-egg-overlay.is-stake-choice .raid-egg-panel {height:min(96%,560px);width:min(82%,620px);padding:clamp(8px,1.3cqw,18px);gap:clamp(4px,.5cqw,8px);}
+.raid-egg-overlay.is-stake-choice .raid-egg-art {max-height:29%;flex:1;}
+.raid-egg-overlay.is-stake-choice .raid-egg-bar {margin:0;}
+.raid-egg-offer {display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(3px,.5cqw,8px);width:100%;font-size:clamp(10px,1.25cqw,15px);color:#fff;}
+.raid-egg-offer h3 {margin:0;font-size:clamp(13px,1.8cqw,21px);color:#ffe3ae;}
+.raid-egg-stake-select {display:flex;align-items:center;justify-content:center;gap:clamp(8px,1.2cqw,18px);width:100%;}
+.raid-egg-stake-select button {min-width:34px;padding:3px 10px;}
+#eggStakeAmount {font-weight:900;font-size:clamp(20px,3cqw,35px);color:var(--green);}
+.raid-egg-offer-actions {display:flex;gap:8px;width:100%;}
+.raid-egg-offer-actions button {flex:1;min-width:0;padding:clamp(5px,.8cqw,10px);font-size:clamp(10px,1.15cqw,14px);}
+#eggStakeConfirm {background:var(--gold);color:#171020;}
+#eggStakeSkip {background:#24132f;color:#fff;}
+#eggStakeStatus {font-size:clamp(9px,1.1cqw,13px);overflow-wrap:anywhere;max-width:100%;color:#fff;}
+#eggStakeStatus a,#eggPayoutStatus a {color:var(--green);text-decoration:underline;}
+#eggStakeProgress {color:#ffe3ae;font-weight:900;font-size:clamp(10px,1.3cqw,16px);text-align:center;}
+#eggPayoutStatus {font-size:clamp(10px,1.1cqw,14px);color:#fff;overflow-wrap:anywhere;}
 @keyframes raidEggImpact{
   0%,100%{transform:translateX(0) scale(1)}
   20%{transform:translateX(-5px) scale(.96);filter:brightness(1.7)}
@@ -2100,6 +2119,21 @@ td { background:#1c1428 }
       <div id="raidEggFill" class="raid-egg-fill"></div>
       <div id="raidEggHealth" class="raid-egg-hp">0 / 0</div>
     </div>
+    <div id="eggStakeProgress" hidden></div>
+    <div id="eggStakeOffer" class="raid-egg-offer" hidden>
+      <h3>MAXIMIZE YOUR EGG REWARDS?</h3>
+      <div>OPTIONAL EGG STAKE · +0.25× EACH SUCCESSFUL ENCOUNTER · UP TO 2.50×</div>
+      <div class="raid-egg-stake-select">
+        <button type="button" id="eggStakeMinus" aria-label="Decrease Egg Stake">−</button>
+        <strong id="eggStakeAmount">$0.25</strong>
+        <button type="button" id="eggStakePlus" aria-label="Increase Egg Stake">+</button>
+      </div>
+      <div class="raid-egg-offer-actions">
+        <button type="button" id="eggStakeConfirm">STAKE WITH PHANTOM</button>
+        <button type="button" id="eggStakeSkip">NO THANKS</button>
+      </div>
+      <div id="eggStakeStatus" role="status" aria-live="polite"></div>
+    </div>
   </div>
 </div>
 
@@ -2145,6 +2179,10 @@ td { background:#1c1428 }
       <span>ENCOUNTER EARNINGS</span>
       <strong id="receiptRaidRewards">$0.00</strong>
     </div>
+    <div class="line" id="eggStakeReceipt" hidden>
+      <span>EGG BET</span><strong id="eggStakeReceiptText">—</strong>
+    </div>
+    <div id="eggPayoutStatus" role="status" aria-live="polite" hidden></div>
     <div class="line" id="receiptRaidPayoutStatus" hidden>
       <span>CRYPTO PAYOUT</span>
       <strong id="receiptRaidPayoutText">PENDING</strong>
@@ -2827,10 +2865,12 @@ $("confirmRaidCard").addEventListener("click",async()=>{
     await window.VHouseScrapStats.refresh();
     const paidForPlayer=raidAuth.getUser()?.id;
     const entrySignature=await payRaidEntry(String(card.id),1);
-    // Supabase requires one verified unspent payment before it can create a Raid.
+    // Offer an optional Egg Stake after entry verification, before Raid creation.
+    const eggStakeId=await window.VHouseEggBet.offer(String(card.id),1);
+    if(raidAuth.getUser()?.id!==paidForPlayer)throw Error("RAID_PAYMENT_ACCOUNT_CHANGED");
     raidEntryStatus("Payment verified. Entering Raid...",entrySignature);
-    const record=await raidRpc("vhouse_start_raid",{
-      p_card_id:String(card.id),p_level:1
+    const record=await raidRpc("vhouse_start_raid_with_egg",{
+      p_card_id:String(card.id),p_level:1,p_egg_stake_id:eggStakeId
     });
     if(raidAuth.getUser()?.id!==paidForPlayer)throw Error("RAID_PAYMENT_ACCOUNT_CHANGED");
     raidPendingRecord=record;
@@ -2907,6 +2947,7 @@ function clearRaidForAccountChange(){
   raidEntrySignature="";
   $("raidEntryStatus").replaceChildren();
   showRaidEntryPayment("");
+  window.VHouseEggBet?.cancel();
   $("paidRetryOffer").hidden=true;
   clearRaidTransfers();
   $("freeRetryButton").hidden=true;
@@ -3167,6 +3208,7 @@ async function showRecordedRaidEggResult(result,run){
   const damage=Math.max(0,Number(result.damage)||0);
   const before=Math.min(total,after+damage);
   const id=++raidEggAnimationId;
+  void window.VHouseEggBet?.updateProgress(run);
   const panel=$("raidEggOverlay"),art=$("raidEggArt"),hit=$("raidEggDamage");
   art.src=before<=0?"assets/Eggopen.png":"assets/Egg.png";
   art.alt=before<=0?"Opened raid egg":"Raid egg";
@@ -3609,6 +3651,7 @@ function finishRaid() {
   towerTransitioning=false;
 
   raid.completed = true;
+  void window.VHouseEggBet?.updateReceipt(raid);
   $("freeRetryButton").hidden=true;
   $("paidRetryOffer").hidden=true;
   void showFreeRetryIfEligible(raid.id);
@@ -3787,6 +3830,11 @@ $("confirmButton").addEventListener("click",async()=>{
         }
       }
     }
+    // Egg funds move only after the Egg actually breaks; otherwise they remain with the Egg.
+    if(!(await window.VHouseEggBet.settle(raid))){
+      $("resultDescription").textContent="EGG PAYOUT NOT COMPLETED · SEE EGG BET STATUS";
+      return;
+    }
     const record=await raidRpc("vhouse_confirm_raid",{p_raid_id:raid.id});
     if(record.status!=="CONFIRMED")throw Error("RAID_CONFIRM_FAILED");
     raid.serverStatus="CONFIRMED";
@@ -3812,6 +3860,7 @@ $("confirmButton").addEventListener("click",async()=>{
 updateSetup();
 </script>
 <script src="assets/vhouse-paid-retry.js"></script>
+<script src="assets/vhouse-egg-bet.js"></script>
 
 </body>
 </html>
