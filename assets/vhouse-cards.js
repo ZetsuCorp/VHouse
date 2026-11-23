@@ -8,9 +8,10 @@ let cards=[], activeId=null,activeSnapshot=null, loadedPlayerId=null;
 let journeyStates=new Map();
 let request=0, loadPromise=Promise.resolve(), assignmentQueue=Promise.resolve();
 const copy=value=>value?{...value}:null;
-const gameStats=card=>window.VHouseAmalieStats?.apply?.(
-   window.VHouseScrapStats?.apply?.(card)||copy(card)
- )||copy(card);
+const gameStats=card=>{
+  const base=window.VHouseScrapStats?.apply?.(card)||copy(card);
+  return window.VHouseAmalieStats?.apply?.(base)||base;
+};
 const auth=()=>window.VHouseAuth;
 const playerId=()=>auth()?.getUser()?.id||null;
 const key=id=>String(id??"");
