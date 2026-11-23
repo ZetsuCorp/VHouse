@@ -1380,6 +1380,26 @@ select {
   font-weight:900;
 }
 
+/* Fit the added Egg confirmation within the existing fixed-height receipt. */
+.receipt:has(#eggRewardDetails:not([hidden])) {
+  gap:clamp(2px,.45cqw,6px);
+  padding:clamp(6px,.75cqw,10px);
+}
+.receipt:has(#eggRewardDetails:not([hidden])) h2 {
+  font-size:clamp(15px,1.5cqw,19px);
+  margin:0;
+  padding-bottom:clamp(3px,.4cqw,6px);
+}
+.receipt:has(#eggRewardDetails:not([hidden])) .big {
+  font-size:clamp(17px,1.8cqw,23px);
+}
+.receipt:has(#eggRewardDetails:not([hidden])) > .line {
+  padding-bottom:clamp(2px,.35cqw,5px);
+  font-size:clamp(10px,1.05cqw,13px);
+}
+.receipt:has(#eggRewardDetails:not([hidden])) > .confirm {
+  padding:clamp(7px,.75cqw,11px);
+}
 .receipt .line {
   display:flex;
   justify-content:space-between;
