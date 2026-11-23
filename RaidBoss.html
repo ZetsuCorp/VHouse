@@ -1170,9 +1170,54 @@ select {
 
 /* Pre-Raid Egg Stake reuses the original Egg HP container. */
 .raid-egg-overlay.is-stake-choice {pointer-events:auto;z-index:32;}
-.raid-egg-overlay.is-stake-choice .raid-egg-panel {height:min(96%,560px);width:min(82%,620px);padding:clamp(8px,1.3cqw,18px);gap:clamp(4px,.5cqw,8px);}
-.raid-egg-overlay.is-stake-choice .raid-egg-art {max-height:29%;flex:1;}
-.raid-egg-overlay.is-stake-choice .raid-egg-bar {margin:0;}
+.raid-egg-overlay.is-stake-choice .raid-egg-panel {
+  height:min(96%,560px);
+  width:min(82%,620px);
+  padding:clamp(8px,1.3cqw,18px);
+  gap:clamp(4px,.5cqw,8px);
+  justify-content:center;
+}
+.raid-egg-overlay.is-stake-choice .raid-egg-title {
+  margin:0;
+  font-size:clamp(18px,2.5cqw,30px);
+}
+.raid-egg-overlay.is-stake-choice .raid-egg-art {
+  flex:0 0 auto;
+  width:100%;
+  height:clamp(84px,19vh,160px);
+  min-height:0;
+  max-height:30%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+.raid-egg-overlay.is-stake-choice .raid-egg-art img {
+  display:block;
+  flex:none;
+  width:auto;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+}
+.raid-egg-overlay.is-stake-choice .raid-egg-label,
+.raid-egg-overlay.is-stake-choice .raid-egg-bar {display:none;}
+.raid-egg-overlay.is-stake-choice .raid-egg-offer {
+  flex:0 1 auto;
+  min-height:0;
+  max-width:100%;
+  line-height:1.2;
+}
+.raid-egg-overlay.is-stake-choice .raid-egg-offer > div {
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+.raid-egg-overlay.is-stake-choice #eggStakeStatus {
+  max-height:clamp(30px,8vh,58px);
+  overflow:hidden;
+  overflow-wrap:anywhere;
+}
 .raid-egg-offer {display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(3px,.5cqw,8px);width:100%;font-size:clamp(10px,1.25cqw,15px);color:#fff;}
 .raid-egg-offer h3 {margin:0;font-size:clamp(13px,1.8cqw,21px);color:#ffe3ae;}
 .raid-egg-stake-select {display:flex;align-items:center;justify-content:center;gap:clamp(8px,1.2cqw,18px);width:100%;}
