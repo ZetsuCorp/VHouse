@@ -54,6 +54,9 @@ function mount(host){
   selected.className="vhouse-placeholder-selection";
   const details=document.createElement("div");
   details.className="vhouse-placeholder-details";
+  const amalie=document.createElement("div");
+  amalie.className="vhouse-placeholder-amalie";
+  amalie.hidden=true;
   const journey=document.createElement("div");
   journey.className="vhouse-placeholder-journeys";
   const actions=document.createElement("div");
@@ -72,7 +75,7 @@ function mount(host){
   close.onclick=()=>{panel.hidden=true;trigger.setAttribute("aria-expanded","false");};
   header.append(close);
   actions.append(closet,creator,goJourney);
-  panel.append(header,selected,details,journey,actions);
+  panel.append(header,selected,details,amalie,journey,actions);
   host.replaceChildren(holder,art,...(showCash?[accountHud]:[loginLabel]),status,trigger,panel);
   const store=window.VHouseCardStore;
   let cashRequest=0;
@@ -161,6 +164,11 @@ function mount(host){
       :ready?"RESULTS READY · "+(raid?"RAID":"JOURNEY")+" RECEIPT"
       :"AVAILABLE";
     if(card?.external)details.textContent+=" · LOADED NFT";
+    const bonusAtk=Number(card?.amalieBonusAtk)||0;
+    const bonusDef=Number(card?.amalieBonusDef)||0;
+    amalie.hidden=!(bonusAtk>0||bonusDef>0);
+    amalie.textContent=amalie.hidden?"":"AMALIE BONUS · +"+
+      numberText(bonusAtk)+" ATK / +"+numberText(bonusDef)+" DEF";
     const lockedCards=store?.getLockedCards?.()||[];
     journey.replaceChildren();
     if(lockedCards.length){

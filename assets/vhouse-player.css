@@ -196,6 +196,11 @@
   overflow-wrap:anywhere;
 }
 .vhouse-placeholder-details{color:#b6ccd3;font-size:11px;margin-bottom:8px}
+.vhouse-placeholder-amalie{
+  color:#f3c66f;font-weight:900;font-size:10px;margin:-4px 0 7px;
+  overflow-wrap:anywhere;
+}
+.vhouse-placeholder-amalie[hidden]{display:none!important}
 .vhouse-placeholder-journeys{
   display:grid;gap:4px;max-height:90px;overflow:hidden;
   font-size:10px;overflow-wrap:anywhere;
