@@ -186,13 +186,23 @@ Deno.serve(async(req:Request)=>{
   if(qError)throw Error("EGG_PAYMENT_LOOKUP_FAILED");
   if(!q)return response({stake:false});
   if(action==="status")return response({stake:true,stakeCents:q.usd_cents,
+    stakeLamports:q.amount_lamports,
     wins:q.successful_encounters,multiplier:q.multiplier_quarters/4,
-    eggBroken:q.egg_broken,status:q.payout_status,payoutSignature:q.payout_signature||""});
+    eggBroken:q.egg_broken,confirmed:!!q.reward_confirmed_at,
+    confirmedAt:q.reward_confirmed_at||null,
+    payoutLamports:q.payout_lamports||null,
+    status:q.payout_status==="TRANSFERRED"?"CONFIRMED":
+      q.delivery_last_status==="NOT ENOUGH"?"NOT ENOUGH":
+      ["SIGNED","PENDING"].includes(q.payout_status)?"PENDING":q.payout_status,
+    reason:q.delivery_last_error||"",
+    payoutSignature:q.payout_signature||""});
 
+  if(!q.reward_confirmed_at)return response({error:"EGG_REWARD_CONFIRMATION_REQUIRED"},409);
   if(!q.egg_broken||!["READY","SIGNED","PENDING","TRANSFERRED","EXPIRED_REVIEW"].includes(q.payout_status))
     return response({error:"EGG_NOT_BROKEN"},409);
-  if(q.payout_status==="TRANSFERRED")return response({status:"TRANSFERRED",
-    signature:q.payout_signature,payoutLamports:q.payout_lamports});
+  if(q.payout_status==="TRANSFERRED")return response({status:"CONFIRMED",
+    signature:q.payout_signature,payoutLamports:q.payout_lamports,
+    amountSol:Number(q.payout_lamports)/1e9});
   if(q.payout_status==="EXPIRED_REVIEW")return response({status:"EXPIRED_REVIEW",
     signature:q.payout_signature});
   const {data:raid,error:raidError}=await db.from("vhouse_raid_records")
@@ -216,8 +226,13 @@ Deno.serve(async(req:Request)=>{
      connection.getFeeForMessage(tx.compileMessage(),"confirmed"),
      connection.getBalance(signer.publicKey,"confirmed")
    ]);
-   if(balance<amount+(fee.value||5000))
-     return response({status:"NOT ENOUGH",error:"EGG_WALLET_NOT_ENOUGH"},409);
+   if(balance<amount+(fee.value||5000)){
+     await store.update({delivery_checked_at:new Date().toISOString(),
+       delivery_last_status:"NOT ENOUGH",delivery_last_error:"EGG_WALLET_NOT_ENOUGH"})
+       .eq("id",q.id).eq("payout_status","READY");
+     return response({status:"NOT ENOUGH",reason:"EGG_WALLET_NOT_ENOUGH",
+       payoutLamports:amount,amountSol:amount/1e9});
+   }
    tx.sign(signer);
    const payoutSignature=bs58.encode(tx.signature!);
    const signed=btoa(String.fromCharCode(...tx.serialize()));
@@ -227,7 +242,9 @@ Deno.serve(async(req:Request)=>{
      payout_status:"SIGNED",payout_signature:payoutSignature,
      payout_signed_transaction_base64:signed,
      payout_blockhash:latest.blockhash,
-     payout_last_valid_block_height:latest.lastValidBlockHeight
+     payout_last_valid_block_height:latest.lastValidBlockHeight,
+     delivery_checked_at:new Date().toISOString(),
+     delivery_last_status:"PENDING",delivery_last_error:null
    }).eq("id",q.id).eq("payout_status","READY").is("payout_signature",null)
     .select("*").maybeSingle();
    if(claimError)throw Error("EGG_PAYOUT_RECORD_FAILED");
@@ -242,16 +259,29 @@ Deno.serve(async(req:Request)=>{
    return response({status:"PENDING"},202);
   const confirmed=await confirmedTx(payoutSig);
   if(confirmed?.meta?.err===null){
-   await store.update({payout_status:"TRANSFERRED",payout_at:new Date().toISOString()})
-     .eq("id",q.id).eq("payout_signature",payoutSig)
+   const {error:recordError}=await store.update({
+       payout_status:"TRANSFERRED",payout_at:new Date().toISOString(),
+       delivery_checked_at:new Date().toISOString(),
+       delivery_last_status:"CONFIRMED",delivery_last_error:null
+     }).eq("id",q.id).eq("payout_signature",payoutSig)
      .in("payout_status",["SIGNED","PENDING"]);
-   return response({status:"TRANSFERRED",signature:payoutSig,payoutLamports:amount});
+   if(recordError)throw Error("EGG_PAYOUT_RECORD_FAILED");
+   return response({status:"CONFIRMED",signature:payoutSig,
+     payoutLamports:amount,amountSol:amount/1e9});
   }
-  if(confirmed?.meta?.err)return response({status:"EXPIRED_REVIEW",
-    signature:payoutSig,error:"EGG_PAYOUT_CHAIN_FAILURE"},409);
+  if(confirmed?.meta?.err){
+    await store.update({payout_status:"EXPIRED_REVIEW",
+      delivery_checked_at:new Date().toISOString(),
+      delivery_last_status:"EXPIRED_REVIEW",delivery_last_error:"EGG_PAYOUT_CHAIN_FAILURE"})
+      .eq("id",q.id).eq("payout_signature",payoutSig);
+    return response({status:"EXPIRED_REVIEW",signature:payoutSig,
+      reason:"EGG_PAYOUT_CHAIN_FAILURE",payoutLamports:amount});
+  }
   if(await connection.getBlockHeight("confirmed")>Number(saved.payout_last_valid_block_height)){
-   await store.update({payout_status:"EXPIRED_REVIEW"}).eq("id",q.id)
-     .in("payout_status",["SIGNED","PENDING"]);
+   await store.update({payout_status:"EXPIRED_REVIEW",
+      delivery_checked_at:new Date().toISOString(),
+      delivery_last_status:"EXPIRED_REVIEW",delivery_last_error:"EGG_PAYOUT_EXPIRED"})
+      .eq("id",q.id).in("payout_status",["SIGNED","PENDING"]);
    return response({status:"EXPIRED_REVIEW",signature:payoutSig});
   }
   try{
@@ -260,8 +290,11 @@ Deno.serve(async(req:Request)=>{
    const sent=await connection.sendRawTransaction(raw,{skipPreflight:false,maxRetries:3});
    if(sent!==payoutSig)throw Error("EGG_SIGNATURE_MISMATCH");
   }catch(e){console.warn("[egg-stake] broadcast:",String(e));}
-  await store.update({payout_status:"PENDING"}).eq("id",q.id).eq("payout_status","SIGNED");
-  return response({status:"PENDING",signature:payoutSig,payoutLamports:amount});
+  await store.update({payout_status:"PENDING",
+    delivery_checked_at:new Date().toISOString(),delivery_last_status:"PENDING",
+    delivery_last_error:null}).eq("id",q.id).eq("payout_status","SIGNED");
+  return response({status:"PENDING",signature:payoutSig,
+    payoutLamports:amount,amountSol:amount/1e9});
  }catch(e){
   const code=e instanceof Error?e.message:"UNKNOWN";
   console.error("[egg-stake]",code);
