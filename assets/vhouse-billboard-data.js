@@ -287,14 +287,8 @@
     const result=await nftRpc("getAccountInfo",[holder.address,parsedAccount]);
     return result?.value?.data?.parsed?.info?.owner??null;
   }
-  async function readNftMintDate(mint,receipt){
+  async function readNftMintDate(mint){
     const txOptions={...parsedAccount,maxSupportedTransactionVersion:0};
-    if(receipt?.transaction_signature){
-      try{
-        const tx=await nftRpc("getTransaction",[receipt.transaction_signature,txOptions]);
-        if(tx?.meta?.err===null&&typeof tx.blockTime==="number")return tx.blockTime;
-      }catch(error){console.warn("[VHouse Billboard] Mint transaction",error);}
-    }
     let before,oldest;
     do{
       const signatures=await nftRpc("getSignaturesForAddress",[mint,{
@@ -309,7 +303,7 @@
     const tx=await nftRpc("getTransaction",[oldest.signature,txOptions]);
     return tx?.meta?.err===null?tx.blockTime:null;
   }
-  async function readNftDetails(root,mint,receiptPromise,display){
+  async function readNftDetails(root,mint){
     const result=await nftRpc("getAccountInfo",[mint,parsedAccount]);
     const account=result?.value;
     const info=account?.data?.parsed?.info;
@@ -318,21 +312,21 @@
     const extension=name=>extensions.find(e=>e.extension===name);
     const metadata=extension("tokenMetadata")?.state||{};
     const close=extension("mintCloseAuthority")?.state||{};
-    display("mintAddress",mint);
-    display("nftName",metadata.name);
-    display("nftSymbol",metadata.symbol);
-    display("tokenStandard",account.data.program==="spl-token-2022"?"Token-2022":
+    field(root,"mintAddress",mint);
+    field(root,"nftName",metadata.name);
+    field(root,"nftSymbol",metadata.symbol);
+    field(root,"tokenStandard",account.data.program==="spl-token-2022"?"Token-2022":
       account.data.program==="spl-token"?"SPL Token":account.data.program);
-    display("soulbound",extension("nonTransferable")?"YES":"NO");
-    display("updateAuthority",metadata.updateAuthority);
-    display("closeAuthority",close.closeAuthority??close.authority);
-    display("metadataUri",metadata.uri);
+    field(root,"soulbound",extension("nonTransferable")?"YES":"NO");
+    field(root,"updateAuthority",metadata.updateAuthority);
+    field(root,"closeAuthority",close.closeAuthority??close.authority);
+    field(root,"metadataUri",metadata.uri);
     await Promise.all([
       readNftOwner(mint).then(owner=>{
-        display("ownerWallet",owner);
+        field(root,"ownerWallet",owner);
       }).catch(error=>console.error("[VHouse Billboard] NFT owner",error)),
-      Promise.resolve(receiptPromise).then(receipt=>readNftMintDate(mint,receipt)).then(date=>{
-        display("mintDate",when(date));
+      readNftMintDate(mint).then(date=>{
+        field(root,"mintDate",when(date));
       }).catch(error=>console.error("[VHouse Billboard] NFT mint date",error))
     ]);
   }
@@ -486,22 +480,8 @@
             view.row=data;renderVHouse(root,card,data);renderHistory(root,view);
           }catch(error){if(isCurrent())console.error("[VHouse Billboard] VCard List",error);}
         })();
-        const displayNft=(id,value)=>{
-          if(active&&displayedCard===key)field(root,id,value);
-        };
-        const mint=card.mint_address;
-        // The active card already contains its mint address; start the RPC immediately.
-        // Only use the database record to recover an address not present in the card snapshot.
-        const nftRead=(address,receipt)=>readNftDetails(root,address,receipt,displayNft)
+        void readNftDetails(root,card.mint_address)
           .catch(error=>console.error("[VHouse Billboard] NFT DETAILS",error));
-        if(mint){
-          void nftRead(mint,rowRead.then(()=>view.row?.mint_receipt));
-        }else{
-          void rowRead.then(()=>{
-            const address=view.row?.mint_address??view.row?.mint_receipt?.mint_address;
-            if(address)void nftRead(address,view.row?.mint_receipt);
-          });
-        }
         const activityRead=async(table,column,key)=>{
           try{
             const {data,error}=await client.from(table)
