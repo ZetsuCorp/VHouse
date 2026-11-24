@@ -198,6 +198,7 @@
   function renderActiveVCard(root, card) {
     const host = root.querySelector("#vcardImage");
     if (!host) return;
+    host.dataset.cardId = String(card.id);
     let preview = host.querySelector(":scope > .vhouse-vcard-host");
     if (!preview) {
       preview = document.createElement("div");
@@ -207,6 +208,34 @@
       host.replaceChildren(preview);
     }
     window.VHouseVCard.render(preview, card);
+  }
+  async function loadMintedVCardImage(root, card, client, isCurrent) {
+    // Same full minted PNG source as the Closet VCard Record.
+    if (!client || card.external || !card.id) return;
+    try {
+      const {data,error}=await client.from("vcard_list")
+        .select("mint_receipt").eq("card_id",String(card.id)).maybeSingle();
+      if(error)throw error;
+      if(!isCurrent())return;
+      const uri=data?.mint_receipt?.image_uri;
+      if(typeof uri!=="string")return;
+      const url=uri.startsWith("ipfs://")
+        ?"https://gateway.pinata.cloud/ipfs/"+uri.slice(7).replace(/^ipfs\//,""):uri;
+      if(!/^https?:\/\//i.test(url))return;
+      const nftImage=new Image();
+      nftImage.alt=(card.name||"VCard")+" full NFT";
+      nftImage.referrerPolicy="no-referrer";
+      nftImage.className="minted-vcard-image";
+      nftImage.onload=()=>{
+        if(!isCurrent())return;
+        const host=root.querySelector("#vcardImage");
+        if(host?.dataset.cardId===String(card.id))host.replaceChildren(nftImage);
+      };
+      nftImage.onerror=()=>console.warn("Minted VCard PNG unavailable; showing VCard preview.");
+      nftImage.src=url;
+    }catch(error){
+      console.warn("Could not load minted VCard PNG; showing VCard preview.",error);
+    }
   }
   function render(root, result) {
     const card = result?.vhouse?.card;
@@ -285,7 +314,8 @@
       "ipfsImage","nftDescription",
     ];
     names.forEach(id => field(root,id,null));
-    root.querySelector("#vcardImage")?.replaceChildren();
+    const imageHost=root.querySelector("#vcardImage");
+    if(imageHost){delete imageHost.dataset.cardId;imageHost.replaceChildren();}
     root.querySelectorAll(".vhouse-growth-series,.vhouse-growth-point").forEach(path=>path.remove());
     setActivity(root,[]);
   }
@@ -366,7 +396,9 @@
         if(!active||ticket!==sequence)return;
         billboardNotice(root,null);
         renderActiveVCard(root,card);
-        const {data,error}=await api.getClient().functions.invoke("vcard-market-data",{
+        const client=api.getClient();
+        void loadMintedVCardImage(root,card,client,()=>active&&ticket===sequence&&store.getActive()?.id===card.id);
+        const {data,error}=await client.functions.invoke("vcard-market-data",{
           body:{cardId:card.id}
         });
         if(!active||ticket!==sequence)return;
