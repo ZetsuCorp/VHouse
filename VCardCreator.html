@@ -345,7 +345,7 @@ button:disabled{opacity:.5;cursor:default}
       <img class="creation-menu-messenger" src="assets/Messengertalk.png" alt="VHouse Messenger speaking" draggable="false">
       <div class="creation-menu-message">
         <img src="assets/Message Frame.png" alt="" draggable="false">
-        <p>Choose how to create a VCard.</p>
+        <p>Choose a VCard action.</p>
       </div>
     </div>
     <div class="creation-menu-options">
@@ -355,10 +355,14 @@ button:disabled{opacity:.5;cursor:default}
       <button class="choice-bubble" id="chooseLoadButton" type="button" disabled>
         <span class="bubble-symbol">◇</span><span>LOAD NFT</span>
       </button>
+      <button class="choice-bubble" id="chooseUpgradeButton" type="button" disabled>
+        <span class="bubble-symbol">↻</span><span>UPGRADE VCARD</span>
+      </button>
       <button class="choice-bubble" id="chooseBurnButton" type="button" disabled>
         <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
       </button>
     </div>
+    <div id="upgradeEntryStatus" class="status" role="status" aria-live="polite" hidden></div>
   </section>
 
   <section class="mint-intro" id="mintIntroPanel" aria-label="Introduction to minting VCards" hidden>
@@ -438,7 +442,7 @@ button:disabled{opacity:.5;cursor:default}
         <li><strong>PAY SERVICE FEE</strong> — $3 worth of SOL transfers from your Phantom wallet to the VHouse treasury.</li>
         <li><strong>BURN NFT</strong> — BURN only destroys the new Token-2022 VCard created by VHouse.</li>
         <li><strong>CLOSE TOKEN ACCOUNT</strong> — The SOL remaining in the NFT's token account returns to your Phantom wallet.</li>
-        <li><strong>CLOSE MINT ACCOUNT</strong> — The SOL stored in the NFT's mint account, including recoverable deposits from UPDATE/CUSTOMIZE, returns to your Phantom wallet.</li>
+        <li><strong>CLOSE MINT ACCOUNT</strong> — The SOL stored in the NFT's mint account, including recoverable deposits from UPGRADE/CUSTOMIZE, returns to your Phantom wallet.</li>
         <li><strong>TRANSACTION COMPLETES</strong> — The wallet's net balance reflects the service fee, recovered SOL, and network fee.</li>
       </ol>
     </div>
@@ -448,7 +452,7 @@ button:disabled{opacity:.5;cursor:default}
     <section class="editor" id="editor">
       <div class="editor-head">
         <span id="editorTitle">VCARD CREATION</span>
-        <small>LEVEL 01</small>
+        <small id="editorLevel">LEVEL 01</small>
       </div>
 
       <div class="group">
@@ -574,9 +578,9 @@ button:disabled{opacity:.5;cursor:default}
         </div>
       </div>
       <div class="post-mint" id="postMint" hidden>
-        <h2>EXISTING VCARD — UPDATE / CUSTOMIZE</h2>
+        <h2>EXISTING VCARD — UPGRADE / CUSTOMIZE</h2>
         <div class="mode-row">
-          <button class="mode-button" id="updateModeButton">UPDATE · <span class="tag-fee">$0.75</span></button>
+          <button class="mode-button" id="updateModeButton">UPGRADE · <span class="tag-fee">$0.75</span></button>
           <button class="mode-button" id="customModeButton">CUSTOMIZE · <span class="tag-fee">$0.75</span></button>
         </div>
         <div class="effect-grid" id="effectGrid" hidden>
@@ -585,8 +589,8 @@ button:disabled{opacity:.5;cursor:default}
           <button class="effect-button" data-effect="holo">HOLO</button>
           <button class="effect-button" data-effect="ember">EMBER</button>
         </div>
-        <div class="post-mint-note" id="operationNote">Select UPDATE to edit name and description, or CUSTOMIZE to apply a card effect. USD price is converted to SOL when submitted; <span class="tag-fee">$0.50</span> goes to VHouse and <span class="tag-balance">$0.25</span> to this NFT.</div>
-        <button class="action" id="applyButton" hidden>CONFIRM UPDATE</button>
+        <div class="post-mint-note" id="operationNote">Select UPGRADE to edit name and description, or CUSTOMIZE to apply a card effect. USD price is converted to SOL when submitted; <span class="tag-fee">$0.50</span> goes to VHouse and <span class="tag-balance">$0.25</span> to this NFT.</div>
+        <button class="action" id="applyButton" hidden>CONFIRM UPGRADE</button>
       </div>
       <div class="status" id="status">
         Mint creation fee: <span class="tag-fee">0.001 SOL</span> paid to VHouse.
@@ -720,7 +724,7 @@ function showConnectedWallet(publicKey) {
   $("walletHeader").hidden = !connected;
   $("walletHeaderAddress").textContent = text;
   $("connectWalletButton").textContent = connected ? "WALLET CONNECTED" : "CONNECT WALLET";
-  for (const id of ["chooseMintButton","chooseLoadButton","chooseBurnButton"]) {
+  for (const id of ["chooseMintButton","chooseLoadButton","chooseUpgradeButton","chooseBurnButton"]) {
     $(id).disabled = !connected;
   }
 }
@@ -921,6 +925,7 @@ const state = {
 let busy = false;
 let job = null;
 let minted = false;
+let upgrading = false;
 let loadedSource = null; // Verified outside NFT awaiting conversion to a new VCard mint.
 let editMode = null;
 let pendingOperation = null;
@@ -933,14 +938,17 @@ function showScreen(screen) {
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
   $("workspaceBackButton").hidden = screen !== "workspace";
+  if (screen === "menu") $("upgradeEntryStatus").hidden = true;
   const loadingVCard = screen === "workspace" && !!loadedSource && !minted;
   $("workspace").classList.toggle("load-setup",loadingVCard);
-  $("editorTitle").textContent = loadingVCard ? "LOAD NFT — CHOOSE TEAM" : "VCARD CREATION";
+  $("editorTitle").textContent = loadingVCard ? "LOAD NFT — CHOOSE TEAM" : upgrading && screen === "workspace" ? "UPGRADE VCARD" : "VCARD CREATION";
+  $("editorLevel").textContent = "LEVEL " + String(upgrading && job?.data ? job.data.level : 1).padStart(2,"0");
 }
 
 function resetForMint() {
   job = null;
   minted = false;
+  upgrading = false;
   loadedSource = null;
   editMode = null;
   pendingOperation = null;
@@ -956,6 +964,8 @@ function resetForMint() {
   paintMoney($("mintButton"),"MINT · 0.001 SOL",true);
   $("editorActions").hidden = false;
   $("postMint").hidden = true;
+  $("updateModeButton").classList.remove("active");
+  $("customModeButton").classList.remove("active");
   $("effectGrid").hidden = true;
   $("applyButton").hidden = true;
   $("mintPending").hidden = false;
@@ -985,6 +995,7 @@ function resetForMint() {
 }
 
 $("chooseMintButton").onclick = () => {
+  if (busy) return;
   if (pendingOperation?.signature || (job?.signature && !minted)) {
     showScreen("workspace");
     message("A submitted transaction must be verified before starting another VCard.");
@@ -998,11 +1009,12 @@ $("mintIntroContinueButton").onclick = () => {
   showScreen("workspace");
 };
 $("chooseLoadButton").onclick = () => {
+  if (busy) return;
   $("connectedWalletInfo").hidden = true;
   showScreen("load");
 };
 $("loadBackButton").onclick = () => showScreen("menu");
-$("chooseBurnButton").onclick = () => showScreen("burn");
+$("chooseBurnButton").onclick = () => { if (!busy) showScreen("burn"); };
 $("burnBackButton").onclick = () => showScreen("menu");
 $("workspaceBackButton").onclick = () => showScreen("menu");
 
@@ -1015,7 +1027,7 @@ function paintMoney(element,text,feeByDefault = false) {
     element.append(document.createTextNode(message.slice(from,found.index)));
     const context = message.slice(Math.max(0,found.index-70),found.index);
     const span = document.createElement("span");
-    span.className = feeByDefault || /(?:fee|charge|confirm update|confirm customize|VHouse received|TOTAL TO PAY)[^.!|]*$/i.test(context)
+    span.className = feeByDefault || /(?:fee|charge|confirm upgrade|confirm customize|VHouse received|TOTAL TO PAY)[^.!|]*$/i.test(context)
       ? "tag-fee" : "tag-balance";
     span.textContent = found[0];
     element.append(span);
@@ -1045,10 +1057,11 @@ function lock(value) {
   });
   $("applyButton").disabled = value;
   $("loadMintButton").disabled = value;
+  $("chooseUpgradeButton").disabled = value || !(window.phantom?.solana || window.solana)?.isConnected;
   // Positioning is available as soon as an NFT image is loaded;
   // an UPDATE or CUSTOMIZE selection is not required to crop locally.
   const canPosition = !value && !pendingOperation &&
-    (!job || (minted && job.loaded));
+    (!job || (minted && job.loaded && (!upgrading || !!editMode)));
   $("positionImageButton").disabled = !canPosition;
 }
 
@@ -1194,9 +1207,9 @@ function cardData() {
     description:limitedDescription(state.mode === "default"
       ? baseDescription
       : $("descriptionInput").value),
-    level:1,
-    atk:100,
-    def:100,
+    level:upgrading && job?.data ? job.data.level : 1,
+    atk:upgrading && job?.data ? job.data.atk : 100,
+    def:upgrading && job?.data ? job.data.def : 100,
     price:NFT_PRICE_SOL,
     effect:state.effect || "none",
     imageMode:state.image ? "custom" : "preset",
@@ -1285,7 +1298,7 @@ let cropPointer = null;
 
 function mayPositionImage() {
   return !busy && !pendingOperation && !cropOpening &&
-    (!job || (minted && job.loaded));
+    (!job || (minted && job.loaded && (!upgrading || !!editMode)));
 }
 
 function cropGeometry() {
@@ -2774,6 +2787,8 @@ $("mintButton").onclick = async () => {
 
 /* UPDATE and CUSTOMIZE existing VCards: same mint, new IPFS metadata. */
 
+function editLabel(mode) { return mode === "update" ? "UPGRADE" : "CUSTOMIZE"; }
+
 function showPostMintUI() {
   $("postMint").hidden = false;
   $("editorActions").hidden = true;
@@ -2808,7 +2823,7 @@ function setEditMode(mode) {
     );
   }
   if (job?.standard === "mpl-core") {
-    message("Metaplex Core ownership verified. Its UPDATE/CUSTOMIZE transaction requires the Core program; Token-2022 instructions cannot edit it.");
+    message("Metaplex Core ownership verified. Its UPGRADE/CUSTOMIZE transaction requires the Core program; Token-2022 instructions cannot edit it.");
     return;
   }
   if (job?.updateAuthorized === false) {
@@ -2824,9 +2839,9 @@ function setEditMode(mode) {
   $("customModeButton").classList.toggle("active",mode === "customize");
   $("effectGrid").hidden = mode !== "customize";
   $("applyButton").hidden = false;
-  paintMoney($("applyButton"),mode === "update" ? "CONFIRM UPDATE · $0.75" : "CONFIRM CUSTOMIZE · $0.75",true);
+  paintMoney($("applyButton"),mode === "update" ? "CONFIRM UPGRADE · $0.75" : "CONFIRM CUSTOMIZE · $0.75",true);
   $("operationNote").textContent = mode === "update"
-    ? "Edit team, name, image or description above, then confirm the paid UPDATE."
+    ? "Edit team, name, image or description above, then confirm the paid UPGRADE."
     : "Select a visual effect below, then confirm the paid CUSTOMIZE.";
   lock(false);
 }
@@ -2951,7 +2966,7 @@ async function submitEditTransaction(phantom,owner,update) {
   if (tx.serialize({requireAllSignatures:false,verifySignatures:false}).length > 1232) {
     throw Error("Update transaction exceeds Solana size limit; no payment sent.");
   }
-  message(`Approve ${update.mode.toUpperCase()}: $${EDIT_PRICE_USD.toFixed(2)} (~${(update.quote.total/1e9).toFixed(6)} SOL) plus network fees and any rent top-up.`);
+  message(`Approve ${editLabel(update.mode)}: $${EDIT_PRICE_USD.toFixed(2)} (~${(update.quote.total/1e9).toFixed(6)} SOL) plus network fees and any rent top-up.`);
   const response = await phantom.signAndSendTransaction(tx,{skipPreflight:false});
   update.signature = typeof response === "string" ? response : response?.signature;
   if (!update.signature) throw Error("Phantom returned no update transaction signature.");
@@ -2980,7 +2995,7 @@ async function findEditReceipt(signature) {
       });
       const status = statuses.value[0];
       if (status?.err) {
-        throw Error("CUSTOMIZE/UPDATE failed on Solana: " + JSON.stringify(status.err));
+        throw Error("CUSTOMIZE/UPGRADE failed on Solana: " + JSON.stringify(status.err));
       }
       if (status?.confirmationStatus === "confirmed" ||
           status?.confirmationStatus === "finalized") confirmed = true;
@@ -3069,7 +3084,7 @@ async function finishEdit(update) {
   $("customModeButton").classList.remove("active");
   $("effectGrid").hidden = true;
   $("applyButton").hidden = true;
-  message("VCard " + update.mode.toUpperCase() + " verified on Solana. Click the VCard to flip and view its updated receipt.");
+  message("VCard " + editLabel(update.mode) + " verified on Solana. Click the VCard to flip and view its updated receipt.");
   lock(false);
   refresh();
   window.dispatchEvent(new CustomEvent("vhouse:vcard-updated",{
@@ -3123,7 +3138,7 @@ $("applyButton").onclick = async () => {
     };
     pendingOperation = update;
     await submitEditTransaction(phantom,owner,update);
-    $("applyButton").textContent = "CHECK " + editMode.toUpperCase();
+    $("applyButton").textContent = "CHECK " + editLabel(editMode);
     for (let i=0;i<15;i++) {
       if (await verifyEditTransaction(owner,update)) {
         await finishEdit(update);
@@ -3145,7 +3160,7 @@ $("applyButton").onclick = async () => {
         if (failure) {
           pendingOperation = null;
           paintMoney($("applyButton"),editMode === "update"
-            ? "CONFIRM UPDATE · $0.75" : "CONFIRM CUSTOMIZE · $0.75",true);
+            ? "CONFIRM UPGRADE · $0.75" : "CONFIRM CUSTOMIZE · $0.75",true);
         }
       } catch (_) {}
     }
@@ -3348,6 +3363,104 @@ $("loadMintButton").onclick = async () => {
   }
 };
 
+
+
+/* UPGRADE: open the already-minted Active VCard without starting a mint. */
+$("chooseUpgradeButton").onclick = async () => {
+  if (busy) return;
+  if (pendingOperation?.signature || (job?.signature && !minted)) {
+    showScreen("workspace");
+    message("A submitted transaction must be verified before opening another VCard.");
+    return;
+  }
+  const status = $("upgradeEntryStatus");
+  status.hidden = false;
+  status.textContent = "LOADING ACTIVE VCARD...";
+  lock(true);
+  try {
+    await requireVHousePlayer();
+    await window.VHouseCardStore.ready();
+    const card = window.VHouseCardStore.getActive();
+    if (!card?.mint_address) throw Error("Select a minted Active VCard in the Closet.");
+    const phantom = window.phantom?.solana || window.solana;
+    if (!phantom?.isPhantom || !phantom.isConnected || !phantom.publicKey)
+      throw Error("Connect Phantom first.");
+    const owner = phantom.publicKey;
+    await requireLinkedMintWallet(owner);
+    const mint = new PublicKey(card.mint_address);
+    const chain = await getRpc();
+    const [mintData,meta,held] = await Promise.all([
+      getMint(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID),
+      getTokenMetadata(chain,mint,"confirmed",TOKEN_2022_PROGRAM_ID),
+      findOwnedNFTTokenAccount(chain,mint,owner)
+    ]);
+    if (mintData.decimals !== 0 || mintData.supply !== 1n || !meta?.mint?.equals(mint))
+      throw Error("Active VCard does not have readable Token-2022 NFT metadata.");
+    if (!meta.updateAuthority?.equals(owner))
+      throw Error("Connected wallet is not the VCard metadata update authority.");
+    const json = await ipfsJSON(meta.uri);
+    const v = json?.properties?.vhouse || {};
+    const fields = new Map(meta.additionalMetadata || []);
+    const attribute = key => json?.attributes?.find(a => String(a?.trait_type).toLowerCase() === key.toLowerCase())?.value;
+    const team = ({STONE:"R",WIND:"P",BLADE:"S"})[String(fields.get("Team") || attribute("Team") || "").toUpperCase()] || v.team || card.team;
+    if (!teams[team]) throw Error("Active VCard team is unavailable.");
+    const stat = (key, fallback) => {
+      const value = Number(fields.get(key) ?? attribute(key) ?? fallback);
+      if (!Number.isFinite(value) || value < 0) throw Error("Active VCard " + key + " is unavailable.");
+      return value;
+    };
+    const level = stat("Level",v.level ?? card.level);
+    const atk = stat("ATK",v.atk ?? card.atk);
+    const def = stat("DEF",v.def ?? card.def);
+    const artIndex = [0,1,2].includes(v.artIndex) ? v.artIndex : 0;
+    let source = null, sourceURI = null;
+    if (v.imageMode !== "preset") {
+      sourceURI = v.sourceImage || null;
+      if (sourceURI) source = await imageDataFromIPFS(sourceURI);
+      else if (card.image && card.image !== json.image && card.image !== assetURL(json.image)) {
+        source = card.image.startsWith("data:image/") ? card.image : await imageDataFromIPFS(card.image);
+      } else throw Error("Active VCard source artwork is unavailable.");
+    }
+    if (window.VHouseCardStore.getActive()?.id !== card.id ||
+        !phantom.publicKey?.equals(owner)) throw Error("Active VCard or wallet changed. Open UPGRADE again.");
+    resetForMint();
+    lock(true);
+    state.team = team;
+    state.art = artIndex;
+    state.image = source;
+    state.effect = String(fields.get("Effect") || attribute("Effect") || v.effect || "none").toLowerCase();
+    state.mode = "custom";
+    $("nameInput").value = cardDisplayName(meta.name);
+    $("descriptionInput").value = limitedDescription(json.description || "");
+    $("descriptionInput").hidden = false;
+    $("defaultText").hidden = true;
+    document.querySelectorAll(".team-button").forEach(b => b.classList.toggle("active",b.dataset.team === team));
+    document.querySelectorAll(".art-button").forEach(b => b.classList.toggle("selected",!source && Number(b.dataset.art) === artIndex));
+    document.querySelectorAll(".mode-button[data-mode]").forEach(b => b.classList.toggle("active",b.dataset.mode === "custom"));
+    document.querySelectorAll(".effect-button").forEach(b => b.classList.toggle("active",b.dataset.effect === state.effect));
+    job = {
+      data:{...cardData(),level,atk,def},
+      mint:{publicKey:mint},owner:owner.toBase58(),tokenAccount:held.address,
+      uri:meta.uri,imageURI:json.image,sourceImageURI:sourceURI,originalMetadata:json,
+      chainName:meta.name,symbol:meta.symbol,soulbound:getNonTransferable(mintData)!==null,
+      loaded:true,standard:"token-2022",updateAuthorized:true,signature:null,registered:true
+    };
+    upgrading = true;
+    minted = true;
+    receiptLink("receiptMint","mintPending","mintDetail",mintURL(),mint.toBase58());
+    showIPFSResult(job.imageURI,job.uri);
+    $("operationNote").textContent = "Select UPGRADE to edit team, name, image or description, or CUSTOMIZE to apply a card effect. Each costs $0.75: $0.50 to VHouse and $0.25 to this NFT.";
+    showPostMintUI();
+    showScreen("workspace");
+    refresh();
+    message("Active VCard loaded. Select UPGRADE or CUSTOMIZE.");
+  } catch (error) {
+    console.error("Active VCard upgrade:",error);
+    status.textContent = "UPGRADE: " + shortError(error);
+  } finally {
+    lock(false);
+  }
+};
 
 /* BURN: reuse LOAD's Phantom wallet and Token-2022 ownership lookup.
    One Phantom signature includes the service fee, burn, and both closures. */
