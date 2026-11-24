@@ -445,7 +445,7 @@
         };
         void activityRead("vcard_verification_chain","card_id","checks");
         void activityRead("vhouse_chain","item","events");
-        void (async()=>{
+        const marketRead=(async()=>{
           try{
             const {data,error}=await client.functions.invoke("vcard-market-data",{body:{cardId:card.id}});
             if(!isCurrent())return;
@@ -467,7 +467,7 @@
           renderActiveVCard(root,card);
           void loadMintedVCardImage(root,card,client,isCurrent);
         }catch(error){console.error("[VHouse Billboard] VCard image",error);}
-        await rowRead;
+        await Promise.all([rowRead,marketRead]);
       }catch(error){
         if(!active||ticket!==sequence)return;
         console.error("[VHouse Billboard]",error);
