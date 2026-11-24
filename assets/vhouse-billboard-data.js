@@ -319,8 +319,6 @@
     if (activity.status === "ON_RAID" || activity.status === "ON_JOURNEY")
       return name + " is currently on a " + (raid ? "Raid" : "Journey") +
         ". Please wait until it is complete.";
-    if (!card.mint_address || card.external)
-      return name + " is not a VHouse-minted NFT.";
     return null;
   }
   async function mount(root) {
