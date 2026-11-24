@@ -54,11 +54,11 @@
     const sol=balances.map(b=>({t:Date.parse(b.time),lamports:b.lamports}))
       .filter(b=>Number.isFinite(b.t)&&Number.isSafeInteger(b.lamports)&&b.lamports>=0)
       .sort((a,b)=>a.t-b.t);
-    const game=gameEvents.filter(e=>Number.isFinite(Date.parse(e.checked_at)))
-      .map((e,i)=>({t:Date.parse(e.checked_at),value:i+1}))
+    const game=gameEvents.map(e=>({t:Date.parse(e.time),value:e.value}))
+      .filter(e=>Number.isFinite(e.t)&&Number.isInteger(e.value)&&e.value>=0)
       .sort((a,b)=>a.t-b.t);
     if(!sol.length&&!game.length){
-      if(status)status.textContent=healthy?"AWAITING FIRST RECORDED BALANCE":"BALANCE DATA UNAVAILABLE";
+      if(status)status.textContent=healthy==="LOADING"?"LOADING SOL DATA":"NO RECORDED GROWTH DATA";
       return;
     }
     const allTimes=[...sol.map(b=>b.t),...game.map(e=>e.t)];
@@ -93,11 +93,11 @@
       [[left,minT,"start"],[(left+right)/2,(minT+maxT)/2,"middle"],[right,maxT,"end"]];
     for(const [pos,t,anchor] of times)label(pos,84,time(t),"#a9b9c4",anchor);
     const solPoints=sol.map(b=>({x:x(b.t),y:ySol(b.lamports)}));
-    const gameValues=game.map((e,i)=>({x:x(e.t),y:game.length===1?41:
-      bottom-i/(game.length-1)*(bottom-top)}));
+    const maxEdits=Math.max(1,...game.map(e=>e.value));
+    const gameValues=game.map(e=>({x:x(e.t),y:bottom-e.value/maxEdits*(bottom-top),value:e.value,t:e.t}));
     const series=[
       {key:"SOL",points:solPoints,color:"#4bea9b"},
-      {key:"VHouse",points:gameValues,color:"#f5c97c"}
+      {key:"VHouse edits",points:gameValues,color:"#f5c97c"}
     ].filter(s=>s.points.length);
     const paths=series.map(s=>({
       ...s,path:make("path",{fill:"none",stroke:s.color,"stroke-width":2.2,
@@ -152,8 +152,13 @@
       }
     }
     for(const p of gameValues){
-      make("circle",{class:"vhouse-growth-point",cx:p.x,cy:p.y,r:2.1,
+      const point=make("circle",{class:"vhouse-growth-point",cx:p.x,cy:p.y,r:2.1,
         fill:"#f5c97c",stroke:"#171321","stroke-width":0.7});
+      make("title",{},p.value+" recorded paid edits | "+new Date(p.t).toLocaleString(),point);
+    }
+    if(gameValues.length){
+      const p=gameValues[gameValues.length-1];
+      label(p.x>right-45?p.x-4:p.x+4,p.y<30?p.y+11:p.y-7,p.value+" edits","#f5c97c",p.x>right-45?"end":"start");
     }
     const next={series:Object.fromEntries(series.map(s=>[s.key,s.points])),frame:0};
     plotState.set(root,next);
@@ -168,7 +173,7 @@
       next.frame=requestAnimationFrame(tick);
     }else draw(1);
     if(status){
-      status.textContent=series.map(s=>s.key).join(" + ")+(healthy?" · VERIFIED":" · LAST READ UNAVAILABLE");
+      status.textContent=series.map(s=>s.key).join(" + ")+(healthy==="VERIFIED"?"":healthy==="LOADING"?" · SOL LOADING":" · SOL UNAVAILABLE");
       status.style.inset="0px 4px auto auto";
       status.style.display="block";
       status.style.pointerEvents="none";
@@ -237,73 +242,89 @@
       console.warn("Could not load minted VCard PNG; showing VCard preview.",error);
     }
   }
-  function render(root, result) {
-    const card = result?.vhouse?.card;
-    if (!card) return;
-    const chain = result.chain || {};
-    const loaded = {...(chain.loaded || {}), ...Object.fromEntries(Object.entries(result.image || {}).filter(([,v])=>v!==null && v!==undefined))};
-    const traits = Array.isArray(loaded.attributes) ? loaded.attributes : [];
-    const vchecks = result.vhouse?.verification || [];
-    const game = result.vhouse?.events || [];
-    const snapshots = chain.snapshots || [];
-    field(root,"vcardId",card.card_id);
-    field(root,"nftName",text(loaded.nftName) || card.name);
+  const safeUri=value=>typeof value==="string"&&/^(https?:\/\/|ipfs:\/\/)/i.test(value)?value:null;
+  function showStat(root,id,value,bonus){
+    field(root,id,value);
+    const el=root.querySelector('[id="'+id+'"]'),amount=Number(bonus);
+    if(el&&Number.isFinite(amount)&&amount>0){
+      const extra=document.createElement("span");
+      extra.style.color="#f3c66f";extra.style.fontSize="0.8em";
+      extra.textContent=" +"+amount.toLocaleString(undefined,{maximumFractionDigits:1});
+      extra.title="Amalie bonus";el.append(extra);
+    }
+  }
+  function renderVHouse(root,card,row){
+    field(root,"vcardId",card.id);
+    field(root,"nftName",row?.name??card.name);
+    field(root,"mintAddress",row?.mint_address??card.mint_address??row?.mint_receipt?.mint_address);
+    field(root,"nftDescription",row?.description??card.description);
+    field(root,"team",row?.designation??card.team);
+    field(root,"level",row?.level??card.level);
+    const current=window.VHouseCardStore?.getActive?.()||card;
+    showStat(root,"atk",current.atk,current.amalieBonusAtk);
+    showStat(root,"def",current.def,current.amalieBonusDef);
+    field(root,"updates",dataNumber(row?.updates));
+    field(root,"customizations",dataNumber(row?.customizations));
+    const receipt=row?.mint_receipt||{};
+    if(safeUri(receipt.metadata_uri))field(root,"metadataUri",receipt.metadata_uri);
+    if(safeUri(receipt.image_uri))field(root,"ipfsImage",receipt.image_uri);
+  }
+  function renderBlockchain(root,result){
+    const chain=result?.chain||{};
+    const loaded={...(chain.loaded||{}),...Object.fromEntries(Object.entries(result?.image||{}).filter(([,v])=>v!==null&&v!==undefined))};
+    const traits=Array.isArray(loaded.attributes)?loaded.attributes:[];
     field(root,"nftSymbol",text(loaded.symbol));
-    field(root,"mintAddress",card.mint_address);
     field(root,"ownerWallet",chain.currentOwner);
-    // Never use the VHouse row's created_at as a substitute for NFT mint time.
     field(root,"mintDate",when(chain.mintedAt));
     field(root,"tokenStandard",loaded.tokenStandard);
-    field(root,"soulbound",loaded.soulbound == null ? null : loaded.soulbound ? "YES":"NO");
+    field(root,"soulbound",loaded.soulbound==null?null:loaded.soulbound?"YES":"NO");
     field(root,"updateAuthority",loaded.updateAuthority);
     field(root,"closeAuthority",loaded.closeAuthority);
-    field(root,"metadataUri",loaded.metadataUri);
-    field(root,"ipfsImage",loaded.imageUri);
-    field(root,"nftDescription",text(loaded.description) || card.description);
-    field(root,"team",traitValue(traits,"Team") || card.designation);
-    field(root,"level",traitValue(traits,"Level") ?? card.level);
-    field(root,"atk",traitValue(traits,"ATK") ?? card.atk);
-    field(root,"def",traitValue(traits,"DEF") ?? card.def);
-    field(root,"effect",traitValue(traits,"Effect") || "NONE");
-    const price=traitValue(traits,"Mint Price (SOL)") ?? traitValue(traits,"Mint Price");
-    field(root,"mintPrice",price === null ? null :
-      String(price).toUpperCase().includes("SOL") ? price : price+" SOL");
-    const initial=typeof chain.initialMintLamports==="number" ? chain.initialMintLamports : null;
-    const current=typeof chain.balanceLamports==="number" ? chain.balanceLamports : null;
+    if(safeUri(loaded.metadataUri))field(root,"metadataUri",loaded.metadataUri);
+    if(safeUri(loaded.imageUri))field(root,"ipfsImage",loaded.imageUri);
+    field(root,"effect",traitValue(traits,"Effect"));
+    const price=traitValue(traits,"Mint Price (SOL)")??traitValue(traits,"Mint Price");
+    field(root,"mintPrice",price===null?null:String(price).toUpperCase().includes("SOL")?price:price+" SOL");
+    const initial=dataNumber(chain.initialMintLamports),current=dataNumber(chain.balanceLamports);
     field(root,"initialMint",fmtSol(initial));
-    field(root,"recoverableSol",loaded.closeAuthority ? fmtSol(current) : null);
-    const observed=snapshots.filter(e=>typeof e.lamports==="number");
-    // These are actual increases between recorded observations; no guessed deposits.
-    const increases=observed.length < 2 ? 0 :
-      observed.slice(1).reduce((sum,e,i)=>sum+Math.max(0,e.lamports-observed[i].lamports),0);
+    field(root,"recoverableSol",loaded.closeAuthority?fmtSol(current):null);
+    const observed=(chain.snapshots||[]).filter(e=>Number.isSafeInteger(e.lamports)&&Number.isFinite(Date.parse(e.time)))
+      .sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
+    const increases=observed.length<2?null:observed.slice(1).reduce((sum,e,i)=>sum+Math.max(0,e.lamports-observed[i].lamports),0);
     field(root,"depositedSol",fmtSol(increases));
-    // VCard List owns paid-edit counters; verification checks are not purchases.
-    field(root,"updates",Number.isInteger(card.updates) ? card.updates : 0);
-    field(root,"customizations",Number.isInteger(card.customizations) ? card.customizations : 0);
-    const baseline=initial ?? (observed.length ? observed[0].lamports : null);
-    const change=baseline!==null && current!==null
-      ? (baseline===0 ? (current===0 ? "0.00%" : null) :
-        ((current-baseline)/baseline*100).toFixed(2)+"%") : null;
-    field(root,"growthPercent",change === null ? null :
-      Number.parseFloat(change) > 0 ? change + " - more than when minted." :
-      Number.parseFloat(change) < 0 ? change + " - less than when minted." :
-      change + " - same as when minted.");
-
-    const events = [
-      ...vchecks.map(e => ({date:when(e.checked_at),ts:Date.parse(e.checked_at),
-        label:"VHOUSE VCARD · " + (e.state || "CHECK"),
-        detail:[e.source, "EX:" + e.ex, "OWN:" + e.own, "USE:" + e.use].join(" · ")})),
-      ...game.map(e => ({date:when(e.checked_at),ts:Date.parse(e.checked_at),
-        label:"VHOUSE · " + (e.state || "CHECK"),
-        detail:[e.item,e.source, "EX:" + e.ex, "OWN:" + e.own, "USE:" + e.use].join(" · ")})),
+    const change=initial!==null&&initial>0&&current!==null?((current-initial)/initial*100).toFixed(2)+"%":null;
+    field(root,"growthPercent",change===null?null:change+(parseFloat(change)>0?" - more than when minted.":parseFloat(change)<0?" - less than when minted.":" - same as when minted."));
+  }
+  function paidEdits(row){
+    const records=Array.isArray(row?.mint_receipt?.verified_edits)?row.mint_receipt.verified_edits:[];
+    const seen=new Set();
+    return records.filter(e=>{
+      if(!e?.signature||seen.has(e.signature)||!["update","customize"].includes(e.mode)||!Number.isFinite(Date.parse(e.confirmed_at)))return false;
+      seen.add(e.signature);return true;
+    }).sort((a,b)=>Date.parse(a.confirmed_at)-Date.parse(b.confirmed_at));
+  }
+  function renderHistory(root,view){
+    const chain=view.chain?.chain||{},snapshots=chain.snapshots||[];
+    const edits=paidEdits(view.row);
+    const points=edits.map((e,i)=>({time:e.confirmed_at,value:i+1}));
+    // Recorded paid edits, not invented monetary valuations.
+    const updates=dataNumber(view.row?.updates),custom=dataNumber(view.row?.customizations);
+    if(updates!==null&&custom!==null&&updates+custom===0&&Number.isFinite(Date.parse(view.row?.created_at)))
+      points.push({time:view.row.created_at,value:0});
+    const events=[
+      ...(view.checks||[]).map(e=>({date:when(e.checked_at),ts:Date.parse(e.checked_at),
+        label:"VHOUSE VCARD · "+(e.state||"CHECK"),detail:[e.source,"EX:"+e.ex,"OWN:"+e.own,"USE:"+e.use].join(" · ")})),
+      ...(view.events||[]).map(e=>({date:when(e.checked_at),ts:Date.parse(e.checked_at),
+        label:"VHOUSE · "+(e.state||"CHECK"),detail:[e.item,e.source,"EX:"+e.ex,"OWN:"+e.own,"USE:"+e.use].join(" · ")})),
+      ...edits.map(e=>({date:when(e.confirmed_at),ts:Date.parse(e.confirmed_at),label:"VHOUSE · "+e.mode.toUpperCase(),detail:e.signature})),
       ...(chain.transactions||[]).map(e=>({date:when(e.time),ts:Date.parse(e.time),label:"SOLANA · TRANSACTION",detail:e.signature})),
-      ...snapshots.map(e=>({date:when(e.time),ts:Date.parse(e.time),
-        label:"SOLANA · VCARD BALANCE",detail:fmtSol(e.lamports)})),
+      ...snapshots.map(e=>({date:when(e.time),ts:Date.parse(e.time),label:"SOLANA · VCARD BALANCE",detail:fmtSol(e.lamports)}))
     ];
     setActivity(root,events);
-    chart(root,snapshots,[...vchecks,...game],current!==null);
-    const chartStatus=root.querySelector("#chartStatus");
-
+    if(!events.length&&view.activityError){
+      const cell=root.querySelector("#activityHistory td");if(cell)cell.textContent="VHOUSE ACTIVITY UNAVAILABLE";
+    }
+    chart(root,snapshots,points,view.chainState);
   }
   function clear(root) {
     const names = [
@@ -316,7 +337,7 @@
     names.forEach(id => field(root,id,null));
     const imageHost=root.querySelector("#vcardImage");
     if(imageHost){delete imageHost.dataset.cardId;imageHost.replaceChildren();}
-    root.querySelectorAll(".vhouse-growth-series,.vhouse-growth-point").forEach(path=>path.remove());
+    root.querySelector("#growthChart svg")?.replaceChildren();
     setActivity(root,[]);
   }
   function billboardNotice(root, message) {
@@ -354,17 +375,8 @@
     menu.toggleAttribute("data-vcard-unavailable", Boolean(message));
     notice.querySelector("#billboardNoticeStatus").textContent = message || "";
   }
-  function unavailableMessage(card, activity) {
-    if (!card) return "No Active VCard. Select a VCard in the Closet.";
-    const name = card.name;
-    const raid = activity.activity === "RAID" || activity.status === "ON_RAID";
-    if (activity.status === "RESULTS_READY")
-      return name + " has completed its " + (raid ? "Raid" : "Journey") +
-        ". Confirm the receipt to view its information.";
-    if (activity.status === "ON_RAID" || activity.status === "ON_JOURNEY")
-      return name + " is currently on a " + (raid ? "Raid" : "Journey") +
-        ". Please wait until it is complete.";
-    return null;
+  function unavailableMessage(card) {
+    return card?null:"No Active VCard. Select a VCard in the Closet.";
   }
   async function mount(root) {
     if(!root)return;
@@ -377,41 +389,83 @@
       if(status)status.textContent="VHOUSE PLAYER DATA UNAVAILABLE";
       return;
     }
+    let displayedCard=null,displayedView=null;
     const load=async()=>{
       const ticket=++sequence;
-      // Keep the prior graph visible between live reads, rather than resetting it.
       try{
         await api.ready;
         await store.ready();
         if(!active||ticket!==sequence)return;
-        const card=store.getActive();
-        const notice = !api.getUser() ? "Sign in to view the Active VCard." :
-          unavailableMessage(card,store.getActiveStatus());
+        const card=store.getActive(),user=api.getUser();
+        const notice=!user?"Sign in to view the Active VCard.":unavailableMessage(card);
         if(notice){
-          clear(root);
-          billboardNotice(root,notice);
-          return;
+          displayedCard=null;displayedView=null;
+          clear(root);billboardNotice(root,notice);return;
         }
-        await prepareVCard(root);
-        if(!active||ticket!==sequence)return;
-        billboardNotice(root,null);
-        renderActiveVCard(root,card);
+        const isCurrent=()=>active&&ticket===sequence&&store.getActive()?.id===card.id&&api.getUser()?.id===user.id;
         const client=api.getClient();
-        void loadMintedVCardImage(root,card,client,()=>active&&ticket===sequence&&store.getActive()?.id===card.id);
-        const {data,error}=await client.functions.invoke("vcard-market-data",{
-          body:{cardId:card.id}
-        });
-        if(!active||ticket!==sequence)return;
-        if(error)throw error;
-        if(data?.error)throw Error(data.error);
-        if(data?.status==="no_active"){
-          clear(root);
-          billboardNotice(root,unavailableMessage(store.getActive(),store.getActiveStatus()) ||
-            "No Active VCard. Select a VCard in the Closet.");
-          return;
-        }
         billboardNotice(root,null);
-        render(root,data);
+        const key=user.id+":"+card.id;
+        const sameCard=displayedCard===key;
+        if(!sameCard){
+          for(const id of ["vcardId","nftName","nftSymbol","mintAddress","ownerWallet","mintDate","tokenStandard","soulbound","updateAuthority","closeAuthority","metadataUri","initialMint","depositedSol","recoverableSol","updates","customizations","growthPercent","team","level","atk","def","effect","mintPrice","ipfsImage","nftDescription"])field(root,id,null);
+          displayedCard=key;
+        }
+        const view=sameCard&&displayedView?{...displayedView,chainState:"LOADING"}:
+          {row:null,checks:[],events:[],chain:null,chainState:"LOADING"};
+        displayedView=view;
+        renderVHouse(root,card,view.row);
+        renderHistory(root,view);
+        const rowRead=(async()=>{
+          if(card.external)return;
+          try{
+            const {data,error}=await client.from("vcard_list")
+              .select("card_id,name,description,designation,level,atk,def,mint_address,created_at,updates,customizations,mint_receipt")
+              .eq("card_id",String(card.id)).maybeSingle();
+            if(error)throw error;
+            if(!isCurrent())return;
+            view.row=data;renderVHouse(root,card,data);renderHistory(root,view);
+          }catch(error){if(isCurrent())console.error("[VHouse Billboard] VCard List",error);}
+        })();
+        const activityRead=async(table,column,key)=>{
+          try{
+            const {data,error}=await client.from(table)
+              .select("event_id,state,ex,own,use,source,checked_at,"+column)
+              .eq("player_id",user.id).eq(column,String(card.id)).order("checked_at",{ascending:false}).limit(40);
+            if(error)throw error;
+            if(!isCurrent())return;
+            view[key]=data||[];renderHistory(root,view);
+          }catch(error){
+            if(!isCurrent())return;
+            view.activityError=true;renderHistory(root,view);
+            console.error("[VHouse Billboard] "+table,error);
+          }
+        };
+        void activityRead("vcard_verification_chain","card_id","checks");
+        void activityRead("vhouse_chain","item","events");
+        void (async()=>{
+          try{
+            const {data,error}=await client.functions.invoke("vcard-market-data",{body:{cardId:card.id}});
+            if(!isCurrent())return;
+            if(error)throw error;
+            if(data?.error)throw Error(data.error);
+            if(!data?.chain)throw Error("Blockchain data unavailable");
+            view.chain=data;
+            view.chainState=dataNumber(data.chain.balanceLamports)!==null?"VERIFIED":"UNAVAILABLE";
+            renderBlockchain(root,data);renderHistory(root,view);
+          }catch(error){
+            if(!isCurrent())return;
+            view.chainState="UNAVAILABLE";renderHistory(root,view);
+            console.error("[VHouse Billboard] Blockchain",error);
+          }
+        })();
+        try{
+          await prepareVCard(root);
+          if(!isCurrent())return;
+          renderActiveVCard(root,card);
+          void loadMintedVCardImage(root,card,client,isCurrent);
+        }catch(error){console.error("[VHouse Billboard] VCard image",error);}
+        await rowRead;
       }catch(error){
         if(!active||ticket!==sequence)return;
         console.error("[VHouse Billboard]",error);
