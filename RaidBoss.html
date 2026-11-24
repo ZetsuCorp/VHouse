@@ -1232,10 +1232,11 @@ select {
 #eggStakeProgress {color:#ffe3ae;font-weight:900;font-size:clamp(10px,1.3cqw,16px);text-align:center;}
 #eggPayoutStatus {font-size:clamp(10px,1.1cqw,14px);color:#fff;overflow-wrap:anywhere;}
 /* Compact Egg reward information and its separate confirmation on Raid receipt. */
-.egg-reward-details {display:flex;flex-direction:column;gap:2px;border:1px solid #805d95;border-radius:6px;padding:clamp(4px,.6cqw,7px);background:#180d25aa;}
-.egg-reward-details .line {padding:0 0 2px;gap:4px;font-size:clamp(10px,1.03cqw,13px);}
-.egg-reward-details .line strong {white-space:nowrap;}
-#eggRewardAmount {color:var(--green);}
+.egg-reward-details {display:flex;flex-direction:column;gap:1px;border:1px solid #805d95;border-radius:6px;padding:clamp(3px,.45cqw,6px);background:#180d25aa;min-width:0;}
+.egg-reward-details .line {padding:0 0 1px;gap:4px;font-size:clamp(9px,.95cqw,12px);line-height:1.15;min-width:0;}
+.egg-reward-details .line span {min-width:0;overflow-wrap:anywhere;text-align:left;}
+.egg-reward-details .line strong {white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;}
+#eggRewardAmount,#eggTotalPayout {color:var(--green);}
 #eggPayoutStatus {font-size:clamp(10px,.99cqw,13px);line-height:1.25;}
 #eggPayoutStatus[hidden],#eggRewardConfirm[hidden],#eggRewardDetails[hidden]{display:none!important;}
 #eggRewardConfirm {width:100%;padding:clamp(5px,.8cqw,10px);background:linear-gradient(120deg,#63378f,#34194b);border:2px solid var(--gold);color:#fff;font-size:clamp(10px,1.1cqw,14px);font-weight:900;}
@@ -2255,9 +2256,10 @@ td { background:#1c1428 }
       <strong id="receiptRaidRewards">$0.00</strong>
     </div>
     <div id="eggRewardDetails" class="egg-reward-details" hidden>
-      <div class="line"><span>ORIGINAL EGG STAKE</span><strong id="eggStakeOriginal">—</strong></div>
-      <div class="line"><span>EGG WINS / MULTIPLIER</span><strong id="eggStakeReceiptText">—</strong></div>
-      <div class="line"><span id="eggRewardLabel">EGG REWARD</span><strong id="eggRewardAmount">—</strong></div>
+      <div class="line"><span>ORIGINAL STAKE</span><strong id="eggStakeOriginal">—</strong></div>
+      <div class="line"><span>BONUS MULTIPLIER</span><strong id="eggStakeReceiptText">—</strong></div>
+      <div class="line"><span id="eggRewardLabel">POTENTIAL BONUS</span><strong id="eggRewardAmount">—</strong></div>
+      <div class="line"><span id="eggTotalLabel">POTENTIAL TOTAL PAYOUT</span><strong id="eggTotalPayout">—</strong></div>
       <div class="line"><span>EGG OUTCOME</span><strong id="eggRewardOutcome">—</strong></div>
       <div id="eggPayoutStatus" role="status" aria-live="polite" hidden></div>
       <button type="button" id="eggRewardConfirm" hidden>CONFIRM EGG REWARD</button>

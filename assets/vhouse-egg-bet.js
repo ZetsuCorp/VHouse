@@ -125,13 +125,13 @@ async function updateProgress(run){
   const data=await api({action:"status",raidId:run.id});
   if(run!==raid||!data?.stake)return;
   const label=el("eggStakeProgress");
-  label.textContent="EGG BET · "+Number(data.wins)+" WINS · "+Number(data.multiplier).toFixed(2)+"×";
+  label.textContent="EGG BONUS · "+Number(data.wins)+" WINS · +"+Number(data.multiplier).toFixed(2)+"×";
   label.hidden=false;
  }catch(error){console.warn("Egg growth:",error);}
 }
 let lastEggReceipt=null;
 let deliveryBusy=false;
-const money=(usd)=>"$"+Number(usd).toFixed(3);
+const money=(usd)=>"$"+Number(usd).toFixed(4);
 const solAmount=(lamports)=>(Number(lamports)/1e9).toFixed(9)+" SOL";
 function clearReceipt(){
  lastEggReceipt=null;
@@ -180,10 +180,14 @@ function paintReceipt(run,data){
  lastEggReceipt={raidId:run.id,...data};
  const usdStake=Number(data.stakeCents)/100;
  const multiplier=Number(data.multiplier)||0;
+ const earnedBonus=usdStake*multiplier;
+ const totalPayout=usdStake+earnedBonus;
  el("eggStakeOriginal").textContent="$"+usdStake.toFixed(2);
- el("eggStakeReceiptText").textContent=String(data.wins)+" WINS · "+multiplier.toFixed(2)+"×";
- el("eggRewardLabel").textContent=data.eggBroken?"EGG REWARD WON":"POTENTIAL EGG REWARD";
- el("eggRewardAmount").textContent=money(usdStake*multiplier);
+ el("eggStakeReceiptText").textContent=String(data.wins)+" WINS · +"+multiplier.toFixed(2)+"×";
+ el("eggRewardLabel").textContent=data.eggBroken?"BONUS WON":"POTENTIAL BONUS";
+ el("eggRewardAmount").textContent=money(earnedBonus);
+ el("eggTotalLabel").textContent=data.eggBroken?"TOTAL EGG PAYOUT":"POTENTIAL TOTAL PAYOUT";
+ el("eggTotalPayout").textContent=money(totalPayout);
  el("eggRewardOutcome").textContent=data.eggBroken?"EGG BROKEN":"EGG SURVIVED";
  button.hidden=!data.eggBroken||data.status==="CONFIRMED";
  if(!button.hidden){
