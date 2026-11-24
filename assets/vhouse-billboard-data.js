@@ -7,9 +7,6 @@
     const el = root.querySelector('[id="' + id + '"]');
     if (el) el.textContent = value === null || value === undefined || value === "" ? "—" : String(value);
   };
-  const cleanImage = url => typeof url === "string" &&
-    /^(https:\/\/|ipfs:\/\/)/i.test(url)
-      ? (/^ipfs:\/\//i.test(url) ? "https://gateway.pinata.cloud/ipfs/" + url.slice(7) : url) : null;
   const text = value => typeof value === "string" && value.trim() ? value.trim() : null;
   const fmtSol = lamports => typeof lamports === "number" && Number.isFinite(lamports)
     ? (lamports / 1e9).toLocaleString("en-US", { maximumFractionDigits: 9 }) + " SOL" : null;
@@ -177,6 +174,40 @@
       status.style.pointerEvents="none";
     }
   };
+  const vcardAssets = new URL(".", document.currentScript.src);
+  let vcardRenderer;
+  function prepareVCard(root) {
+    const styles = root.head || root;
+    if (!styles.querySelector("link[data-billboard-vcard-style]")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = new URL("vhouse-vcard.css", vcardAssets).href;
+      link.setAttribute("data-billboard-vcard-style", "");
+      styles.append(link);
+    }
+    if (window.VHouseVCard) return Promise.resolve();
+    if (!vcardRenderer) vcardRenderer = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = new URL("vhouse-vcard.js", vcardAssets).href;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.append(script);
+    });
+    return vcardRenderer;
+  }
+  function renderActiveVCard(root, card) {
+    const host = root.querySelector("#vcardImage");
+    if (!host) return;
+    let preview = host.querySelector(":scope > .vhouse-vcard-host");
+    if (!preview) {
+      preview = document.createElement("div");
+      host.style.display = "grid";
+      host.style.placeItems = "center";
+      preview.style.width = "78%";
+      host.replaceChildren(preview);
+    }
+    window.VHouseVCard.render(preview, card);
+  }
   function render(root, result) {
     const card = result?.vhouse?.card;
     if (!card) return;
@@ -186,19 +217,6 @@
     const vchecks = result.vhouse?.verification || [];
     const game = result.vhouse?.events || [];
     const snapshots = chain.snapshots || [];
-    const image = cleanImage(result.image?.imageUri || loaded.imageUri);
-    const host = root.querySelector("#vcardImage");
-    if (host) {
-      host.replaceChildren();
-      if (image) {
-        const img = document.createElement("img");
-        img.alt = text(loaded.nftName) || text(card.name) || "VCard";
-        img.src = image;
-        img.referrerPolicy = "no-referrer";
-        img.onerror=()=>{const urls=["https://ipfs.io","https://dweb.link"];const path=new URL(image).pathname;if(path.startsWith("/ipfs/")&&urls.length){const next=urls.find(u=>!img.src.startsWith(u)&&!img.dataset[u.includes("ipfs.io")?"triedIpfs":"triedDweb"]);if(next){img.dataset[next.includes("ipfs.io")?"triedIpfs":"triedDweb"]="1";img.src=next+path;}}};
-        host.append(img);
-      }
-    }
     field(root,"vcardId",card.card_id);
     field(root,"nftName",text(loaded.nftName) || card.name);
     field(root,"nftSymbol",text(loaded.symbol));
@@ -344,6 +362,10 @@
           billboardNotice(root,notice);
           return;
         }
+        await prepareVCard(root);
+        if(!active||ticket!==sequence)return;
+        billboardNotice(root,null);
+        renderActiveVCard(root,card);
         const {data,error}=await api.getClient().functions.invoke("vcard-market-data",{
           body:{cardId:card.id}
         });
@@ -371,8 +393,9 @@
       const card=store.getActive();
       const activity=store.getActiveStatus();
       return JSON.stringify(card?[
-        card.id,card.mint_address,card.name,card.description,
+        card.id,card.mint_address,card.name,card.description,card.image,
         card.team,card.level,card.atk,card.def,card.speed,
+        card.amalieBonusAtk,card.amalieBonusDef,
         activity.status,activity.activity
       ]:null);
     };
