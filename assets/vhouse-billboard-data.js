@@ -186,7 +186,9 @@
     const vchecks = result.vhouse?.verification || [];
     const game = result.vhouse?.events || [];
     const snapshots = chain.snapshots || [];
-    const image = cleanImage(loaded.imageUri) || cleanImage(card.image);
+    // The mint receipt records the complete NFT PNG, not the source character art.
+    const receipt = card.mint_receipt;
+    const image = cleanImage(receipt.image_uri);
     const host = root.querySelector("#vcardImage");
     if (host) {
       host.replaceChildren();
@@ -209,8 +211,8 @@
     field(root,"soulbound",loaded.soulbound == null ? null : loaded.soulbound ? "YES":"NO");
     field(root,"updateAuthority",loaded.updateAuthority);
     field(root,"closeAuthority",loaded.closeAuthority);
-    field(root,"metadataUri",loaded.metadataUri || card.mint_receipt?.metadata_uri);
-    field(root,"ipfsImage",loaded.imageUri || card.mint_receipt?.image_uri || card.image);
+    field(root,"metadataUri",receipt.metadata_uri);
+    field(root,"ipfsImage",receipt.image_uri);
     field(root,"nftDescription",text(loaded.description) || card.description);
     field(root,"team",traitValue(traits,"Team") || card.designation);
     field(root,"level",traitValue(traits,"Level") ?? card.level);
@@ -272,6 +274,55 @@
     root.querySelectorAll(".vhouse-growth-series,.vhouse-growth-point").forEach(path=>path.remove());
     setActivity(root,[]);
   }
+  function billboardNotice(root, message) {
+    const menu = root.querySelector("#billboard");
+    if (!menu) return;
+    let notice = menu.querySelector("#billboardNotice");
+    if (!notice) {
+      const style = document.createElement("style");
+      style.textContent = `
+        #billboard .billboard-notice {
+          padding:16px; color:#ffe2ac; text-align:center;
+          border:1px solid #805535; background:#21172a;
+          font:inherit; line-height:1.5; z-index:3;
+        }
+        #billboard .billboard-notice[hidden],
+        #billboard[data-vcard-unavailable] #overview,
+        #billboard[data-vcard-unavailable] #activity {display:none!important}
+        #billboard .billboard-notice p {margin:8px 0 0;color:#e8d0e7}
+      `;
+      (root.head || root).append(style);
+      notice = document.createElement("section");
+      notice.id = "billboardNotice";
+      notice.className = "billboard-notice";
+      notice.setAttribute("role","status");
+      const title = document.createElement("strong");
+      title.textContent = "BILLBOARD — VCARD MARKET";
+      const description = document.createElement("p");
+      description.textContent = "The Billboard displays the Active VCard’s NFT information, blockchain activity and VHouse records.";
+      const current = document.createElement("p");
+      current.id = "billboardNoticeStatus";
+      notice.append(title,description,current);
+      menu.querySelector(".nav").after(notice);
+    }
+    notice.hidden = !message;
+    menu.toggleAttribute("data-vcard-unavailable", Boolean(message));
+    notice.querySelector("#billboardNoticeStatus").textContent = message || "";
+  }
+  function unavailableMessage(card, activity) {
+    if (!card) return "No Active VCard. Select a VCard in the Closet.";
+    const name = card.name;
+    const raid = activity.activity === "RAID" || activity.status === "ON_RAID";
+    if (activity.status === "RESULTS_READY")
+      return name + " has completed its " + (raid ? "Raid" : "Journey") +
+        ". Confirm the receipt to view its information.";
+    if (activity.status === "ON_RAID" || activity.status === "ON_JOURNEY")
+      return name + " is currently on a " + (raid ? "Raid" : "Journey") +
+        ". Please wait until it is complete.";
+    if (!card.mint_address || card.external)
+      return name + " is not a VHouse-minted NFT.";
+    return null;
+  }
   async function mount(root) {
     if(!root)return;
     const previous=state.get(root);
@@ -291,10 +342,11 @@
         await store.ready();
         if(!active||ticket!==sequence)return;
         const card=store.getActive();
-        if(!card||!api.getUser()){
+        const notice = !api.getUser() ? "Sign in to view the Active VCard." :
+          unavailableMessage(card,store.getActiveStatus());
+        if(notice){
           clear(root);
-          if(status)status.textContent=api.getUser()
-            ?"NO ACTIVE VCARD IN PLAYER PLACEHOLDER":"SIGN IN TO VIEW VCARD MARKET";
+          billboardNotice(root,notice);
           return;
         }
         const {data,error}=await api.getClient().functions.invoke("vcard-market-data",{
@@ -305,9 +357,11 @@
         if(data?.error)throw Error(data.error);
         if(data?.status==="no_active"){
           clear(root);
-          if(status)status.textContent="NO ACTIVE VCARD IN PLAYER PLACEHOLDER";
+          billboardNotice(root,unavailableMessage(store.getActive(),store.getActiveStatus()) ||
+            "No Active VCard. Select a VCard in the Closet.");
           return;
         }
+        billboardNotice(root,null);
         render(root,data);
       }catch(error){
         if(!active||ticket!==sequence)return;
@@ -320,9 +374,11 @@
     // Refresh for an actual VCard selection or property change, not a clock tick.
     const cardSignature=()=>{
       const card=store.getActive();
+      const activity=store.getActiveStatus();
       return JSON.stringify(card?[
-        card.id,card.mint_address,card.name,card.image,card.description,
-        card.team,card.level,card.atk,card.def,card.speed
+        card.id,card.mint_address,card.name,card.description,
+        card.team,card.level,card.atk,card.def,card.speed,
+        activity.status,activity.activity
       ]:null);
     };
     let knownCard=cardSignature();
