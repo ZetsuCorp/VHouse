@@ -79,22 +79,19 @@ async function mintDetails(mint:string,receipt:O){
  const tokenMeta=obj(find("tokenMetadata")?.state);
  const close=obj(find("mintCloseAuthority")?.state);
  const uri=str(tokenMeta.uri)||str(receipt.metadata_uri);
- const metadata=await readNFTJSON(uri);
  const raw=Array.isArray(tokenMeta.additionalMetadata)?tokenMeta.additionalMetadata:[];
  const onchainTraits=raw.filter((x:unknown)=>Array.isArray(x)&&x.length===2).map((x:unknown)=>({
   trait_type:(x as string[])[0],value:(x as string[])[1]
  }));
  return {
   tokenStandard:value.owner===TOKEN_2022?"Token-2022":null,
-  nftName:str(tokenMeta.name)||str(metadata.name),
-  symbol:str(tokenMeta.symbol)||str(metadata.symbol),
+  nftName:str(tokenMeta.name),
+  symbol:str(tokenMeta.symbol),
   metadataUri:uri,
   updateAuthority:str(tokenMeta.updateAuthority),
   closeAuthority:str(close.closeAuthority)||str(close.authority),
   soulbound:value.owner===TOKEN_2022 ? Boolean(find("nonTransferable")):null,
-  imageUri:str(metadata.image)||str(receipt.image_uri),
-  description:str(metadata.description),
-  attributes:Array.isArray(metadata.attributes)?metadata.attributes:onchainTraits,
+  attributes:onchainTraits,
   supply:str(info.supply), decimals:num(info.decimals),
   mintAccountLamports:num(value.lamports),
  };
@@ -197,141 +194,133 @@ Deno.serve(async(request:Request)=>{
   }
   const cardId=payload.cardId;
   if(typeof cardId!=="string"||!cardId||cardId.length>150)return send({error:"Active VCard required"},400);
-  const [accountResult,invResult,cardResult,checksResult,chainResult]=await Promise.all([
-   client.from("vhouse_accounts").select("active_vcard_id").eq("id",playerId).maybeSingle(),
+  const [accountResult,invResult,cardResult]=await Promise.all([
+   client.from("vhouse_accounts").select("active_vcard_id,active_vcard_snapshot,wallet_address").eq("id",playerId).maybeSingle(),
    client.from("vhouse_player_inventory").select("thing").eq("player_id",playerId)
     .eq("thing",cardId).eq("type","VCard").gt("quantity",0).maybeSingle(),
-   client.from("vcard_list").select("card_id,name,image,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt,updates,customizations")
-    .eq("card_id",cardId).maybeSingle(),
-   client.from("vcard_verification_chain").select("event_id,card_id,state,ex,own,use,quantity,source,checked_at")
-    .eq("player_id",playerId).eq("card_id",cardId).order("checked_at",{ascending:true}).limit(200),
-   client.from("vhouse_chain").select("event_id,item,state,ex,own,use,quantity,source,checked_at")
-    .eq("player_id",playerId).in("item",[cardId]).order("checked_at",{ascending:true}).limit(200),
+   client.from("vcard_list").select("card_id,name,description,designation,level,atk,def,luck,speed,mint_address,mint_receipt,updates,customizations")
+    .eq("card_id",cardId).maybeSingle()
   ]);
-  for(const result of [accountResult,invResult,cardResult,checksResult,chainResult])
-   if(result.error)throw result.error;
-  if(!accountResult.data?.active_vcard_id)return send({status:"no_active"});
-  if(accountResult.data.active_vcard_id!==cardId)return send({error:"Active VCard changed"},409);
-  if(!invResult.data||!cardResult.data)return send({error:"VCard is not in player's inventory"},403);
-  const card=cardResult.data,mint=card.mint_address,receipt=obj(card.mint_receipt);
-  const vhouse={card,verification:checksResult.data||[],events:chainResult.data||[]};
-  if(!address(mint)){
-   const uri=str(receipt.metadata_uri);
-   const metadata=await readNFTJSON(uri);
-   return send({status:"no_mint",vhouse,chain:{loaded:{
-    metadataUri:uri,imageUri:str(metadata.image)||str(receipt.image_uri),
-    nftName:str(metadata.name),symbol:str(metadata.symbol),
-    description:str(metadata.description),
-    attributes:Array.isArray(metadata.attributes)?metadata.attributes:[]
-   }}});
-  }
-  // Existing RLS read is used for VHouse data; balance history is server-only.
-  const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if(!serviceKey)throw Error("Balance history storage unavailable");
-  const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data:stored,error:historyError}=await admin.from("vcard_balance_history")
-   .select("lamports,checked_at,sample_minute").eq("player_id",playerId).eq("card_id",cardId)
-   .eq("mint_address",mint).order("checked_at",{ascending:false}).limit(RECENT);
-  if(historyError)throw historyError;
-  const history=(stored||[]).reverse().map(x=>({
-   time:x.checked_at,lamports:Number(x.lamports)
-  }));
+  for(const result of [accountResult,invResult,cardResult])if(result.error)throw result.error;
+  const account=accountResult.data;
+  if(!account?.active_vcard_id)return send({status:"no_active"});
+  if(account.active_vcard_id!==cardId)return send({error:"Active VCard changed"},409);
+  const snapshot=obj(account.active_vcard_snapshot);
+  const external=snapshot.external===true&&snapshot.id===cardId&&
+   address(snapshot.mint_address)&&cardId==="nft:"+snapshot.mint_address;
+  if(!external&&(!invResult.data||!cardResult.data))return send({error:"VCard is not in player's inventory"},403);
+  const card:O=external?{
+   card_id:cardId,name:snapshot.name,description:snapshot.description,designation:snapshot.team,
+   level:snapshot.level,atk:snapshot.atk,def:snapshot.def,mint_address:snapshot.mint_address
+  }:obj(cardResult.data);
+  const receipt=obj(card.mint_receipt);
+  const mint=str(card.mint_address)||str(receipt.mint_address);
+  const wallet=str(account.wallet_address)||str(receipt.owner_wallet)||str(snapshot.owner_wallet);
   const warnings:string[]=[];
-  // The account already read by Load/Burn contains its actual SOL balance.
-  // An unavailable Solscan subscription must not erase verified on-chain value.
-  const [infoResult,originResult]=await Promise.allSettled([
-    mintDetails(mint,receipt),mintOrigin(mint,receipt)
-  ]);
-  let loaded=infoResult.status==="fulfilled"?infoResult.value:null;
-  if(!loaded){
-   const uri=str(receipt.metadata_uri);
-   const metadata=await readNFTJSON(uri);
-   if(uri||str(receipt.image_uri)){
-    loaded={
-     metadataUri:uri,imageUri:str(metadata.image)||str(receipt.image_uri),
-     nftName:str(metadata.name),symbol:str(metadata.symbol),
-     description:str(metadata.description),
-     attributes:Array.isArray(metadata.attributes)?metadata.attributes:[],
-     tokenStandard:null,updateAuthority:null,closeAuthority:null,soulbound:null,
-     supply:null,decimals:null,mintAccountLamports:null
-    };
+  // Read each source independently. No receipt or balance-history requirement.
+  const chainRead=address(mint)?mintDetails(mint!,receipt).catch(e=>{
+   warnings.push("Solana NFT metadata: "+String(e));return null;
+  }):Promise.resolve(null);
+  const storedUri=str(receipt.metadata_uri);
+  const imageRead=(async()=>{
+   const stored=await readNFTJSON(storedUri);
+   const onchain=await chainRead;
+   const uri=onchain?.metadataUri||storedUri;
+   const metadata=uri&&uri!==storedUri?await readNFTJSON(uri):stored;
+   return {
+    metadataUri:uri,imageUri:str(metadata.image)||str(receipt.image_uri),
+    nftName:str(metadata.name),symbol:str(metadata.symbol),description:str(metadata.description),
+    attributes:Array.isArray(metadata.attributes)?metadata.attributes:null
+   };
+  })();
+  const vhouseRead=(async()=>{
+   const [checks,events]=await Promise.all([
+    client.from("vcard_verification_chain").select("event_id,card_id,state,ex,own,use,quantity,source,checked_at")
+     .eq("player_id",playerId).eq("card_id",cardId).order("checked_at",{ascending:true}).limit(200),
+    client.from("vhouse_chain").select("event_id,item,state,ex,own,use,quantity,source,checked_at")
+     .eq("player_id",playerId).eq("item",cardId).order("checked_at",{ascending:true}).limit(200)
+   ]);
+   for(const result of [checks,events])if(result.error)warnings.push("VHouse activity: "+result.error.message);
+   return {card,verification:checks.data||[],events:events.data||[]};
+  })();
+  const solanaRead=(async()=>{
+   if(!address(mint))return {loaded:null,currentOwner:null,mintedAt:null,initialMintLamports:null,balanceLamports:null,snapshots:[],transactions:[]};
+   const ownerRead=(async()=>{
+    if(!address(wallet))return null;
+    try{
+     const accounts=obj(await rpc("getTokenAccountsByOwner",[wallet,{mint},{encoding:"jsonParsed",commitment:"confirmed"}]));
+     const values=Array.isArray(accounts.value)?accounts.value:[];
+     return values.some((row:unknown)=>{
+      const t=obj(obj(obj(obj(row).account).data).parsed).info;
+      const info=obj(t);
+      return info.owner===wallet&&info.mint===mint&&obj(info.tokenAmount).amount==="1";
+     })?wallet:null;
+    }catch(e){warnings.push("Solana ownership: "+String(e));return null;}
+   })();
+   const transactionsRead=(async()=>{
+    try{
+     const rows=await rpc("getSignaturesForAddress",[mint,{limit:20,commitment:"confirmed"}]);
+     const signatures=Array.isArray(rows)?rows.map(obj).filter(x=>x.err===null&&signature(x.signature)):[];
+     const transactions:O[]=[];
+     // Use actual transaction balances, not estimated changes.
+     for(let i=0;i<signatures.length;i+=5){
+      const batch=await Promise.allSettled(signatures.slice(i,i+5).map(async row=>{
+       const tx=obj(await rpc("getTransaction",[row.signature,{encoding:"jsonParsed",maxSupportedTransactionVersion:0,commitment:"confirmed"}]));
+       const keys=obj(obj(tx.transaction).message).accountKeys;
+       const index=Array.isArray(keys)?keys.findIndex(x=>typeof x==="string"?x===mint:obj(x).pubkey===mint):-1;
+       const meta=obj(tx.meta),post=meta.postBalances,pre=meta.preBalances;
+       const after=Array.isArray(post)&&index>=0?num(post[index]):null;
+       const before=Array.isArray(pre)&&index>=0?num(pre[index]):null;
+       if(after===null||typeof tx.blockTime!=="number")return null;
+       return {signature:row.signature,time:new Date(tx.blockTime*1000).toISOString(),lamports:after,beforeLamports:before,slot:row.slot};
+      }));
+      for(const result of batch)if(result.status==="fulfilled"&&result.value)transactions.push(result.value);
+     }
+     return transactions;
+    }catch(e){warnings.push("Solana transactions: "+String(e));return [];}
+   })();
+   const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+   const admin=serviceKey?createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}):null;
+   const historyRead=(async()=>{
+    if(!admin||external)return [];
+    try{
+     const {data,error}=await admin.from("vcard_balance_history").select("lamports,checked_at,sample_minute")
+      .eq("player_id",playerId).eq("card_id",cardId).eq("mint_address",mint)
+      .order("checked_at",{ascending:false}).limit(RECENT);
+     if(error)throw error;
+     return (data||[]).reverse().map(x=>({time:x.checked_at,lamports:Number(x.lamports)}));
+    }catch(e){warnings.push("Recorded balance history: "+String(e));return [];}
+   })();
+   const [loaded,origin,currentOwner,transactions,history]=await Promise.all([
+    chainRead,mintOrigin(mint!,receipt),ownerRead,transactionsRead,historyRead
+   ]);
+   let balanceLamports=loaded?.mintAccountLamports??null;
+   if(balanceLamports===null){
+    try{balanceLamports=num(obj(await rpc("getBalance",[mint,{commitment:"confirmed"}])).value);}
+    catch(e){warnings.push("Solana balance: "+String(e));}
    }
-  }
-  if(infoResult.status==="rejected"){
-    warnings.push("Solana NFT metadata: "+String(infoResult.reason));
-    console.warn("[vcard-market-data] Solana RPC mint:",String(infoResult.reason));
-  }
-  const origin=originResult.status==="fulfilled"?originResult.value:
-    {mintedAt:null,initialMintLamports:null};
-  const newest=history[history.length-1];
-  const key=Deno.env.get("SOLSCAN_API_KEY");
-  let balanceLamports:number|null=null;
-  let source="Solana RPC",sampled=false;
-  if(newest && Date.now()-Date.parse(newest.time)<60000){
-    balanceLamports=newest.lamports;
-    source="Recorded balance";
-  }else{
-    let fromSolscan:number|null=null;
-    if(key){
-      try{
-        const detail=obj(await solscan("account/detail",{address:mint},key));
-        const amount=num(detail.lamports);
-        if(amount===null||detail.account!==mint)throw Error("Invalid account balance data");
-        fromSolscan=amount;
-        source="Solscan";
-      }catch(e){
-        const reason=e instanceof Error?e.message:String(e);
-        warnings.push("Solscan account detail: "+reason);
-        console.warn("[vcard-market-data] Solscan account detail:",reason);
-      }
-    }
-    const amount=fromSolscan??loaded?.mintAccountLamports??null;
-    if(amount!==null){
-      balanceLamports=amount;
+   const snapshots=[...history,...transactions.map(x=>({time:String(x.time),lamports:Number(x.lamports)}))];
+   if(origin.initialMintLamports!==null&&origin.mintedAt!==null)
+    snapshots.push({time:new Date(origin.mintedAt*1000).toISOString(),lamports:origin.initialMintLamports});
+   if(balanceLamports!==null){
+    snapshots.push({time:new Date().toISOString(),lamports:balanceLamports});
+    if(admin&&!external){
+     try{
       const now=new Date(),minute=new Date(Math.floor(now.getTime()/60000)*60000).toISOString();
-      const {error:writeError}=await admin.from("vcard_balance_history").upsert({
-        player_id:playerId,card_id:cardId,mint_address:mint,lamports:amount,
-        sample_minute:minute,checked_at:now.toISOString()
+      const {error}=await admin.from("vcard_balance_history").upsert({
+       player_id:playerId,card_id:cardId,mint_address:mint,lamports:balanceLamports,
+       sample_minute:minute,checked_at:now.toISOString()
       },{onConflict:"player_id,card_id,sample_minute"});
-      if(writeError)throw writeError;
-      sampled=true;
-      if(history.length && history[history.length-1].time.slice(0,16)===now.toISOString().slice(0,16))
-        history[history.length-1]={time:now.toISOString(),lamports:amount};
-      else history.push({time:now.toISOString(),lamports:amount});
-      if(history.length>RECENT)history.shift();
+      if(error)warnings.push("Recorded balance history: "+error.message);
+     }catch(e){warnings.push("Recorded balance history: "+String(e));}
     }
-  }
-  let currentOwner:null|string=null;
-  if(address(receipt.owner_wallet) && loaded?.supply==="1"){
-   try{
-    const accounts=obj(await rpc("getTokenAccountsByOwner",[
-     receipt.owner_wallet,{mint},{encoding:"jsonParsed",commitment:"confirmed"}
-    ]));
-    const values=Array.isArray(accounts.value)?accounts.value:[];
-    if(values.some((row:unknown)=>{
-     const info=obj(obj(obj(obj(row).account).data).parsed).info;
-     const t=obj(info);
-     return t.owner===receipt.owner_wallet && t.mint===mint && obj(t.tokenAmount).amount==="1";
-    }))currentOwner=String(receipt.owner_wallet);
-   }catch{ /* Ownership is unknown, not assumed. */ }
-  }
-  const latest=history[history.length-1];
-  const start=origin.initialMintLamports??(history.length?history[0].lamports:null);
-  const current=balanceLamports;
-  const deposits=start!==null && current!==null ? Math.max(0,current-start) : null;
-  return send({
-   status:balanceLamports===null?"partial":"ok",
-   vhouse,
-   chain:{
-    loaded,currentOwner,initialMintLamports:origin.initialMintLamports,
-    mintedAt:origin.mintedAt,balanceLamports:current,
-    initialObservedLamports:history.length?history[0].lamports:null,
-    history:history.map(x=>({time:x.time,afterLamports:x.lamports})),
-    historyComplete:true,
-    snapshots:history,source,sampled,depositedLamports:deposits
-   },
-   warnings,
-  });
+   }
+   snapshots.sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
+   return {loaded,currentOwner,initialMintLamports:origin.initialMintLamports,mintedAt:origin.mintedAt,
+    balanceLamports,snapshots,transactions,source:"Solana RPC"};
+  })();
+  const [image,vhouse,chain]=await Promise.all([imageRead,vhouseRead,solanaRead]);
+  return send({status:"ok",image,vhouse,chain,warnings});
  }catch(error){
   console.error("[vcard-market-data]",error instanceof Error?error.message:error);
   return send({error:"Unable to retrieve VCard market data"},500);
