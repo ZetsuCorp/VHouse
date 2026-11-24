@@ -255,8 +255,6 @@
   }
   function renderVHouse(root,card,row){
     field(root,"vcardId",card.id);
-    field(root,"nftName",row?.name??card.name);
-    field(root,"mintAddress",row?.mint_address??card.mint_address??row?.mint_receipt?.mint_address);
     field(root,"nftDescription",row?.description??card.description);
     field(root,"team",row?.designation??card.team);
     field(root,"level",row?.level??card.level);
@@ -266,21 +264,85 @@
     field(root,"updates",dataNumber(row?.updates));
     field(root,"customizations",dataNumber(row?.customizations));
     const receipt=row?.mint_receipt||{};
-    if(safeUri(receipt.metadata_uri))field(root,"metadataUri",receipt.metadata_uri);
     if(safeUri(receipt.image_uri))field(root,"ipfsImage",receipt.image_uri);
+  }
+  // NFT DETAILS: read the mint directly from Solana, independently of market history.
+  async function nftRpc(method,params){
+    const response=await fetch("https://solana-rpc.publicnode.com",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({jsonrpc:"2.0",id:1,method,params})
+    });
+    if(!response.ok)throw Error("Solana RPC HTTP "+response.status);
+    const data=await response.json();
+    if(data.error)throw Error(data.error.message||"Solana RPC error");
+    return data.result;
+  }
+  const parsedAccount={encoding:"jsonParsed",commitment:"confirmed"};
+  async function readNftOwner(mint){
+    const accounts=await nftRpc("getTokenLargestAccounts",[mint,{commitment:"confirmed"}]);
+    const holder=accounts?.value?.find(account=>account.amount==="1");
+    if(!holder)return null;
+    const result=await nftRpc("getAccountInfo",[holder.address,parsedAccount]);
+    return result?.value?.data?.parsed?.info?.owner??null;
+  }
+  async function readNftMintDate(mint,receipt){
+    const txOptions={...parsedAccount,maxSupportedTransactionVersion:0};
+    if(receipt?.transaction_signature){
+      try{
+        const tx=await nftRpc("getTransaction",[receipt.transaction_signature,txOptions]);
+        if(tx?.meta?.err===null&&typeof tx.blockTime==="number")return tx.blockTime;
+      }catch(error){console.warn("[VHouse Billboard] Mint transaction",error);}
+    }
+    let before,oldest;
+    do{
+      const signatures=await nftRpc("getSignaturesForAddress",[mint,{
+        commitment:"confirmed",limit:1000,...(before?{before}:{})
+      }]);
+      if(!signatures?.length)break;
+      for(const entry of signatures)if(entry.err===null)oldest=entry;
+      if(signatures.length<1000)break;
+      before=signatures[signatures.length-1].signature;
+    }while(before);
+    if(!oldest)return null;
+    const tx=await nftRpc("getTransaction",[oldest.signature,txOptions]);
+    return tx?.meta?.err===null?tx.blockTime:null;
+  }
+  async function readNftDetails(root,card,row,isCurrent){
+    const receipt=row?.mint_receipt||{};
+    const mint=text(row?.mint_address)||text(card.mint_address)||text(receipt.mint_address);
+    if(!mint||!isCurrent())return;
+    field(root,"mintAddress",mint);
+    const result=await nftRpc("getAccountInfo",[mint,parsedAccount]);
+    if(!isCurrent())return;
+    const account=result?.value;
+    const info=account?.data?.parsed?.info;
+    if(!info)throw Error("NFT mint not found");
+    const extensions=Array.isArray(info.extensions)?info.extensions:[];
+    const extension=name=>extensions.find(e=>e.extension===name);
+    const metadata=extension("tokenMetadata")?.state||{};
+    const close=extension("mintCloseAuthority")?.state||{};
+    field(root,"nftName",metadata.name);
+    field(root,"nftSymbol",metadata.symbol);
+    field(root,"tokenStandard",account.data.program==="spl-token-2022"?"Token-2022":
+      account.data.program==="spl-token"?"SPL Token":account.data.program);
+    field(root,"soulbound",extension("nonTransferable")?"YES":"NO");
+    field(root,"updateAuthority",metadata.updateAuthority);
+    field(root,"closeAuthority",close.closeAuthority??close.authority);
+    field(root,"metadataUri",metadata.uri);
+    await Promise.all([
+      readNftOwner(mint).then(owner=>{
+        if(isCurrent())field(root,"ownerWallet",owner);
+      }).catch(error=>console.error("[VHouse Billboard] NFT owner",error)),
+      readNftMintDate(mint,receipt).then(date=>{
+        if(isCurrent())field(root,"mintDate",when(date));
+      }).catch(error=>console.error("[VHouse Billboard] NFT mint date",error))
+    ]);
   }
   function renderBlockchain(root,result){
     const chain=result?.chain||{};
     const loaded={...(chain.loaded||{}),...Object.fromEntries(Object.entries(result?.image||{}).filter(([,v])=>v!==null&&v!==undefined))};
     const traits=Array.isArray(loaded.attributes)?loaded.attributes:[];
-    field(root,"nftSymbol",text(loaded.symbol));
-    field(root,"ownerWallet",chain.currentOwner);
-    field(root,"mintDate",when(chain.mintedAt));
-    field(root,"tokenStandard",loaded.tokenStandard);
-    field(root,"soulbound",loaded.soulbound==null?null:loaded.soulbound?"YES":"NO");
-    field(root,"updateAuthority",loaded.updateAuthority);
-    field(root,"closeAuthority",loaded.closeAuthority);
-    if(safeUri(loaded.metadataUri))field(root,"metadataUri",loaded.metadataUri);
     if(safeUri(loaded.imageUri))field(root,"ipfsImage",loaded.imageUri);
     field(root,"effect",traitValue(traits,"Effect"));
     const price=traitValue(traits,"Mint Price (SOL)")??traitValue(traits,"Mint Price");
@@ -426,6 +488,13 @@
             if(!isCurrent())return;
             view.row=data;renderVHouse(root,card,data);renderHistory(root,view);
           }catch(error){if(isCurrent())console.error("[VHouse Billboard] VCard List",error);}
+        })();
+        void (async()=>{
+          await rowRead;
+          if(!isCurrent())return;
+          try{
+            await readNftDetails(root,card,view.row,isCurrent);
+          }catch(error){if(isCurrent())console.error("[VHouse Billboard] NFT DETAILS",error);}
         })();
         const activityRead=async(table,column,key)=>{
           try{
