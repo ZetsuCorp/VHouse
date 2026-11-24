@@ -181,12 +181,12 @@
     const card = result?.vhouse?.card;
     if (!card) return;
     const chain = result.chain || {};
-    const loaded = chain.loaded || {};
+    const loaded = {...(chain.loaded || {}), ...Object.fromEntries(Object.entries(result.image || {}).filter(([,v])=>v!==null && v!==undefined))};
     const traits = Array.isArray(loaded.attributes) ? loaded.attributes : [];
     const vchecks = result.vhouse?.verification || [];
     const game = result.vhouse?.events || [];
     const snapshots = chain.snapshots || [];
-    const image = cleanImage(loaded.imageUri) || cleanImage(card.mint_receipt?.image_uri);
+    const image = cleanImage(result.image?.imageUri || loaded.imageUri);
     const host = root.querySelector("#vcardImage");
     if (host) {
       host.replaceChildren();
@@ -195,6 +195,7 @@
         img.alt = text(loaded.nftName) || text(card.name) || "VCard";
         img.src = image;
         img.referrerPolicy = "no-referrer";
+        img.onerror=()=>{const urls=["https://ipfs.io","https://dweb.link"];const path=new URL(image).pathname;if(path.startsWith("/ipfs/")&&urls.length){const next=urls.find(u=>!img.src.startsWith(u)&&!img.dataset[u.includes("ipfs.io")?"triedIpfs":"triedDweb"]);if(next){img.dataset[next.includes("ipfs.io")?"triedIpfs":"triedDweb"]="1";img.src=next+path;}}};
         host.append(img);
       }
     }
@@ -209,8 +210,8 @@
     field(root,"soulbound",loaded.soulbound == null ? null : loaded.soulbound ? "YES":"NO");
     field(root,"updateAuthority",loaded.updateAuthority);
     field(root,"closeAuthority",loaded.closeAuthority);
-    field(root,"metadataUri",loaded.metadataUri || card.mint_receipt?.metadata_uri);
-    field(root,"ipfsImage",loaded.imageUri || card.mint_receipt?.image_uri);
+    field(root,"metadataUri",loaded.metadataUri);
+    field(root,"ipfsImage",loaded.imageUri);
     field(root,"nftDescription",text(loaded.description) || card.description);
     field(root,"team",traitValue(traits,"Team") || card.designation);
     field(root,"level",traitValue(traits,"Level") ?? card.level);
@@ -248,16 +249,14 @@
       ...game.map(e => ({date:when(e.checked_at),ts:Date.parse(e.checked_at),
         label:"VHOUSE · " + (e.state || "CHECK"),
         detail:[e.item,e.source, "EX:" + e.ex, "OWN:" + e.own, "USE:" + e.use].join(" · ")})),
+      ...(chain.transactions||[]).map(e=>({date:when(e.time),ts:Date.parse(e.time),label:"SOLANA · TRANSACTION",detail:e.signature})),
       ...snapshots.map(e=>({date:when(e.time),ts:Date.parse(e.time),
         label:"SOLANA · VCARD BALANCE",detail:fmtSol(e.lamports)})),
     ];
     setActivity(root,events);
     chart(root,snapshots,[...vchecks,...game],current!==null);
     const chartStatus=root.querySelector("#chartStatus");
-    if(result.status==="no_mint" && chartStatus)
-      chartStatus.textContent="NO NFT MINT LINKED TO ACTIVE VCARD";
-    if(result.status==="solscan_unconfigured" && chartStatus)
-      chartStatus.textContent="SOLSCAN API KEY NOT CONFIGURED";
+
   }
   function clear(root) {
     const names = [
