@@ -53,6 +53,22 @@ function nftURL(uri:unknown){
  }catch{ /* invalid URL */ }
  return null;
 }
+async function readNFTJSON(uri:unknown):Promise<O>{
+ const first=nftURL(uri);
+ if(!first)return {};
+ const path=new URL(first).pathname;
+ const urls=[...new Set([first,"https://ipfs.io"+path,"https://dweb.link"+path])];
+ for(const url of urls){
+  try{
+   const response=await fetch(url,{signal:AbortSignal.timeout(3500)});
+   if(response.ok){
+    const metadata=obj(await response.json());
+    if(str(metadata.image))return metadata;
+   }
+  }catch(e){console.warn("[VHouse Billboard] NFT JSON",e instanceof Error?e.message:String(e));}
+ }
+ return {};
+}
 async function mintDetails(mint:string,receipt:O){
  const value=obj(obj(await rpc("getAccountInfo",[mint,{encoding:"jsonParsed",commitment:"confirmed"}])).value);
  if(!Object.keys(value).length)throw Error("NFT mint not found");
@@ -63,14 +79,7 @@ async function mintDetails(mint:string,receipt:O){
  const tokenMeta=obj(find("tokenMetadata")?.state);
  const close=obj(find("mintCloseAuthority")?.state);
  const uri=str(tokenMeta.uri)||str(receipt.metadata_uri);
- let metadata:O={};
- const url=nftURL(uri);
- if(url){
-  try{
-   const response=await fetch(url,{signal:AbortSignal.timeout(6500)});
-   if(response.ok)metadata=obj(await response.json());
-  }catch(e){console.warn("[VHouse Billboard] NFT JSON",e instanceof Error?e.message:String(e));}
- }
+ const metadata=await readNFTJSON(uri);
  const raw=Array.isArray(tokenMeta.additionalMetadata)?tokenMeta.additionalMetadata:[];
  const onchainTraits=raw.filter((x:unknown)=>Array.isArray(x)&&x.length===2).map((x:unknown)=>({
   trait_type:(x as string[])[0],value:(x as string[])[1]
@@ -206,7 +215,16 @@ Deno.serve(async(request:Request)=>{
   if(!invResult.data||!cardResult.data)return send({error:"VCard is not in player's inventory"},403);
   const card=cardResult.data,mint=card.mint_address,receipt=obj(card.mint_receipt);
   const vhouse={card,verification:checksResult.data||[],events:chainResult.data||[]};
-  if(!address(mint))return send({status:"no_mint",vhouse});
+  if(!address(mint)){
+   const uri=str(receipt.metadata_uri);
+   const metadata=await readNFTJSON(uri);
+   return send({status:"no_mint",vhouse,chain:{loaded:{
+    metadataUri:uri,imageUri:str(metadata.image)||str(receipt.image_uri),
+    nftName:str(metadata.name),symbol:str(metadata.symbol),
+    description:str(metadata.description),
+    attributes:Array.isArray(metadata.attributes)?metadata.attributes:[]
+   }}});
+  }
   // Existing RLS read is used for VHouse data; balance history is server-only.
   const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!serviceKey)throw Error("Balance history storage unavailable");
@@ -224,7 +242,21 @@ Deno.serve(async(request:Request)=>{
   const [infoResult,originResult]=await Promise.allSettled([
     mintDetails(mint,receipt),mintOrigin(mint,receipt)
   ]);
-  const loaded=infoResult.status==="fulfilled"?infoResult.value:null;
+  let loaded=infoResult.status==="fulfilled"?infoResult.value:null;
+  if(!loaded){
+   const uri=str(receipt.metadata_uri);
+   const metadata=await readNFTJSON(uri);
+   if(uri||str(receipt.image_uri)){
+    loaded={
+     metadataUri:uri,imageUri:str(metadata.image)||str(receipt.image_uri),
+     nftName:str(metadata.name),symbol:str(metadata.symbol),
+     description:str(metadata.description),
+     attributes:Array.isArray(metadata.attributes)?metadata.attributes:[],
+     tokenStandard:null,updateAuthority:null,closeAuthority:null,soulbound:null,
+     supply:null,decimals:null,mintAccountLamports:null
+    };
+   }
+  }
   if(infoResult.status==="rejected"){
     warnings.push("Solana NFT metadata: "+String(infoResult.reason));
     console.warn("[vcard-market-data] Solana RPC mint:",String(infoResult.reason));
