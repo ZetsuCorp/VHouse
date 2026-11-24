@@ -186,9 +186,7 @@
     const vchecks = result.vhouse?.verification || [];
     const game = result.vhouse?.events || [];
     const snapshots = chain.snapshots || [];
-    // The mint receipt records the complete NFT PNG, not the source character art.
-    const receipt = card.mint_receipt;
-    const image = cleanImage(receipt.image_uri);
+    const image = cleanImage(loaded.imageUri) || cleanImage(card.mint_receipt?.image_uri);
     const host = root.querySelector("#vcardImage");
     if (host) {
       host.replaceChildren();
@@ -211,8 +209,8 @@
     field(root,"soulbound",loaded.soulbound == null ? null : loaded.soulbound ? "YES":"NO");
     field(root,"updateAuthority",loaded.updateAuthority);
     field(root,"closeAuthority",loaded.closeAuthority);
-    field(root,"metadataUri",receipt.metadata_uri);
-    field(root,"ipfsImage",receipt.image_uri);
+    field(root,"metadataUri",loaded.metadataUri || card.mint_receipt?.metadata_uri);
+    field(root,"ipfsImage",loaded.imageUri || card.mint_receipt?.image_uri);
     field(root,"nftDescription",text(loaded.description) || card.description);
     field(root,"team",traitValue(traits,"Team") || card.designation);
     field(root,"level",traitValue(traits,"Level") ?? card.level);
