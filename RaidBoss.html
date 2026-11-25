@@ -1351,6 +1351,9 @@ select {
   grid-column:1/-1;
   text-align:center;
 }
+#raidLevelPreview{position:absolute;inset:0;z-index:12;display:grid;place-items:center;pointer-events:none;background:#100b1dc9}
+#raidLevelPreview[hidden]{display:none}
+#raidLevelPreview > div{width:min(24%,220px);max-height:94%}
 .complete-title #resultDescription {
   color:#fff;
   font-weight:900;
@@ -1951,6 +1954,9 @@ td { background:#1c1428 }
 }
 </style>
 <link rel="stylesheet" href="assets/vhouse-vcard.css">
+<script type="importmap">
+{"imports":{"@solana/web3.js":"https://esm.sh/@solana/web3.js@1.99.0?bundle","@solana/spl-token":"https://esm.sh/@solana/spl-token@0.4.15?bundle&external=@solana/web3.js","@solana/spl-token-metadata":"https://esm.sh/@solana/spl-token-metadata@0.1.6?bundle&external=@solana/web3.js"}}
+</script>
 </head>
 
 <body>
@@ -2281,6 +2287,8 @@ td { background:#1c1428 }
   <div class="panel result-panel">
     <h3>BOSS BATTLE RESULTS</h3>
     <div id="raidTransferNotice" class="raid-transfer-notice" role="status" aria-live="polite" hidden></div>
+    <div id="raidLevelStatus" class="raid-entry-proof" role="status" hidden></div>
+    <div id="raidLevelPreview" hidden></div>
 
     <div class="result-table-wrap">
       <table>
@@ -2325,7 +2333,8 @@ td { background:#1c1428 }
 <script src="assets/vhouse-scrap-stats.js"></script>
 <script src="assets/vhouse-amalie-stats.js"></script>
 <script src="assets/vhouse-cards.js"></script>
-<script src="assets/vhouse-vcard.js"></script>
+<script src="assets/vhouse-vcard.js?v=fd22273"></script>
+<script src="assets/vhouse-raid-level.js?v=2da88fe"></script>
 
 <script>
 "use strict";
@@ -3824,10 +3833,43 @@ function finishRaid() {
     rows.append(tr);
   });
 
+  $("raidLevelStatus").hidden=true;
+  $("raidLevelPreview").hidden=true;
   showScreen("completeScreen");
 }
 
 /* BUTTONS */
+function raidLevelStatus(message,signature){
+  const status=$("raidLevelStatus");
+  status.hidden=false;status.textContent=message;
+  if(signature){
+    const link=document.createElement("a");
+    link.href="https://solscan.io/tx/"+encodeURIComponent(signature);
+    link.target="_blank";link.rel="noopener noreferrer";link.textContent=" · SOLSCAN";
+    status.append(link);
+  }
+}
+async function completeRaidLevel(){
+  try{
+    const award=await window.VHouseRaidLevel.award(raid,raidAuth.getClient(),raidLevelStatus);
+    raid.levelAward=award;
+    const previous=Number(award.previousLevel??Number(award.level)-1);
+    const next=Number(award.level);
+    raid.card.level=next;
+    raidLevelStatus("VCARD LEVEL "+next+" · LEVEL UP!",award.signature);
+    const overlay=$("raidLevelPreview"),host=document.createElement("div");
+    overlay.replaceChildren(host);
+    window.VHouseVCard.render(host,raid.card);
+    overlay.hidden=false;
+    try{await window.VHouseVCard.levelUp(host,previous,next);}
+    finally{overlay.hidden=true;overlay.replaceChildren();}
+    window.dispatchEvent(new CustomEvent("vhouse:vcard-updated",{detail:{cardId:raid.card.id,mintAddress:raid.card.mint_address}}));
+  }catch(error){
+    console.error("Raid level update:",error);
+    raidLevelStatus("LEVEL UP NOT SAVED: "+(error?.message||"UNKNOWN ERROR")+" · CHECK LEVEL TO RETRY");
+  }
+}
+
 
 function finishConfirmedRaidView(){
   clearTimeout(towerTransitionTimer);
@@ -3861,7 +3903,16 @@ function finishConfirmedRaidView(){
 $("confirmButton").addEventListener("click",async()=>{
   if(!raid||raidSaveFailed||$("confirmButton").disabled)return;
   if(raid.serverStatus==="CONFIRMED"){
-    finishConfirmedRaidView();
+    if(raid.levelAward){finishConfirmedRaidView();return;}
+    $("confirmButton").disabled=true;
+    $("confirmButton").textContent="CHECKING LEVEL...";
+    try{
+      await completeRaidLevel();
+      if(raid.levelAward)await raidStore.refresh({includeRaid:true});
+    }finally{
+      $("confirmButton").disabled=false;
+      $("confirmButton").textContent=raid.levelAward?"DONE":"CHECK LEVEL";
+    }
     return;
   }
   if(raidConfirmationStarted)return;
@@ -3929,7 +3980,8 @@ $("confirmButton").addEventListener("click",async()=>{
     $("receiptRaidPayoutText").textContent=symbols.length?"TRANSFERRED":"NO CRYPTO BAGS";
     $("receiptRaidPayoutText").classList.toggle("is-transferred",symbols.length>0);
     $("resultDescription").textContent="RAID CONFIRMED · TRANSACTION RECEIPTS BELOW";
-    $("confirmButton").textContent="DONE";
+    await completeRaidLevel();
+    $("confirmButton").textContent=raid.levelAward?"DONE":"CHECK LEVEL";
     // Keep the receipt and Solscan links on-screen until DONE.
     await raidStore.refresh({includeRaid:true});
     await refreshRaidHistory();
@@ -3941,7 +3993,7 @@ $("confirmButton").addEventListener("click",async()=>{
     $("resultDescription").classList.remove("is-confirm-prompt");
     const completed=raid?.serverStatus==="CONFIRMED";
     $("confirmButton").disabled=!completed;
-    $("confirmButton").textContent=completed?"DONE":"CONFIRM RECEIVED";
+    $("confirmButton").textContent=completed?(raid.levelAward?"DONE":"CHECK LEVEL"):"CONFIRM RECEIVED";
   }
 });
 
