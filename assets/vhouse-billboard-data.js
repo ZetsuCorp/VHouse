@@ -263,12 +263,18 @@
     const jsonLevel=dataNumber(traitValue(result?.image?.attributes,"Level"));
     return mintLevel??jsonLevel??row?.level??card.level;
   }
+  function renderLevel(root,card,row,result){
+    const level=billboardLevel(card,row,result);
+    field(root,"level",level);
+    const n=dataNumber(level);
+    field(root,"totalLevelUps",n===null?null:Math.max(0,n-1));
+  }
   function renderVHouse(root,card,row,result){
     field(root,"vcardId",card.id);
     field(root,"mintAddress",card.mint_address??row?.mint_address??row?.mint_receipt?.mint_address);
     field(root,"nftDescription",row?.description??card.description);
     field(root,"team",row?.designation??card.team);
-    field(root,"level",billboardLevel(card,row,result));
+    renderLevel(root,card,row,result);
     const current=window.VHouseCardStore?.getActive?.()||card;
     showStat(root,"atk",current.atk,current.amalieBonusAtk);
     showStat(root,"def",current.def,current.amalieBonusDef);
@@ -293,8 +299,7 @@
     const traits=Array.isArray(loaded.attributes)?loaded.attributes:[];
     if(safeUri(loaded.imageUri))field(root,"ipfsImage",loaded.imageUri);
     field(root,"effect",traitValue(traits,"Effect"));
-    const price=traitValue(traits,"Mint Price (SOL)")??traitValue(traits,"Mint Price");
-    field(root,"mintPrice",price===null?null:String(price).toUpperCase().includes("SOL")?price:price+" SOL");
+
     const initial=dataNumber(chain.initialMintLamports),current=dataNumber(chain.balanceLamports);
     field(root,"initialMint",fmtSol(initial));
     field(root,"recoverableSol",loaded.closeAuthority?fmtSol(current):null);
@@ -369,7 +374,7 @@
       "vcardId","nftName","nftSymbol","mintAddress","ownerWallet","mintDate",
       "tokenStandard","soulbound","updateAuthority","closeAuthority","metadataUri",
       "initialMint","depositedSol","recoverableSol","updates","customizations",
-      "growthPercent","team","level","atk","def","effect","mintPrice",
+      "growthPercent","team","level","atk","def","effect","totalLevelUps",
       "ipfsImage","nftDescription",
     ];
     names.forEach(id => field(root,id,null));
@@ -446,7 +451,7 @@
         const key=user.id+":"+card.id;
         const sameCard=displayedCard===key;
         if(!sameCard){
-          for(const id of ["vcardId","nftName","nftSymbol","mintAddress","ownerWallet","mintDate","tokenStandard","soulbound","updateAuthority","closeAuthority","metadataUri","initialMint","depositedSol","recoverableSol","updates","customizations","growthPercent","team","level","atk","def","effect","mintPrice","ipfsImage","nftDescription"])field(root,id,null);
+          for(const id of ["vcardId","nftName","nftSymbol","mintAddress","ownerWallet","mintDate","tokenStandard","soulbound","updateAuthority","closeAuthority","metadataUri","initialMint","depositedSol","recoverableSol","updates","customizations","growthPercent","team","level","atk","def","effect","totalLevelUps","ipfsImage","nftDescription"])field(root,id,null);
           displayedCard=key;
         }
         const view=sameCard&&displayedView?{...displayedView,chainState:"LOADING"}:
@@ -490,7 +495,7 @@
             if(!data?.chain)throw Error("Blockchain data unavailable");
             view.chain=data;
             view.chainState=dataNumber(data.chain.balanceLamports)!==null?"VERIFIED":"UNAVAILABLE";
-            renderBlockchain(root,data);field(root,"level",billboardLevel(card,view.row,data));renderHistory(root,view);
+            renderBlockchain(root,data);renderLevel(root,card,view.row,data);renderHistory(root,view);
           }catch(error){
             if(!isCurrent())return;
             view.chainState="UNAVAILABLE";renderHistory(root,view);
