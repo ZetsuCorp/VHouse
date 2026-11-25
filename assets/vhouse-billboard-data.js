@@ -131,34 +131,66 @@
         (i?" | "+(delta>0?"+":"")+amount(delta)+" SOL":" | START")+
         " | "+new Date(b.t).toLocaleString(),circle);
     }
-    // Keep the newest value visible; annotate recent changes only when labels fit.
+    // Reserve non-overlapping text rectangles across both chart series.
+    // Latest balance and latest operation take priority over older SOL deltas.
+    const occupiedLabels=[];
+    function chartLabelPosition(point,width,preferBelow){
+      const minX=left+2,maxX=right-width-2;
+      if(maxX<minX)return null;
+      const clampX=v=>Math.max(minX,Math.min(maxX,v));
+      const preferredY=point.y+(preferBelow?13:-9);
+      const xs=[point.x-width/2,point.x-width-5,point.x+5,minX,maxX];
+      for(let xx=minX;xx<=maxX;xx+=8)xs.push(xx);
+      const ys=[preferredY,point.y+(preferBelow?-9:13),point.y-20,point.y+24];
+      for(let yy=20;yy<=73;yy+=10)ys.push(yy);
+      const candidates=[];
+      for(const yy of ys)for(const xx of xs){
+        const x=clampX(xx),y=Math.max(20,Math.min(73,yy));
+        const rect={left:x-2,right:x+width+2,top:y-8,bottom:y+3};
+        if(occupiedLabels.some(b=>rect.left<b.right&&rect.right>b.left&&rect.top<b.bottom&&rect.bottom>b.top))continue;
+        const score=Math.abs(y-preferredY)*2+Math.abs(x+width/2-point.x);
+        candidates.push({x,y,rect,score});
+      }
+      candidates.sort((a,b)=>a.score-b.score);
+      const best=candidates[0];
+      if(best)occupiedLabels.push(best.rect);
+      return best||null;
+    }
+    function placeChartLabel(point,value,color,preferBelow){
+      if(!value.trim())return;
+      const node=label(left,20,value,color,"start");
+      let measured=0;
+      try{measured=node.getComputedTextLength();}catch{}
+      const width=Math.max(measured||0,value.length*4.65);
+      const position=chartLabelPosition(point,width,preferBelow);
+      if(!position){node.remove();return;}
+      node.setAttribute("x",position.x);
+      node.setAttribute("y",position.y);
+    }
     const last=sol.length-1;
     if(last>=0){
       const p=solPoints[last],b=sol[last];
-      const anchor=p.x>right-77?"end":p.x<left+77?"start":"middle";
-      const labelX=anchor==="end"?p.x-5:anchor==="start"?p.x+5:p.x;
-      label(labelX,p.y<32?p.y+12:p.y-9,amount(b.lamports)+" SOL","#e8fff1",anchor);
-      const used=[p.x];
+      placeChartLabel(p,amount(b.lamports)+" SOL","#e8fff1",p.y<32);
+    }
+    if(gameValues.length){
+      const p=gameValues[gameValues.length-1];
+      placeChartLabel(p,((p.label||"")+" "+(p.level!==null?"LV "+p.level:"")).trim(),"#f5c97c",p.y<30);
+    }
+    if(last>=0){
+      const used=[solPoints[last].x];
       const changesToLabel=marked.filter(i=>i>0&&changes[i]!==0).reverse();
       for(const i of changesToLabel){
         const at=solPoints[i],delta=changes[i];
-        if(i!==last && (used.some(xx=>Math.abs(xx-at.x)<72)||used.length>=4))continue;
+        if(i!==last&&(used.some(xx=>Math.abs(xx-at.x)<72)||used.length>=4))continue;
         used.push(at.x);
-        const y=at.y>48?at.y-9:at.y+13;
         const deltaText=(delta>0?"+":"−")+amount(Math.abs(delta))+" SOL";
-        const place=at.x>right-72?"end":at.x<left+72?"start":"middle";
-        label(place==="end"?at.x-5:place==="start"?at.x+5:at.x,
-          y,deltaText,delta>0?"#4bea9b":"#ff7575",place);
+        placeChartLabel(at,deltaText,delta>0?"#4bea9b":"#ff7575",at.y<=48);
       }
     }
     for(const p of gameValues){
       const point=make("circle",{class:"vhouse-growth-point",cx:p.x,cy:p.y,r:2.1,
         fill:"#f5c97c",stroke:"#171321","stroke-width":0.7});
       make("title",{},(p.label||"VHOUSE ACTIVITY")+(p.level!==null?" · LEVEL "+p.level:"")+" | "+new Date(p.t).toLocaleString(),point);
-    }
-    if(gameValues.length){
-      const p=gameValues[gameValues.length-1];
-      label(p.x>right-85?p.x-4:p.x+4,p.y<30?p.y+11:p.y-7,(p.label||"")+" "+(p.level!==null?"LV "+p.level:""),"#f5c97c",p.x>right-85?"end":"start");
     }
     const next={series:Object.fromEntries(series.map(s=>[s.key,s.points])),frame:0};
     plotState.set(root,next);
