@@ -54,7 +54,7 @@
     const sol=balances.map(b=>({t:Date.parse(b.time),lamports:b.lamports}))
       .filter(b=>Number.isFinite(b.t)&&Number.isSafeInteger(b.lamports)&&b.lamports>=0)
       .sort((a,b)=>a.t-b.t);
-    const game=gameEvents.map(e=>({t:Date.parse(e.time),value:e.value}))
+    const game=gameEvents.map(e=>({t:Date.parse(e.time),value:e.value,label:e.label||null,level:e.level??null}))
       .filter(e=>Number.isFinite(e.t)&&Number.isInteger(e.value)&&e.value>=0)
       .sort((a,b)=>a.t-b.t);
     if(!sol.length&&!game.length){
@@ -94,7 +94,7 @@
     for(const [pos,t,anchor] of times)label(pos,84,time(t),"#a9b9c4",anchor);
     const solPoints=sol.map(b=>({x:x(b.t),y:ySol(b.lamports)}));
     const maxEdits=Math.max(1,...game.map(e=>e.value));
-    const gameValues=game.map(e=>({x:x(e.t),y:bottom-e.value/maxEdits*(bottom-top),value:e.value,t:e.t}));
+    const gameValues=game.map(e=>({x:x(e.t),y:bottom-e.value/maxEdits*(bottom-top),value:e.value,t:e.t,label:e.label,level:e.level}));
     const series=[
       {key:"SOL",points:solPoints,color:"#4bea9b"},
       {key:"VHouse edits",points:gameValues,color:"#f5c97c"}
@@ -154,11 +154,11 @@
     for(const p of gameValues){
       const point=make("circle",{class:"vhouse-growth-point",cx:p.x,cy:p.y,r:2.1,
         fill:"#f5c97c",stroke:"#171321","stroke-width":0.7});
-      make("title",{},p.value+" recorded paid edits | "+new Date(p.t).toLocaleString(),point);
+      make("title",{},(p.label||"VHOUSE ACTIVITY")+(p.level!==null?" · LEVEL "+p.level:"")+" | "+new Date(p.t).toLocaleString(),point);
     }
     if(gameValues.length){
       const p=gameValues[gameValues.length-1];
-      label(p.x>right-45?p.x-4:p.x+4,p.y<30?p.y+11:p.y-7,p.value+" edits","#f5c97c",p.x>right-45?"end":"start");
+      label(p.x>right-85?p.x-4:p.x+4,p.y<30?p.y+11:p.y-7,(p.label||"")+" "+(p.level!==null?"LV "+p.level:""),"#f5c97c",p.x>right-85?"end":"start");
     }
     const next={series:Object.fromEntries(series.map(s=>[s.key,s.points])),frame:0};
     plotState.set(root,next);
@@ -315,20 +315,41 @@
       seen.add(e.signature);return true;
     }).sort((a,b)=>Date.parse(a.confirmed_at)-Date.parse(b.confirmed_at));
   }
+  function levelActivity(row,transactions){
+    const records=new Map();
+    for(const e of paidEdits(row))records.set(e.signature,{...e,level:null});
+    for(const e of Array.isArray(row?.mint_receipt?.verified_levels)?row.mint_receipt.verified_levels:[]){
+      if(!e?.signature||!Number.isFinite(Date.parse(e.confirmed_at)))continue;
+      records.set(e.signature,{...records.get(e.signature),...e});
+    }
+    for(const tx of transactions){
+      if(!tx.signature||!Number.isFinite(Date.parse(tx.time)))continue;
+      if(tx.level==null&&!tx.mode&&!tx.paidEdit)continue;
+      const prior=records.get(tx.signature);
+      records.set(tx.signature,{
+        ...prior,signature:tx.signature,confirmed_at:prior?.confirmed_at||tx.time,
+        mode:prior?.mode||tx.mode||null,level:tx.level??prior?.level??null
+      });
+    }
+    return [...records.values()].sort((a,b)=>Date.parse(a.confirmed_at)-Date.parse(b.confirmed_at));
+  }
+  function activityLabel(e){
+    return e.mode==="update"?"UPGRADE":e.mode==="customize"?"CUSTOMIZE":e.mode==="raid"?"RAID":e.level!=null?"LEVEL UP":"PAID EDIT";
+  }
   function renderHistory(root,view){
     const chain=view.chain?.chain||{},snapshots=chain.snapshots||[];
-    const edits=paidEdits(view.row);
-    const points=edits.map((e,i)=>({time:e.confirmed_at,value:i+1}));
+    const edits=levelActivity(view.row,chain.transactions||[]);
+    const points=edits.map((e,i)=>({time:e.confirmed_at,value:i+1,label:activityLabel(e),level:e.level??null}));
     // Recorded paid edits, not invented monetary valuations.
     const updates=dataNumber(view.row?.updates),custom=dataNumber(view.row?.customizations);
-    if(updates!==null&&custom!==null&&updates+custom===0&&Number.isFinite(Date.parse(view.row?.created_at)))
+    if(!edits.length&&updates!==null&&custom!==null&&updates+custom===0&&Number.isFinite(Date.parse(view.row?.created_at)))
       points.push({time:view.row.created_at,value:0});
     const events=[
       ...(view.checks||[]).map(e=>({date:when(e.checked_at),ts:Date.parse(e.checked_at),
         label:"VHOUSE VCARD · "+(e.state||"CHECK"),detail:[e.source,"EX:"+e.ex,"OWN:"+e.own,"USE:"+e.use].join(" · ")})),
       ...(view.events||[]).map(e=>({date:when(e.checked_at),ts:Date.parse(e.checked_at),
         label:"VHOUSE · "+(e.state||"CHECK"),detail:[e.item,e.source,"EX:"+e.ex,"OWN:"+e.own,"USE:"+e.use].join(" · ")})),
-      ...edits.map(e=>({date:when(e.confirmed_at),ts:Date.parse(e.confirmed_at),label:"VHOUSE · "+e.mode.toUpperCase(),detail:e.signature})),
+      ...edits.map(e=>({date:when(e.confirmed_at),ts:Date.parse(e.confirmed_at),label:"VHOUSE · "+activityLabel(e)+(e.level!=null?" · LEVEL "+e.level:""),detail:e.signature})),
       ...(chain.transactions||[]).map(e=>({date:when(e.time),ts:Date.parse(e.time),label:"SOLANA · TRANSACTION",detail:e.signature})),
       ...snapshots.map(e=>({date:when(e.time),ts:Date.parse(e.time),label:"SOLANA · VCARD BALANCE",detail:fmtSol(e.lamports)}))
     ];
