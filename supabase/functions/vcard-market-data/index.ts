@@ -286,17 +286,57 @@ Deno.serve(async(request:Request)=>{
   }):Promise.resolve(null);
   const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const admin=serviceKey?createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}):null;
+  const storedUri=str(receipt.metadata_uri);
+  // The Billboard's existing JSON read is also used by the save below.
+  const metadataRead=syncOnly?Promise.resolve(null):(async()=>{
+   const stored=await readNFTJSON(storedUri);
+   const onchain=await chainRead;
+   const uri=onchain?.metadataUri||storedUri;
+   const metadata=uri&&uri!==storedUri?await readNFTJSON(uri):stored;
+   return {uri,metadata};
+  })();
   // Share the existing verified mint read and save step with the VCard loader.
   const levelSync=chainRead.then(async loaded=>{
    const mintLevel=num(loaded?.attributes.find(x=>String(x.trait_type).toLowerCase()==="level")?.value);
    if(!admin||external||loaded?.tokenStandard!=="Token-2022"||mintLevel===null||mintLevel<1)return null;
-   if(mintLevel!==num(card.level)){
-    const {data:synced,error}=await admin.from("vcard_list").update({level:mintLevel})
-     .eq("card_id",cardId).eq("mint_address",mint).eq("level",card.level)
-     .select("level").maybeSingle();
-    if(error||!synced){warnings.push("VCard level synchronization: "+(error?.message||"record changed"));return null;}
-    card.level=synced.level;
+   const changes:O={};
+   const put=(key:string,value:unknown)=>{
+    if(value!==null&&value!==undefined&&value!==card[key])changes[key]=value;
+   };
+   if(mintLevel<=10)put("level",mintLevel);
+   else warnings.push("NFT level exceeds the existing vcard_list level limit (10)");
+   if(!syncOnly){
+    // Match the existing Creator registration fields; never save the full card PNG as artwork.
+    const name=str(loaded.nftName)?.replace(/^Vcard\s+/i,"");
+    if(name)put("name",name);
+    const trait=(key:string)=>loaded.attributes.find(x=>String(x.trait_type).toLowerCase()===key)?.value;
+    const result=await metadataRead;
+    const metadata=result?.uri===loaded.metadataUri?obj(result?.metadata):{};
+    const v=obj(obj(metadata.properties).vhouse);
+    const attribute=(key:string)=>(Array.isArray(metadata.attributes)?metadata.attributes.map(obj):[])
+     .find(x=>String(x.trait_type).toLowerCase()===key)?.value;
+    const team=String(trait("team")??attribute("team")??v.team??"").toUpperCase();
+    const designation=({STONE:"R",WIND:"P",BLADE:"S",R:"R",P:"P",S:"S"} as Record<string,string>)[team];
+    if(designation)put("designation",designation);
+    for(const key of ["atk","def"]){
+     put(key,num(trait(key)??attribute(key)??v[key]));
+    }
+    if(typeof metadata.description==="string")put("description",metadata.description);
+    const source=str(v.sourceImage);
+    if(v.imageMode==="custom"&&source){
+     const artwork=nftURL(source)||(/^https:\/\//i.test(source)?source:
+      /^ar:\/\//i.test(source)?"https://arweave.net/"+source.slice(5):null);
+     if(artwork)put("image",artwork);
+    }
    }
+   if(Object.keys(changes).length){
+    const {data:synced,error}=await admin.from("vcard_list").update(changes)
+     .eq("card_id",cardId).eq("mint_address",mint).eq("level",card.level)
+     .select(Object.keys(changes).join(",")).maybeSingle();
+    if(error||!synced){warnings.push("VCard data synchronization: "+(error?.message||"record changed"));return null;}
+    Object.assign(card,synced);
+   }
+   if(mintLevel>10)return null;
    return mintLevel;
   }).catch(e=>{warnings.push("VCard level synchronization: "+String(e));return null;});
   if(syncOnly){
@@ -304,18 +344,14 @@ Deno.serve(async(request:Request)=>{
    if(level===null)return send({error:warnings.at(-1)||"NFT level unavailable"},409);
    return send({status:"ok",level});
   }
-  const storedUri=str(receipt.metadata_uri);
-  const imageRead=(async()=>{
-   const stored=await readNFTJSON(storedUri);
-   const onchain=await chainRead;
-   const uri=onchain?.metadataUri||storedUri;
-   const metadata=uri&&uri!==storedUri?await readNFTJSON(uri):stored;
+  const imageRead=metadataRead.then(result=>{
+   const {uri,metadata}=result!;
    return {
     metadataUri:uri,imageUri:str(metadata.image)||str(receipt.image_uri),
     nftName:str(metadata.name),symbol:str(metadata.symbol),description:str(metadata.description),
     attributes:Array.isArray(metadata.attributes)?metadata.attributes:null
    };
-  })();
+  });
   const vhouseRead=(async()=>{
    const [checks,events]=await Promise.all([
     client.from("vcard_verification_chain").select("event_id,card_id,state,ex,own,use,quantity,source,checked_at")
