@@ -79,6 +79,22 @@ tr.active{background:#41334d}
 .foot .back-button{font-size:.9cqw;padding:.35cqw .65cqw;min-width:0;border-width:1px}
 .foot .status{font-size:.86cqw;color:#ad9fbc;text-align:right}
 footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;text-align:center;padding:.42cqw .2cqw;font-size:.94cqw;white-space:nowrap}
+.market{position:relative}
+.trade-buy,.trade-sell{font-weight:900;border-radius:.25cqw;padding:.28cqw .7cqw;font-size:.95cqw;white-space:nowrap;color:#fff}
+.trade-buy{background:#18533a;border:1px solid #59e0a2}
+.trade-sell{background:#782f43;border:1px solid #fa8497}
+.trade-layer{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:#08050dc9}
+.trade-layer[hidden]{display:none}
+.trade-window{width:min(94%,44cqw);height:94%;min-height:0;display:flex;flex-direction:column;background:#1b1628;border:1px solid #d1ae65;border-radius:.5cqw;padding:.65cqw;overflow:hidden;box-shadow:0 0 2cqw #0009}
+.trade-heading{display:flex;justify-content:space-between;align-items:center;gap:.5cqw;font-size:1.4cqw;font-weight:bold;color:#e8c987;flex:none}
+.trade-wallet{display:flex;align-items:center;justify-content:space-between;gap:.5cqw;margin:.4cqw 0;font-size:.95cqw;flex:none}
+.trade-wallet span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trade-viewport{position:relative;flex:1;min-height:0;overflow:hidden}
+.trade-scale{position:absolute;top:0;left:50%;width:400px;height:568px;transform-origin:top center}
+#tradeWidget{width:400px;height:568px}
+.trade-result{font-size:1cqw;text-align:center;padding:.35cqw;overflow-wrap:anywhere;flex:none}
+.trade-result a{color:#e8c987}
+:root{--jupiter-plugin-primary:232,201,135;--jupiter-plugin-background:27,22,40;--jupiter-plugin-primaryText:238,234,248;--jupiter-plugin-interactive:48,37,63;--jupiter-plugin-module:36,28,50}
 </style>
 </head>
 <body>
@@ -101,7 +117,7 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 </section>
 <section class="panel" aria-label="Selected token market">
 <div class="heading"><span id="name"></span><div id="tabs" class="controls"></div></div>
-<div class="pricebar"><div><span id="price" class="price">—</span><span id="change" class="change"></span></div><div class="controls"><a id="trade" class="external" target="_blank" rel="noopener noreferrer">Trade ↗</a><a id="dex" class="external" target="_blank" rel="noopener noreferrer">DEXScreener ↗</a></div></div>
+<div class="pricebar"><div><span id="price" class="price">—</span><span id="change" class="change"></span></div><div class="controls"><button type="button" id="chartBuy" class="trade-buy">BUY</button><button type="button" id="chartSell" class="trade-sell">SELL</button><a id="trade" class="external" target="_blank" rel="noopener noreferrer">Trade ↗</a><a id="dex" class="external" target="_blank" rel="noopener noreferrer">DEXScreener ↗</a></div></div>
 <div class="chart"><svg id="chart" viewBox="0 0 500 120" preserveAspectRatio="none" aria-label="Historical USD price chart" role="img"></svg><div id="chartnote" class="chartnote" role="status">Loading market data…</div></div>
 <div class="metrics"><div><span>MARKET CAP</span><b id="cap">—</b></div><div><span>24H VOLUME</span><b id="vol">—</b></div><div><span>LIQUIDITY</span><b id="liq">—</b></div></div>
 <div class="details"><div><div class="sectiontitle">MARKET ACTIVITY · 24H</div><div class="stats"><div><span>TXNS</span><b id="txns">—</b></div><div><span>BUYS</span><b class="pos" id="buys">—</b></div><div><span>SELLS</span><b class="neg" id="sells">—</b></div></div><div class="ratio"><div id="buybar" style="background:#59e0a2"></div><div id="sellbar" style="background:#fa8497"></div></div><div class="ratiolabel"><span class="pos" id="bp">—</span><span class="neg" id="sp">—</span></div></div>
@@ -111,6 +127,14 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 </div>
 <div class="foot"><a class="vhouse-btn back-button" href="./index.html">← BACK</a><span class="status" id="status" role="status">Loading market data…</span><button id="refresh" class="nav" type="button">Refresh ↻</button></div>
 <footer>Zetsumetsu EOe™ | Zetsu EDU™ | Zetsu R&amp;D LLC - CAGE : 20UB7 | © 2024 - 2026 Zetsumetsu Corporation™ | Artworqq Kevin Suber</footer>
+<div class="trade-layer" id="tradeLayer" hidden>
+ <section class="trade-window" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
+  <div class="trade-heading"><span id="tradeTitle">BUY</span><button type="button" class="nav" id="closeTrade" aria-label="Close trading overlay">✕</button></div>
+  <div class="trade-wallet"><span id="tradeWallet">Phantom</span><button type="button" class="nav" id="tradeConnect">CONNECT PHANTOM</button></div>
+  <div class="trade-viewport" id="tradeViewport"><div class="trade-scale" id="tradeScale"><div id="tradeWidget"></div></div></div>
+  <div class="trade-result" id="tradeResult" role="status"></div>
+ </section>
+</div>
 </div>
 </div>
 </main>
@@ -227,7 +251,7 @@ function renderSpotlight(){
  const offset=start*spotlightCapacity;
  for(let i=offset;i<Math.min(offset+spotlightCapacity,assets.length);i++){
   const a=assets[i],p=pairFor(a);
-  const button=document.createElement("button");button.type="button";button.className="feature";button.dataset.i=i;button.title=a.name;button.setAttribute("aria-label","View "+a.name);
+  const button=document.createElement("button");button.type="button";button.className="feature";button.dataset.buy=i;button.title="Buy "+a.name;button.setAttribute("aria-label","Buy "+a.name);
   const art=document.createElement("div");art.className="art";art.style.setProperty("--accent",a.accent);
   const mark=document.createElement("span");mark.className="mark";mark.textContent=a.symbol.slice(0,3);art.append(mark);
   if(a.native){
@@ -329,6 +353,98 @@ async function loadChart(){
  }catch{if(ticket===chartRequest)chartNote("Historical price data unavailable")}
 }
 function choose(i){if(!assets[i])return;selected=i;renderList();renderDetail();void loadChart();void loadSupply(assets[i])}
+// Trade selection is deliberately separate from chart selection.
+const USDC_MINT="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+let tradeAsset=null,tradeMode="BUY",tradeGeneration=0,tradeProvider=null,pluginLoading=null,widgetReady=false,tradeConnecting=false,tradeReturnFocus=null;
+function tradePair(a,mode){
+ const counter=a.native?USDC_MINT:assets[0].mint;
+ return {initialInputMint:mode==="BUY"?counter:a.mint,initialOutputMint:mode==="BUY"?a.mint:counter,fixedMint:a.mint,swapMode:"ExactIn"};
+}
+function tradeMessage(message){$("tradeResult").textContent=message}
+function fitTrade(){
+ const view=$("tradeViewport"),scale=Math.min(view.clientWidth/400,view.clientHeight/568,1);
+ if(scale>0)$("tradeScale").style.transform="translateX(-50%) scale("+scale+")";
+}
+function loadTradePlugin(){
+ if(window.Jupiter?.init)return Promise.resolve();
+ if(!pluginLoading)pluginLoading=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");script.src="https://plugin.jup.ag/plugin-v1.js";script.async=true;
+  const timer=setTimeout(()=>{script.remove();pluginLoading=null;reject(Error("Jupiter did not load"))},20000);
+  script.onload=()=>{clearTimeout(timer);if(window.Jupiter?.init)resolve();else{script.remove();pluginLoading=null;reject(Error("Jupiter unavailable"))}};
+  script.onerror=()=>{clearTimeout(timer);script.remove();pluginLoading=null;reject(Error("Jupiter unavailable"))};
+  document.head.append(script);
+ });
+ return pluginLoading;
+}
+function phantom(){const p=window.phantom?.solana||window.solana;return p?.isPhantom?p:null}
+function tradeContext(){
+ const p=tradeProvider,connected=!!(p?.isConnected&&p.publicKey),key=connected?p.publicKey:null;
+ const requireWallet=()=>{if(!p?.isConnected||!key||p.publicKey?.toBase58()!==key.toBase58())throw Error("Phantom account changed. Reconnect before trading.")};
+ const adapter=p?{name:"Phantom",url:"https://phantom.app/",icon:"",publicKey:key,connected,connecting:false,readyState:"Installed",supportedTransactionVersions:new Set(["legacy",0]),connect:()=>connectTrade(),disconnect:async()=>{await p.disconnect();syncTradeWallet()}}:null;
+ return {autoConnect:false,wallets:adapter?[{adapter,readyState:"Installed"}]:[],wallet:adapter?{adapter,readyState:"Installed"}:null,publicKey:key,connected,connecting:tradeConnecting,disconnecting:false,select:()=>{},connect:()=>connectTrade(),disconnect:async()=>{if(p)await p.disconnect();syncTradeWallet()},signTransaction:connected?async tx=>{requireWallet();return p.signTransaction(tx)}:undefined,signAllTransactions:connected?async txs=>{requireWallet();return p.signAllTransactions(txs)}:undefined,signMessage:connected?async msg=>{requireWallet();return (await p.signMessage(msg)).signature}:undefined,sendTransaction:connected?async(tx)=>{requireWallet();return (await p.signAndSendTransaction(tx)).signature}:async()=>{throw Error("Connect Phantom first")}};
+}
+function syncTradeWallet(){
+ const p=tradeProvider,connected=!!(p?.isConnected&&p.publicKey);
+ $("tradeWallet").textContent=connected?"Phantom · "+p.publicKey.toBase58():"Phantom";
+ $("tradeConnect").hidden=connected;$("tradeConnect").disabled=tradeConnecting;
+ if(widgetReady&&!$("tradeLayer").hidden)window.Jupiter?.syncProps?.({passthroughWalletContextState:tradeContext()});
+}
+async function connectTrade(){
+ if(tradeConnecting)return;
+ const p=phantom(),generation=tradeGeneration;
+ if(!p){tradeMessage("Open VHouse in a browser with Phantom installed.");return}
+ tradeConnecting=true;$("tradeConnect").disabled=true;
+ try{
+  const response=await p.connect();
+  if(generation!==tradeGeneration||$("tradeLayer").hidden)return;
+  if(!response?.publicKey||!p.publicKey)throw Error("Phantom did not return an address");
+  tradeProvider=p;tradeMessage("");
+ }catch(error){if(generation===tradeGeneration)tradeMessage(error?.message||"Phantom connection declined")}
+ finally{tradeConnecting=false;if(generation===tradeGeneration)syncTradeWallet()}
+}
+function closeTrade(){
+ tradeGeneration++;widgetReady=false;$("tradeLayer").hidden=true;
+ // Unmount the swap UI; do not disconnect or modify the user's wallet.
+ try{window.Jupiter?.root?.unmount?.();if(window.Jupiter)window.Jupiter.root=null}catch{}
+ $("tradeWidget").replaceChildren();
+ tradeAsset=null;tradeProvider=null;tradeReturnFocus?.focus?.();tradeReturnFocus=null;
+}
+async function openTrade(i,mode){
+ const a=assets[i];if(!a)return;
+ if(!$("tradeLayer").hidden)closeTrade();
+ const generation=++tradeGeneration;
+ tradeAsset=a;tradeMode=mode;tradeReturnFocus=document.activeElement;
+ tradeProvider=phantom();widgetReady=false;
+ $("tradeTitle").textContent=mode+" "+a.symbol;
+ $("tradeLayer").hidden=false;tradeMessage("Loading Jupiter…");syncTradeWallet();fitTrade();$("closeTrade").focus();
+ try{
+  await loadTradePlugin();
+  if(generation!==tradeGeneration||$("tradeLayer").hidden)return;
+  window.Jupiter.init({
+   displayMode:"integrated",integratedTargetId:"tradeWidget",containerStyles:{width:"400px",height:"568px",borderRadius:"8px",overflow:"hidden"},
+   localStoragePrefix:"vhouse-market-dex",autoConnect:false,enableWalletPassthrough:true,passthroughWalletContextState:tradeContext(),onRequestConnectWallet:connectTrade,
+   defaultExplorer:"Solscan",formProps:tradePair(a,mode),
+   onSuccess:({txid})=>{
+    if(generation!==tradeGeneration||!txid)return;
+    tradeMessage("Swap confirmed · ");
+    const link=document.createElement("a");link.href="https://solscan.io/tx/"+encodeURIComponent(txid);link.target="_blank";link.rel="noopener noreferrer";link.textContent="View Solscan receipt";$("tradeResult").append(link);
+    void refreshMarket();
+   },
+   onSwapError:()=>{if(generation===tradeGeneration)tradeMessage("Swap not completed. Check the Jupiter result.")}
+  });
+  widgetReady=true;tradeMessage("");syncTradeWallet();fitTrade();
+ }catch(error){if(generation===tradeGeneration)tradeMessage("Jupiter unavailable. "+(error?.message||""))}
+}
+$("chartBuy").onclick=()=>void openTrade(selected,"BUY");
+$("chartSell").onclick=()=>void openTrade(selected,"SELL");
+$("closeTrade").onclick=closeTrade;
+$("tradeConnect").onclick=()=>void connectTrade();
+$("tradeLayer").addEventListener("click",e=>{if(e.target===$("tradeLayer"))closeTrade()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("tradeLayer").hidden)closeTrade()});
+if(typeof ResizeObserver==="function")new ResizeObserver(fitTrade).observe($("tradeViewport"));
+window.addEventListener("resize",fitTrade);
+const injectedPhantom=phantom();
+if(injectedPhantom?.on){for(const event of ["connect","disconnect","accountChanged"])injectedPhantom.on(event,()=>{if(!$("tradeLayer").hidden)syncTradeWallet()})}
 async function refreshMarket(){
  if(refreshing)return;refreshing=true;$("refresh").disabled=true;
  $("status").textContent="Refreshing market data…";
@@ -355,7 +471,8 @@ $("all").onclick=()=>{query="";filter="all";page=0;$("search").value="";renderLi
 $("search").oninput=e=>{query=e.target.value.trim().toLowerCase();page=0;renderList()};
 $("refresh").onclick=()=>void refreshMarket();
 document.querySelector(".market").addEventListener("click",e=>{
- const coin=e.target.closest("[data-i]"),dot=e.target.closest("[data-slide]"),f=e.target.closest("[data-filter]"),t=e.target.closest("[data-period]");
+ const spotlight=e.target.closest("#features [data-buy]"),coin=e.target.closest("#rows [data-i]"),dot=e.target.closest("[data-slide]"),f=e.target.closest("[data-filter]"),t=e.target.closest("[data-period]");
+ if(spotlight)void openTrade(Number(spotlight.dataset.buy),"BUY");
  if(coin)choose(Number(coin.dataset.i));
  if(dot)slide(Number(dot.dataset.slide));
  if(f){filter=f.dataset.filter;page=0;renderList()}
