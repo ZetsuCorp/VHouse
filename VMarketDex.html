@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <script src="assets/vhouse-public-config.js"></script>
 <script src="assets/vhouse-auth.js"></script>
+<script src="assets/vhouse-market-data.js"></script>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -181,26 +182,19 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 </main>
 <script>
 "use strict";
-const assets=[
- {name:"Solana",symbol:"SOL",mint:"So11111111111111111111111111111111111111112",category:"Network",accent:"#64d5b5",glow:"#206b64",mark:"≋",native:true},
- {name:"AWT",symbol:"AWT",mint:"ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump",category:"Ecosystem",accent:"#bc92ea",glow:"#65429d",mark:"A"},
- {name:"Scraps",symbol:"SCRAPS",mint:"BGf97TZtX7SezpJs21B3DchsonwHvw8DiekDALXLpump",category:"Rewards",accent:"#d9b36a",glow:"#815330",mark:"⚙"},
- {name:"Amalie",symbol:"AMALIE",mint:"rdWAk8U5Zx3L5TjLtL7sb3XhEPmXhqcMLxVBDi3pump",category:"Bonus points",accent:"#e89bbf",glow:"#933f76",mark:"✦"}
-];
+const {assets,num,money,percent,refreshMs}=window.VHouseMarketData;
+const marketData=window.VHouseMarketData.create();
+const {markets,pumpCoins,pairFor,displayPrice,displayCap,changeFor}=marketData;
 const $=id=>document.getElementById(id);
-const num=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
 const compact=v=>v===null||v===undefined?"—":new Intl.NumberFormat("en-US",{notation:"compact",maximumFractionDigits:2}).format(v);
 const usd=v=>v===null||v===undefined?"—":"$"+compact(v);
-const money=v=>v===null||v===undefined?"—":"$"+(v>0&&v<.000001?v.toExponential(3):v.toFixed(v>=1?2:6));
-const percent=v=>v===null||v===undefined?"—":(v>=0?"+":"")+v.toFixed(2)+"%";
 const integer=v=>v===null||v===undefined?"—":v.toLocaleString("en-US");
 const colorClass=v=>v===null||v===undefined?"muted":v>=0?"pos":"neg";
 const ranges={"1H":["minute",1,60],"24H":["minute",15,96],"7D":["hour",4,42],"30D":["day",1,30]};
 const filterOptions=[["all","All assets"],["gainers","Top gainers"],["losers","Top losers"],["volume","Highest volume"]];
 let selected=0,start=0,page=0,filter="all",query="",period="24H",lastUpdated=null,refreshing=false,marketError=false,chartRequest=0;
-const perPage=10,markets=new Map(),supplies=new Map(),chartCache=new Map(),supplyInflight=new Map();
+const perPage=10,supplies=new Map(),chartCache=new Map(),supplyInflight=new Map();
 const cacheTime=60000;
-const pumpCoins=new Map();
 // Resolve artwork directly from mint metadata, independently of market data.
 const tokenImages=new Map();
 function artworkUrls(uri){
@@ -260,22 +254,6 @@ function attachTokenImage(art,mark,sources){
  img.src=urls[0];art.append(img);
 }
 let pumpUnavailable=false;
-function displayPrice(a){return num(pumpCoins.get(a.mint)?.priceUsd)??num(pairFor(a)?.priceUsd)}
-function displayCap(a){return num(pumpCoins.get(a.mint)?.marketCap)??num(pairFor(a)?.marketCap)}
-async function loadPump(){
- await window.VHouseAuth.ready;
- const client=window.VHouseAuth.getClient();
- const {data,error}=await client.functions.invoke("vhouse-pump-market",{body:{}});
- if(error||!Array.isArray(data?.coins))throw Error("Pump market unavailable");
- for(const coin of data.coins)if(coin.ok&&assets.some(a=>!a.native&&a.mint===coin.mint))pumpCoins.set(coin.mint,coin);
- pumpUnavailable=assets.some(a=>!a.native&&!data.coins.some(c=>c.mint===a.mint&&c.ok&&num(c.priceUsd)>0));
-}
-function selectPair(pairs,asset){
- return pairs.filter(p=>p?.chainId==="solana"&&p.baseToken?.address===asset.mint&&num(p.priceUsd)>0&&p.pairAddress)
- .sort((a,b)=>(num(b.liquidity?.usd)??0)-(num(a.liquidity?.usd)??0))[0]||null;
-}
-function pairFor(a){return markets.get(a.mint)||null}
-function changeFor(a){return num(pairFor(a)?.priceChange?.h24)}
 function volumeFor(a){return num(pairFor(a)?.volume?.h24)}
 function visibleAssets(){
  let list=assets.map((a,i)=>({a,i})).filter(({a})=>(a.name+" "+a.symbol+" "+a.mint).toLowerCase().includes(query));
@@ -695,13 +673,7 @@ async function refreshMarket(){
  if(refreshing)return;refreshing=true;$("refresh").disabled=true;
  $("status").textContent="Refreshing market data…";
  try{
-  const results=await Promise.allSettled([loadPump(),...assets.map(async a=>{
-   const pairs=await json("https://api.dexscreener.com/token-pairs/v1/solana/"+a.mint);
-   if(!Array.isArray(pairs))throw Error("Invalid market response");
-   markets.set(a.mint,selectPair(pairs,a));
-  })]);
-  if(results[0].status==="rejected")pumpUnavailable=true;
-  if(results.every(x=>x.status==="rejected"))throw Error("Market unavailable");
+  ({pumpUnavailable}=await marketData.refresh());
   lastUpdated=new Date();marketError=false;
  }catch{marketError=true}
  finally{
@@ -730,7 +702,7 @@ $("features").addEventListener("touchstart",e=>{touchStart=e.touches[0].clientX}
 $("features").addEventListener("touchend",e=>{const distance=e.changedTouches[0].clientX-touchStart;if(Math.abs(distance)>40)slide(start+(distance<0?1:-1))},{passive:true});
 renderSpotlight();renderList();renderDetail();void refreshMarket();
 for(const a of assets)if(!a.native)void loadTokenImage(a);
-setInterval(()=>{if(!document.hidden)void refreshMarket()},60000);
+setInterval(()=>{if(!document.hidden)void refreshMarket()},refreshMs);
 // Connected-wallet display follows Journey's existing account/Phantom checks.
 const marketWalletPanel=$("marketConnectedWallet"),marketWalletAddress=$("marketWalletAddress");
 async function updateMarketWallet(){
