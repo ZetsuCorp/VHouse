@@ -7,6 +7,8 @@
 <script src="assets/vhouse-entry.js"></script>
 <link rel="stylesheet" href="assets/vhouse-buttons.css">
 <link rel="stylesheet" href="assets/vhouse-layout.css">
+<script src="assets/vhouse-public-config.js"></script>
+<script src="assets/vhouse-auth.js"></script>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -134,6 +136,18 @@ const filterOptions=[["all","All assets"],["gainers","Top gainers"],["losers","T
 let selected=0,start=0,page=0,filter="all",query="",period="24H",lastUpdated=null,refreshing=false,marketError=false,chartRequest=0;
 const perPage=10,markets=new Map(),supplies=new Map(),chartCache=new Map(),supplyInflight=new Map();
 const cacheTime=60000;
+const pumpCoins=new Map();
+let pumpUnavailable=false;
+function displayPrice(a){return num(pumpCoins.get(a.mint)?.priceUsd)??num(pairFor(a)?.priceUsd)}
+function displayCap(a){return num(pumpCoins.get(a.mint)?.marketCap)??num(pairFor(a)?.marketCap)}
+async function loadPump(){
+ await window.VHouseAuth.ready;
+ const client=window.VHouseAuth.getClient();
+ const {data,error}=await client.functions.invoke("vhouse-pump-market",{body:{}});
+ if(error||!Array.isArray(data?.coins))throw Error("Pump market unavailable");
+ for(const coin of data.coins)if(coin.ok&&assets.some(a=>!a.native&&a.mint===coin.mint))pumpCoins.set(coin.mint,coin);
+ pumpUnavailable=assets.some(a=>!a.native&&!data.coins.some(c=>c.mint===a.mint&&c.ok&&num(c.priceUsd)>0));
+}
 function selectPair(pairs,asset){
  return pairs.filter(p=>p?.chainId==="solana"&&p.baseToken?.address===asset.mint&&num(p.priceUsd)>0&&p.pairAddress)
  .sort((a,b)=>(num(b.liquidity?.usd)??0)-(num(a.liquidity?.usd)??0))[0]||null;
@@ -156,9 +170,9 @@ function renderSpotlight(){
   const button=document.createElement("button");button.type="button";button.className="feature";button.dataset.i=i;button.setAttribute("aria-label","View "+a.name);
   const art=document.createElement("div");art.className="art";art.style.setProperty("--accent",a.accent);art.style.setProperty("--glow",a.glow);
   const mark=document.createElement("span");mark.className="mark";mark.textContent=a.mark;art.append(mark);
-  const src=p?.info?.header||p?.info?.imageUrl;
+  const src=pumpCoins.get(a.mint)?.image||p?.info?.header||p?.info?.imageUrl;
   if(typeof src==="string"&&/^https:\/\//i.test(src)){
-   const img=document.createElement("img");img.alt="";img.src=src;if(!p?.info?.header)img.className="logo";img.onerror=()=>img.remove();art.append(img);
+   const img=document.createElement("img");img.alt="";img.src=src;if(pumpCoins.get(a.mint)?.image||!p?.info?.header)img.className="logo";img.onerror=()=>img.remove();art.append(img);
   }
   const arrow=document.createElement("span");arrow.className="arrow";arrow.textContent="↗";art.append(arrow);
   const desc=document.createElement("div");desc.className="desc";const title=document.createElement("b");title.textContent=a.name;const sub=document.createElement("small");sub.className="muted";sub.textContent="$"+a.symbol+" · "+a.category;desc.append(title,sub);button.append(art,desc);$("features").append(button);
@@ -171,14 +185,14 @@ function renderList(){
  const list=visibleAssets(),pages=Math.max(1,Math.ceil(list.length/perPage));page=Math.max(0,Math.min(page,pages-1));
  $("filters").innerHTML=filterOptions.map(([id,label])=>'<button type="button" class="filter '+(id===filter?"active":"")+'" data-filter="'+id+'">'+label+'</button>').join("");
  $("rows").innerHTML=list.slice(page*perPage,(page+1)*perPage).map(({a,i})=>{
-  const p=pairFor(a),c=changeFor(a),v=num(p?.priceUsd);
+  const p=pairFor(a),c=changeFor(a),v=displayPrice(a);
   return '<tr tabindex="0" data-i="'+i+'" class="'+(i===selected?"active":"")+'"><td title="'+a.name+'"><span style="color:'+a.accent+'">●</span> '+a.symbol+'</td><td title="'+(v??"Unavailable")+'">'+money(v)+'</td><td class="'+colorClass(c)+'">'+percent(c)+'</td><td>'+usd(volumeFor(a))+'</td></tr>';
  }).join("")||'<tr><td colspan="4" style="text-align:center">No matching assets</td></tr>';
  $("count").textContent=list.length+" coins";$("range").textContent=(list.length?page*perPage+1:0)+"–"+Math.min((page+1)*perPage,list.length)+" of "+list.length;$("page").textContent=(page+1)+" / "+pages;$("pagePrev").disabled=page===0;$("pageNext").disabled=page>=pages-1;
 }
 function renderSupply(){
  const a=assets[selected],p=pairFor(a),s=supplies.get(a.mint);
- const price=num(p?.priceUsd),cap=num(p?.marketCap),total=s?.total??null;
+ const price=displayPrice(a),cap=displayCap(a),total=s?.total??pumpCoins.get(a.mint)?.totalSupply??null;
  let circulating=s?.circulating??null,estimated=false;
  if(!a.native&&circulating===null&&cap!==null&&price>0){
   const estimate=cap/price;
@@ -192,8 +206,8 @@ function renderSupply(){
 }
 function renderDetail(){
  const a=assets[selected],p=pairFor(a),c=changeFor(a);
- $("name").textContent=a.name+" / USD";$("price").textContent=money(num(p?.priceUsd));$("change").textContent=percent(c);$("change").className="change "+colorClass(c);
- $("cap").textContent=usd(num(p?.marketCap));$("vol").textContent=usd(volumeFor(a));$("liq").textContent=usd(num(p?.liquidity?.usd));
+ $("name").textContent=a.name+" / USD";$("price").textContent=money(displayPrice(a));$("change").textContent=percent(c);$("change").className="change "+colorClass(c);
+ $("cap").textContent=usd(displayCap(a));$("vol").textContent=usd(volumeFor(a));$("liq").textContent=usd(num(p?.liquidity?.usd));
  const buys=num(p?.txns?.h24?.buys),sells=num(p?.txns?.h24?.sells),total=buys!==null&&sells!==null?buys+sells:null;
  $("buys").textContent=integer(buys);$("sells").textContent=integer(sells);$("txns").textContent=integer(total);
  const ratio=total>0?buys/total*100:null;
@@ -258,15 +272,19 @@ async function refreshMarket(){
  if(refreshing)return;refreshing=true;$("refresh").disabled=true;
  $("status").textContent="Refreshing market data…";
  try{
-  const pairs=await json("https://api.dexscreener.com/tokens/v1/solana/"+assets.map(a=>a.mint).join(","));
-  if(!Array.isArray(pairs))throw Error("Invalid market response");
-  for(const a of assets)markets.set(a.mint,selectPair(pairs,a));
+  const results=await Promise.allSettled([loadPump(),...assets.map(async a=>{
+   const pairs=await json("https://api.dexscreener.com/token-pairs/v1/solana/"+a.mint);
+   if(!Array.isArray(pairs))throw Error("Invalid market response");
+   markets.set(a.mint,selectPair(pairs,a));
+  })]);
+  if(results[0].status==="rejected")pumpUnavailable=true;
+  if(results.every(x=>x.status==="rejected"))throw Error("Market unavailable");
   lastUpdated=new Date();marketError=false;
  }catch{marketError=true}
  finally{
   refreshing=false;$("refresh").disabled=false;renderSpotlight();renderList();renderDetail();
   const time=lastUpdated?lastUpdated.toLocaleTimeString():"";
-  $("status").textContent=marketError?(time?"Market refresh unavailable · Last data "+time:"Market data unavailable"):"DEXScreener · Highest-liquidity pair · Updated "+time;
+  $("status").textContent=marketError?(time?"Market refresh unavailable · Last data "+time:"Market data unavailable"):(pumpUnavailable?"Pump.fun partial/unavailable · DEXScreener fallback":"Pump.fun + DEXScreener")+" · Updated "+time;
   void loadChart();void loadSupply(assets[selected]);
  }
 }
