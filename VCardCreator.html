@@ -378,7 +378,6 @@ button:disabled{opacity:.5;cursor:default}
         <span class="bubble-symbol">♨</span><span>BURN VCARD</span>
       </button>
     </div>
-    <div id="upgradeEntryStatus" class="status" role="status" aria-live="polite" hidden></div>
   </section>
 
   <section class="mint-intro" id="mintIntroPanel" aria-label="Introduction to minting VCards" hidden>
@@ -401,6 +400,28 @@ button:disabled{opacity:.5;cursor:default}
         <button class="nav-back" id="mintIntroBackButton" type="button">BACK</button>
         <button class="action" id="mintIntroContinueButton" type="button">CREATE VCARD</button>
       </div>
+    </div>
+  </section>
+
+  <section class="mint-intro" id="upgradeIntroPanel" aria-label="Introduction to upgrading VCards" hidden>
+    <div class="mint-intro-figure">
+      <img src="assets/Messengertalk.png" alt="VHouse Messenger speaking" draggable="false">
+    </div>
+    <div class="mint-intro-copy">
+      <h2>UPGRADE YOUR VCARD</h2>
+      <p><strong>Your VCard is already alive! Now let's make it your own.</strong></p>
+      <h3>UPGRADE — <span class="tag-fee">$0.75</span></h3>
+      <p>Change your VCard's name, team, artwork, or character description.</p>
+      <h3>CUSTOMIZE — <span class="tag-fee">$0.75</span></h3>
+      <p>Enhance your VCard's appearance with special visual effects and artwork positioning.</p>
+      <h3>GROW YOUR VCARD'S VALUE</h3>
+      <p>Every UPGRADE or CUSTOMIZE costs <span class="tag-fee">$0.75</span>, which includes a <span class="tag-fee">$0.50</span> VHouse service fee and a <span class="tag-balance">$0.25</span> SOL deposit directly into your NFT, increasing its recoverable SOL balance through <strong>VHouse BURN</strong>.</p>
+      <p>Your VCard retains its original mint address and ownership.</p>
+      <div class="mint-intro-actions">
+        <button class="nav-back" id="upgradeIntroBackButton" type="button">BACK</button>
+        <button class="action" id="upgradeIntroContinueButton" type="button">CONTINUE</button>
+      </div>
+      <div id="upgradeEntryStatus" class="status" role="status" aria-live="polite" hidden></div>
     </div>
   </section>
 
@@ -952,6 +973,7 @@ function showScreen(screen) {
   if (screen !== "workspace") closeCropEditor();
   $("entryMenu").hidden = screen !== "menu";
   $("mintIntroPanel").hidden = screen !== "mint-intro";
+  $("upgradeIntroPanel").hidden = screen !== "upgrade-intro";
   $("loadPanel").hidden = screen !== "load";
   $("burnPanel").hidden = screen !== "burn";
   $("workspace").hidden = screen !== "workspace";
@@ -3399,7 +3421,15 @@ $("loadMintButton").onclick = async () => {
 
 
 /* UPGRADE: open the already-minted Active VCard without starting a mint. */
-$("chooseUpgradeButton").onclick = async () => {
+$("chooseUpgradeButton").onclick = () => {
+  if (busy) return;
+  $("upgradeEntryStatus").hidden = true;
+  showScreen("upgrade-intro");
+};
+$("upgradeIntroBackButton").onclick = () => {
+  if (!busy) showScreen("menu");
+};
+$("upgradeIntroContinueButton").onclick = async () => {
   if (busy) return;
   if (pendingOperation?.signature || (job?.signature && !minted)) {
     showScreen("workspace");
@@ -3409,6 +3439,8 @@ $("chooseUpgradeButton").onclick = async () => {
   const status = $("upgradeEntryStatus");
   status.hidden = false;
   status.textContent = "LOADING ACTIVE VCARD...";
+  $("upgradeIntroBackButton").disabled = true;
+  $("upgradeIntroContinueButton").disabled = true;
   lock(true);
   try {
     await requireVHousePlayer();
@@ -3482,7 +3514,7 @@ $("chooseUpgradeButton").onclick = async () => {
     minted = true;
     receiptLink("receiptMint","mintPending","mintDetail",mintURL(),mint.toBase58());
     showIPFSResult(job.imageURI,job.uri);
-    $("operationNote").textContent = "Select UPGRADE to edit team, name, image or description, or CUSTOMIZE to apply a card effect. Each costs $0.75: $0.50 to VHouse and $0.25 to this NFT.";
+    $("operationNote").textContent = "Select UPGRADE to edit team, name, image or description, or CUSTOMIZE to apply a card effect. Each costs $0.75: a $0.50 VHouse service fee and a $0.25 SOL deposit into this NFT, recoverable through VHouse BURN.";
     showPostMintUI();
     showScreen("workspace");
     refresh();
@@ -3491,6 +3523,8 @@ $("chooseUpgradeButton").onclick = async () => {
     console.error("Active VCard upgrade:",error);
     status.textContent = "UPGRADE: " + shortError(error);
   } finally {
+    $("upgradeIntroBackButton").disabled = false;
+    $("upgradeIntroContinueButton").disabled = false;
     lock(false);
   }
 };
