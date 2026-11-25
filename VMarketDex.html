@@ -89,12 +89,18 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 .trade-heading{display:flex;justify-content:space-between;align-items:center;gap:.5cqw;font-size:1.4cqw;font-weight:bold;color:#e8c987;flex:none}
 .trade-wallet{display:flex;align-items:center;justify-content:space-between;gap:.5cqw;margin:.4cqw 0;font-size:.95cqw;flex:none}
 .trade-wallet span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.trade-viewport{position:relative;flex:1;min-height:0;overflow:hidden}
-.trade-scale{position:absolute;top:0;left:50%;width:400px;height:568px;transform-origin:top center}
-#tradeWidget{width:400px;height:568px}
+.trade-form{display:flex;flex-direction:column;gap:.55cqw;flex:1;min-height:0;justify-content:center}
+.trade-form[hidden]{display:none}
+.trade-field{display:flex;flex-direction:column;gap:.3cqw;padding:.65cqw;border:1px solid #624d70;background:#241c32;border-radius:.35cqw}
+.trade-field label,.trade-caption{font-size:1cqw;color:#ad9fbc}
+.trade-input-row{display:flex;align-items:center;gap:.5cqw}
+.trade-input-row input{min-width:0;flex:1;background:transparent;border:0;outline:none;font-size:2cqw}
+.trade-input-row b{font-size:1.15cqw;color:#e8c987}
+.trade-estimate{font-size:1.65cqw;font-weight:bold}
+.trade-actions{display:flex;gap:.5cqw}
+.trade-actions button{flex:1;padding:.55cqw;font-size:1.1cqw}
 .trade-result{font-size:1cqw;text-align:center;padding:.35cqw;overflow-wrap:anywhere;flex:none}
 .trade-result a{color:#e8c987}
-:root{--jupiter-plugin-primary:232,201,135;--jupiter-plugin-background:27,22,40;--jupiter-plugin-primaryText:238,234,248;--jupiter-plugin-interactive:48,37,63;--jupiter-plugin-module:36,28,50}
 </style>
 </head>
 <body>
@@ -131,7 +137,12 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
  <section class="trade-window" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
   <div class="trade-heading"><span id="tradeTitle">BUY</span><button type="button" class="nav" id="closeTrade" aria-label="Close trading overlay">✕</button></div>
   <div class="trade-wallet"><span id="tradeWallet">Phantom</span><button type="button" class="nav" id="tradeConnect">CONNECT PHANTOM</button></div>
-  <div class="trade-viewport" id="tradeViewport"><div class="trade-scale" id="tradeScale"><div id="tradeWidget"></div></div></div>
+  <div class="trade-form" id="tradeForm">
+  <div class="trade-field"><label for="tradeAmount">You pay</label><div class="trade-input-row"><input id="tradeAmount" type="text" inputmode="decimal" autocomplete="off" maxlength="28" placeholder="0.00"><b id="tradeInputSymbol"></b></div></div>
+  <div class="trade-field"><span class="trade-caption">Estimated receive</span><div class="trade-input-row"><span class="trade-estimate" id="tradeOutput">—</span><b id="tradeOutputSymbol"></b></div></div>
+  <div class="trade-caption" id="tradeRoute">Pump.fun / PumpSwap · Slippage 1% · Network and trading fees apply</div>
+  <div class="trade-actions"><button type="button" class="nav" id="tradeQuote">GET QUOTE</button><button type="button" class="trade-buy" id="tradeSubmit" disabled>BUY</button></div>
+ </div>
   <div class="trade-result" id="tradeResult" role="status"></div>
  </section>
 </div>
@@ -298,7 +309,7 @@ function renderDetail(){
  const ratio=total>0?buys/total*100:null;
  $("buybar").style.width=(ratio??0)+"%";$("sellbar").style.width=(ratio===null?0:100-ratio)+"%";
  $("bp").textContent=ratio===null?"—":ratio.toFixed(1)+"% Buy";$("sp").textContent=ratio===null?"—":(100-ratio).toFixed(1)+"% Sell";
- $("trade").textContent=a.native?"Jupiter ↗":"Pump.fun ↗";$("trade").href=a.native?"https://jup.ag/swap":"https://pump.fun/coin/"+a.mint;
+ $("trade").hidden=a.native;$("trade").textContent="Pump.fun ↗";$("trade").href="https://pump.fun/coin/"+a.mint;
  $("dex").href="https://dexscreener.com/solana/"+(p?.pairAddress||a.mint);
  $("tabs").innerHTML=Object.keys(ranges).map(t=>'<button type="button" class="period '+(period===t?"active":"")+'" data-period="'+t+'">'+t+'</button>').join("");
  renderSupply();
@@ -353,104 +364,144 @@ async function loadChart(){
  }catch{if(ticket===chartRequest)chartNote("Historical price data unavailable")}
 }
 function choose(i){if(!assets[i])return;selected=i;renderList();renderDetail();void loadChart();void loadSupply(assets[i])}
-// Trade selection is deliberately separate from chart selection.
-const USDC_MINT="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-let tradeAsset=null,tradeMode="BUY",tradeGeneration=0,tradeProvider=null,pluginLoading=null,widgetReady=false,tradeConnecting=false,tradeReturnFocus=null;
-function tradePair(a,mode){
- const counter=a.native?USDC_MINT:assets[0].mint;
- return {initialInputMint:mode==="BUY"?counter:a.mint,initialOutputMint:mode==="BUY"?a.mint:counter,fixedMint:a.mint,swapMode:"ExactIn"};
-}
-function tradeMessage(message){$("tradeResult").textContent=message}
-function fitTrade(){
- const view=$("tradeViewport"),scale=Math.min(view.clientWidth/400,view.clientHeight/568,1);
- if(scale>0)$("tradeScale").style.transform="translateX(-50%) scale("+scale+")";
-}
-function loadTradePlugin(){
- if(window.Jupiter?.init)return Promise.resolve();
- if(!pluginLoading)pluginLoading=new Promise((resolve,reject)=>{
-  const script=document.createElement("script");script.src="https://plugin.jup.ag/plugin-v1.js";script.async=true;
-  const timer=setTimeout(()=>{script.remove();pluginLoading=null;reject(Error("Jupiter did not load"))},20000);
-  script.onload=()=>{clearTimeout(timer);if(window.Jupiter?.init)resolve();else{script.remove();pluginLoading=null;reject(Error("Jupiter unavailable"))}};
-  script.onerror=()=>{clearTimeout(timer);script.remove();pluginLoading=null;reject(Error("Jupiter unavailable"))};
-  document.head.append(script);
- });
- return pluginLoading;
-}
+// Pump.fun trading is independent of the selected market chart.
+const PUMP_PROGRAMS=new Set(["6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P","pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"]);
+const SOL_MINT=assets[0].mint;
+let tradeAsset=null,tradeMode="BUY",tradeGeneration=0,tradeQuoteData=null,tradeBusy=false,tradeReturnFocus=null;
 function getMarketTradePhantom(){const p=window.phantom?.solana||window.solana;return p?.isPhantom?p:null}
-function tradeContext(){
- const p=tradeProvider,connected=!!(p?.isConnected&&p.publicKey),key=connected?p.publicKey:null;
- const requireWallet=()=>{if(!p?.isConnected||!key||p.publicKey?.toBase58()!==key.toBase58())throw Error("Phantom account changed. Reconnect before trading.")};
- const adapter=p?{name:"Phantom",url:"https://phantom.app/",icon:"",publicKey:key,connected,connecting:false,readyState:"Installed",supportedTransactionVersions:new Set(["legacy",0]),connect:()=>connectTrade(),disconnect:async()=>{await p.disconnect();syncTradeWallet()}}:null;
- return {autoConnect:false,wallets:adapter?[{adapter,readyState:"Installed"}]:[],wallet:adapter?{adapter,readyState:"Installed"}:null,publicKey:key,connected,connecting:tradeConnecting,disconnecting:false,select:()=>{},connect:()=>connectTrade(),disconnect:async()=>{if(p)await p.disconnect();syncTradeWallet()},signTransaction:connected?async tx=>{requireWallet();return p.signTransaction(tx)}:undefined,signAllTransactions:connected?async txs=>{requireWallet();return p.signAllTransactions(txs)}:undefined,signMessage:connected?async msg=>{requireWallet();return (await p.signMessage(msg)).signature}:undefined,sendTransaction:connected?async(tx)=>{requireWallet();return (await p.signAndSendTransaction(tx)).signature}:async()=>{throw Error("Connect Phantom first")}};
+function tradeMessage(message){$("tradeResult").textContent=message}
+function tradeReceipt(signature,message){
+ tradeMessage(message+" · ");
+ const link=document.createElement("a");link.href="https://solscan.io/tx/"+encodeURIComponent(signature);link.target="_blank";link.rel="noopener noreferrer";link.textContent="Solscan receipt";$("tradeResult").append(link);
+}
+function tradeUnits(value,decimals){
+ const v=String(value).trim();
+ if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(v))throw Error("Enter a valid amount.");
+ const [whole,fraction=""]=v.split(".");
+ if(fraction.length>decimals)throw Error("Use at most "+decimals+" decimal places.");
+ const units=BigInt((whole||"0")+fraction.padEnd(decimals,"0"));
+ if(units<=0n||units>18446744073709551615n)throw Error("Enter a positive amount within the token limit.");
+ return units.toString();
+}
+function displayTradeUnits(value,decimals){
+ const digits=String(value).padStart(decimals+1,"0");
+ return digits.slice(0,-decimals)+(digits.slice(-decimals).replace(/0+$/,"")?"."+digits.slice(-decimals).replace(/0+$/,""):"");
+}
+function clearTradeQuote(){
+ tradeQuoteData=null;$("tradeOutput").textContent="—";$("tradeSubmit").disabled=true;
+ $("tradeRoute").textContent="Pump.fun / PumpSwap · Slippage 1% · Network and trading fees apply";
+}
+function currentTradeAddress(){
+ const p=getMarketTradePhantom();return p?.isConnected&&p.publicKey?p.publicKey.toBase58():null;
 }
 function syncTradeWallet(){
- const p=tradeProvider,connected=!!(p?.isConnected&&p.publicKey);
- $("tradeWallet").textContent=connected?"Phantom · "+p.publicKey.toBase58():"Phantom";
- $("tradeConnect").hidden=connected;$("tradeConnect").disabled=tradeConnecting;
- if(widgetReady&&!$("tradeLayer").hidden)window.Jupiter?.syncProps?.({passthroughWalletContextState:tradeContext()});
+ const address=currentTradeAddress();
+ $("tradeWallet").textContent=address?"Phantom · "+address:"Phantom";
+ $("tradeConnect").hidden=!!address;
+ $("tradeConnect").disabled=tradeBusy;
+ if(tradeQuoteData&&tradeQuoteData.user!==address)clearTradeQuote();
+ $("tradeQuote").disabled=tradeBusy||!address||!tradeAsset||tradeAsset.native;
+ $("tradeSubmit").disabled=tradeBusy||!tradeQuoteData||!address;
 }
+function lockTrade(busy){tradeBusy=busy;$("tradeAmount").disabled=busy;$("closeTrade").disabled=busy;syncTradeWallet()}
 async function connectTrade(){
- if(tradeConnecting)return;
- const p=getMarketTradePhantom(),generation=tradeGeneration;
+ if(tradeBusy)return;
+ const p=getMarketTradePhantom();
  if(!p){tradeMessage("Open VHouse in a browser with Phantom installed.");return}
- tradeConnecting=true;$("tradeConnect").disabled=true;
- try{
-  const response=await p.connect();
-  if(generation!==tradeGeneration||$("tradeLayer").hidden)return;
-  if(!response?.publicKey||!p.publicKey)throw Error("Phantom did not return an address");
-  tradeProvider=p;tradeMessage("");
- }catch(error){if(generation===tradeGeneration)tradeMessage(error?.message||"Phantom connection declined")}
- finally{tradeConnecting=false;if(generation===tradeGeneration)syncTradeWallet()}
+ lockTrade(true);
+ try{await p.connect();if(!currentTradeAddress())throw Error("Phantom did not return a connected wallet.");tradeMessage("")}
+ catch(error){tradeMessage(error?.message||"Phantom connection declined.")}
+ finally{lockTrade(false)}
 }
 function closeTrade(){
- tradeGeneration++;widgetReady=false;$("tradeLayer").hidden=true;
- // Unmount the swap UI; do not disconnect or modify the user's wallet.
- try{window.Jupiter?.root?.unmount?.();if(window.Jupiter)window.Jupiter.root=null}catch{}
- $("tradeWidget").replaceChildren();
- tradeAsset=null;tradeProvider=null;tradeReturnFocus?.focus?.();tradeReturnFocus=null;
+ if(tradeBusy)return;
+ tradeGeneration++;clearTradeQuote();$("tradeLayer").hidden=true;tradeAsset=null;
+ tradeReturnFocus?.focus?.();tradeReturnFocus=null;
 }
-async function openTrade(i,mode){
- const a=assets[i];if(!a)return;
+function openTrade(i,mode){
+ const a=assets[i];if(!a||tradeBusy)return;
  if(!$("tradeLayer").hidden)closeTrade();
- const generation=++tradeGeneration;
- tradeAsset=a;tradeMode=mode;tradeReturnFocus=document.activeElement;
- tradeProvider=getMarketTradePhantom();widgetReady=false;
- $("tradeTitle").textContent=mode+" "+a.symbol;
- $("tradeLayer").hidden=false;tradeMessage("Loading Jupiter…");syncTradeWallet();fitTrade();$("closeTrade").focus();
+ tradeGeneration++;tradeAsset=a;tradeMode=mode;tradeReturnFocus=document.activeElement;
+ clearTradeQuote();$("tradeAmount").value="";$("tradeTitle").textContent=mode+" "+a.symbol;
+ $("tradeInputSymbol").textContent=mode==="BUY"?"SOL":a.symbol;
+ $("tradeOutputSymbol").textContent=mode==="BUY"?a.symbol:"SOL";
+ $("tradeSubmit").textContent=mode+" "+a.symbol;
+ $("tradeSubmit").className=mode==="BUY"?"trade-buy":"trade-sell";
+ $("tradeForm").hidden=!!a.native;$("tradeLayer").hidden=false;syncTradeWallet();
+ tradeMessage(a.native?"SOL is the payment asset for Pump.fun token trades. Select AWT, SCRAPS or AMALIE.":"");
+ $("closeTrade").focus();
+}
+async function requestTradeQuote(){
+ if(tradeBusy||!tradeAsset||tradeAsset.native)return;
+ clearTradeQuote();
+ const user=currentTradeAddress();if(!user){tradeMessage("Connect Phantom first.");return}
+ const a=tradeAsset,mode=tradeMode,generation=tradeGeneration;
+ lockTrade(true);
  try{
-  await loadTradePlugin();
-  if(generation!==tradeGeneration||$("tradeLayer").hidden)return;
-  window.Jupiter.init({
-   displayMode:"integrated",integratedTargetId:"tradeWidget",containerStyles:{width:"400px",height:"568px",borderRadius:"8px",overflow:"hidden"},
-   localStoragePrefix:"vhouse-market-dex",autoConnect:false,enableWalletPassthrough:true,passthroughWalletContextState:tradeContext(),onRequestConnectWallet:connectTrade,
-   defaultExplorer:"Solscan",formProps:tradePair(a,mode),
-   onSuccess:({txid})=>{
-    if(generation!==tradeGeneration||!txid)return;
-    tradeMessage("Swap confirmed · ");
-    const link=document.createElement("a");link.href="https://solscan.io/tx/"+encodeURIComponent(txid);link.target="_blank";link.rel="noopener noreferrer";link.textContent="View Solscan receipt";$("tradeResult").append(link);
-    void refreshMarket();
-   },
-   onSwapError:()=>{if(generation===tradeGeneration)tradeMessage("Swap not completed. Check the Jupiter result.")}
-  });
-  widgetReady=true;tradeMessage("");syncTradeWallet();fitTrade();
- }catch(error){if(generation===tradeGeneration)tradeMessage("Jupiter unavailable. "+(error?.message||""))}
+  const mintInfo=await rpc("getTokenSupply",[a.mint,{commitment:"confirmed"}]);
+  if(mintInfo?.decimals!==6)throw Error("Pump.fun token precision could not be verified.");
+  const amount=tradeUnits($("tradeAmount").value,mode==="BUY"?9:6);
+  const body={inputMint:mode==="BUY"?SOL_MINT:a.mint,outputMint:mode==="BUY"?a.mint:SOL_MINT,amount,user};
+  tradeMessage("Getting Pump.fun quote…");
+  await window.VHouseAuth.ready;
+  const {data,error}=await window.VHouseAuth.getClient().functions.invoke("vhouse-pump-trade",{body});
+  if(error){let detail="";try{detail=(await error.context.json()).error}catch{}throw Error(detail||error.message||"Pump.fun quote failed.")}
+  if(data?.error)throw Error(data.error);
+  if(generation!==tradeGeneration||currentTradeAddress()!==user)throw Error("Phantom account changed.");
+  if(typeof data?.transaction!=="string"||!/^\d{1,20}$/.test(data?.expectedOutAmount||"")||BigInt(data.expectedOutAmount)<=0n)throw Error("Invalid Pump.fun quote.");
+  const {VersionedTransaction}=await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+  const tx=VersionedTransaction.deserialize(Uint8Array.from(atob(data.transaction),c=>c.charCodeAt(0)));
+  const msg=tx.message,keys=msg.staticAccountKeys;
+  if(msg.header.numRequiredSignatures!==1||keys[0]?.toBase58()!==user)throw Error("Unexpected transaction signer.");
+  if(!msg.compiledInstructions.some(ix=>PUMP_PROGRAMS.has(keys[ix.programIdIndex]?.toBase58())))throw Error("No Pump.fun trading instruction found.");
+  tradeQuoteData={tx,user,generation,amount,at:Date.now()};
+  $("tradeOutput").textContent=displayTradeUnits(data.expectedOutAmount,mode==="BUY"?6:9);
+  $("tradeRoute").textContent=(data.hasGraduated?"PumpSwap":"Pump.fun bonding curve")+" · Slippage 1% · Fees apply";
+  tradeMessage("Review the quote, then approve in Phantom.");
+ }catch(error){clearTradeQuote();tradeMessage(error?.message||"Pump.fun quote failed.")}
+ finally{lockTrade(false)}
+}
+async function confirmTradeSignature(signature){
+ for(let i=0;i<30;i++){
+  try{
+   const statuses=await rpc("getSignatureStatuses",[[signature],{searchTransactionHistory:true}]);
+   const status=statuses?.[0];
+   if(status?.err)return "failed";
+   if(status?.confirmationStatus==="confirmed"||status?.confirmationStatus==="finalized")return "confirmed";
+  }catch{}
+  await new Promise(resolve=>setTimeout(resolve,2000));
+ }
+ return "unverified";
+}
+async function submitTrade(){
+ if(tradeBusy||!tradeQuoteData)return;
+ const quote=tradeQuoteData,p=getMarketTradePhantom();
+ if(currentTradeAddress()!==quote.user||quote.generation!==tradeGeneration||Date.now()-quote.at>20000){clearTradeQuote();tradeMessage("Quote expired or wallet changed. Get a new quote.");syncTradeWallet();return}
+ lockTrade(true);clearTradeQuote();let signature=null;
+ try{
+  if(typeof p?.signAndSendTransaction!=="function")throw Error("Phantom transaction approval unavailable.");
+  tradeMessage("Review and approve the transaction in Phantom.");
+  const result=await p.signAndSendTransaction(quote.tx,{skipPreflight:false});
+  signature=result?.signature;
+  if(typeof signature!=="string"||!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature))throw Error("Phantom did not return a valid signature. Check wallet activity before retrying.");
+  tradeReceipt(signature,"Submitted · Checking Solana");
+  const status=await confirmTradeSignature(signature);
+  tradeReceipt(signature,status==="confirmed"?"Swap confirmed":status==="failed"?"Transaction failed":"Confirmation not yet verified. Check Solscan before retrying.");
+  if(status==="confirmed")void refreshMarket();
+ }catch(error){if(signature)tradeReceipt(signature,"Check transaction status before retrying");else tradeMessage(error?.message||"Transaction not completed.")}
+ finally{lockTrade(false)}
 }
 function initMarketTradeControls(){
-$("chartBuy").onclick=()=>void openTrade(selected,"BUY");
-$("chartSell").onclick=()=>void openTrade(selected,"SELL");
-$("closeTrade").onclick=closeTrade;
-$("tradeConnect").onclick=()=>void connectTrade();
-$("tradeLayer").addEventListener("click",e=>{if(e.target===$("tradeLayer"))closeTrade()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("tradeLayer").hidden)closeTrade()});
-if(typeof ResizeObserver==="function")new ResizeObserver(fitTrade).observe($("tradeViewport"));
-window.addEventListener("resize",fitTrade);
-// Provider events are optional; they must never interrupt market startup.
-try{
- const injectedPhantom=getMarketTradePhantom();
- if(typeof injectedPhantom?.on==="function"){
-  for(const event of ["connect","disconnect","accountChanged"])injectedPhantom.on(event,()=>{if(!$("tradeLayer").hidden)syncTradeWallet()});
- }
-}catch(error){console.warn("Trade wallet event setup unavailable",error)}
+ $("chartBuy").onclick=()=>openTrade(selected,"BUY");
+ $("chartSell").onclick=()=>openTrade(selected,"SELL");
+ $("closeTrade").onclick=closeTrade;
+ $("tradeConnect").onclick=()=>void connectTrade();
+ $("tradeAmount").oninput=()=>{clearTradeQuote();tradeMessage("");syncTradeWallet()};
+ $("tradeQuote").onclick=()=>void requestTradeQuote();
+ $("tradeSubmit").onclick=()=>void submitTrade();
+ $("tradeLayer").addEventListener("click",e=>{if(e.target===$("tradeLayer"))closeTrade()});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("tradeLayer").hidden)closeTrade()});
+ try{const p=getMarketTradePhantom();if(typeof p?.on==="function")for(const event of ["connect","disconnect","accountChanged"])p.on(event,()=>{if(!$("tradeLayer").hidden)syncTradeWallet()})}catch(error){console.warn("Trade wallet events unavailable",error)}
 }
 async function refreshMarket(){
  if(refreshing)return;refreshing=true;$("refresh").disabled=true;
