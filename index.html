@@ -250,6 +250,25 @@ html, body {
 
 /* Page placement; the icon and info box are a persistent UI object. */
 .town-player-hud { top: 1%; left: 1%; }
+/* Thin market ticker follows the actual name/cash HUD width. */
+#townMarketTicker{
+ position:absolute;z-index:25;display:block;height:clamp(17px,1.6cqw,26px);
+ top:1%;right:1%;left:32%;overflow:hidden;white-space:nowrap;
+ border:1px solid #d7ad61;border-radius:4px;background:#21142def;
+ color:#fff;text-decoration:none;font:700 clamp(8px,.72cqw,12px) Arial,sans-serif;
+ line-height:1;box-shadow:0 1px 5px #0008;
+}
+#townMarketTicker[hidden]{display:none!important}
+#townMarketTicker .ticker-track{display:flex;width:max-content;height:100%;align-items:center;animation:town-market-scroll 30s linear infinite}
+#townMarketTicker .ticker-group{display:flex;align-items:center;flex-shrink:0;height:100%;gap:1cqw;padding-right:1cqw}
+#townMarketTicker .ticker-item{display:inline-flex;align-items:center;gap:.35cqw}
+#townMarketTicker .ticker-symbol{color:#f4d79f}
+#townMarketTicker .ticker-up{color:#59e0a2}
+#townMarketTicker .ticker-down{color:#fa8497}
+#townMarketTicker .ticker-neutral{color:#ad9fbc}
+#townMarketTicker:hover .ticker-track,#townMarketTicker:focus-visible .ticker-track{animation-play-state:paused}
+@keyframes town-market-scroll{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){#townMarketTicker .ticker-track{animation:none}}
 /* Journey overlay, aligned to the second marked rectangle. */
 .journey-overlay {
   position: absolute;
@@ -453,6 +472,10 @@ html, body {
       <div data-vhouse-info aria-live="polite"></div>
     </aside>
 
+    <a id="townMarketTicker" href="./VMarketDex.html" aria-label="VHouse Market DEX live ticker" hidden>
+      <span class="ticker-track"><span class="ticker-group"></span><span class="ticker-group" aria-hidden="true"></span></span>
+    </a>
+
     <!-- Journey displays only the menu -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
       <div class="journey-window">
@@ -572,5 +595,53 @@ document.addEventListener("keydown", (event) => {
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-player.js"></script>
 <script src="assets/vhouse-info.js"></script>
+<script src="assets/vhouse-market-data.js"></script>
+<script>
+(()=>{
+ const ticker=document.getElementById("townMarketTicker");
+ const stage=ticker.closest(".map-container");
+ const hud=stage.querySelector(".town-player-hud");
+ const groups=ticker.querySelectorAll(".ticker-group");
+ const api=window.VHouseMarketData;
+ if(!api)return;
+ const market=api.create();
+ let busy=false,stale=false,account=null;
+ const resize=new ResizeObserver(place);
+ function place(){
+  const next=hud.querySelector(".vhouse-player-account-box");
+  if(next!==account){if(account)resize.unobserve(account);account=next;if(account)resize.observe(account);}
+  const b=account?.getBoundingClientRect(),frame=stage.getBoundingClientRect();
+  if(!b||!b.width||!b.height||!frame.width){ticker.hidden=true;return;}
+  const gap=Math.max(5,frame.width*.006);
+  const left=b.right-frame.left+gap;
+  if(frame.width-left-gap<90){ticker.hidden=true;return;}
+  ticker.style.left=left+"px";ticker.style.top=(b.top-frame.top)+"px";
+  ticker.hidden=false;
+ }
+ function render(){
+  const parts=api.assets.map(a=>{
+   const row=document.createElement("span");row.className="ticker-item";
+   const sym=document.createElement("span");sym.className="ticker-symbol";sym.textContent=a.symbol;
+   const price=document.createElement("span");price.textContent=api.money(market.displayPrice(a));
+   const c=market.changeFor(a),change=document.createElement("span");
+   change.className=c===null?"ticker-neutral":c>0?"ticker-up":c<0?"ticker-down":"ticker-neutral";change.textContent=api.percent(c);
+   row.append(sym,price,change);return row;
+  });
+  if(stale){const notice=document.createElement("span");notice.className="ticker-neutral";notice.textContent="Market refresh unavailable";parts.push(notice);}
+  groups[0].replaceChildren(...parts);
+  groups[1].replaceChildren(...parts.map(p=>p.cloneNode(true)));
+ }
+ async function refresh(){
+  if(busy)return;busy=true;
+  try{await market.refresh();stale=false}catch{stale=true}
+  finally{busy=false;render()}
+ }
+ resize.observe(stage);resize.observe(hud);
+ new MutationObserver(place).observe(hud,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden"]});
+ render();place();void refresh();
+ setInterval(()=>{if(!document.hidden)void refresh()},api.refreshMs);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refresh()});
+})();
+</script>
 </body>
 </html>
