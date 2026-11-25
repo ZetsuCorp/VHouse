@@ -376,7 +376,7 @@ function loadTradePlugin(){
  });
  return pluginLoading;
 }
-function phantom(){const p=window.phantom?.solana||window.solana;return p?.isPhantom?p:null}
+function getMarketTradePhantom(){const p=window.phantom?.solana||window.solana;return p?.isPhantom?p:null}
 function tradeContext(){
  const p=tradeProvider,connected=!!(p?.isConnected&&p.publicKey),key=connected?p.publicKey:null;
  const requireWallet=()=>{if(!p?.isConnected||!key||p.publicKey?.toBase58()!==key.toBase58())throw Error("Phantom account changed. Reconnect before trading.")};
@@ -391,7 +391,7 @@ function syncTradeWallet(){
 }
 async function connectTrade(){
  if(tradeConnecting)return;
- const p=phantom(),generation=tradeGeneration;
+ const p=getMarketTradePhantom(),generation=tradeGeneration;
  if(!p){tradeMessage("Open VHouse in a browser with Phantom installed.");return}
  tradeConnecting=true;$("tradeConnect").disabled=true;
  try{
@@ -414,7 +414,7 @@ async function openTrade(i,mode){
  if(!$("tradeLayer").hidden)closeTrade();
  const generation=++tradeGeneration;
  tradeAsset=a;tradeMode=mode;tradeReturnFocus=document.activeElement;
- tradeProvider=phantom();widgetReady=false;
+ tradeProvider=getMarketTradePhantom();widgetReady=false;
  $("tradeTitle").textContent=mode+" "+a.symbol;
  $("tradeLayer").hidden=false;tradeMessage("Loading Jupiter…");syncTradeWallet();fitTrade();$("closeTrade").focus();
  try{
@@ -435,6 +435,7 @@ async function openTrade(i,mode){
   widgetReady=true;tradeMessage("");syncTradeWallet();fitTrade();
  }catch(error){if(generation===tradeGeneration)tradeMessage("Jupiter unavailable. "+(error?.message||""))}
 }
+function initMarketTradeControls(){
 $("chartBuy").onclick=()=>void openTrade(selected,"BUY");
 $("chartSell").onclick=()=>void openTrade(selected,"SELL");
 $("closeTrade").onclick=closeTrade;
@@ -443,8 +444,14 @@ $("tradeLayer").addEventListener("click",e=>{if(e.target===$("tradeLayer"))close
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("tradeLayer").hidden)closeTrade()});
 if(typeof ResizeObserver==="function")new ResizeObserver(fitTrade).observe($("tradeViewport"));
 window.addEventListener("resize",fitTrade);
-const injectedPhantom=phantom();
-if(injectedPhantom?.on){for(const event of ["connect","disconnect","accountChanged"])injectedPhantom.on(event,()=>{if(!$("tradeLayer").hidden)syncTradeWallet()})}
+// Provider events are optional; they must never interrupt market startup.
+try{
+ const injectedPhantom=getMarketTradePhantom();
+ if(typeof injectedPhantom?.on==="function"){
+  for(const event of ["connect","disconnect","accountChanged"])injectedPhantom.on(event,()=>{if(!$("tradeLayer").hidden)syncTradeWallet()});
+ }
+}catch(error){console.warn("Trade wallet event setup unavailable",error)}
+}
 async function refreshMarket(){
  if(refreshing)return;refreshing=true;$("refresh").disabled=true;
  $("status").textContent="Refreshing market data…";
@@ -485,6 +492,8 @@ $("features").addEventListener("touchend",e=>{const distance=e.changedTouches[0]
 renderSpotlight();renderList();renderDetail();void refreshMarket();
 for(const a of assets)if(!a.native)void loadTokenImage(a);
 setInterval(()=>{if(!document.hidden)void refreshMarket()},60000);
+// Market renders first. Trading controls cannot block the existing DEX.
+try{initMarketTradeControls()}catch(error){console.warn("Trading setup unavailable",error)}
 </script>
 </body>
 </html>
