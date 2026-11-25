@@ -77,7 +77,11 @@ tr.active{background:#41334d}
 .supplyrow b{white-space:nowrap}
 .foot{display:flex;justify-content:space-between;align-items:center;gap:.6cqw;padding:0 .75cqw .35cqw;flex:none}
 .foot .back-button{font-size:.9cqw;padding:.35cqw .65cqw;min-width:0;border-width:1px}
-.foot .status{font-size:.86cqw;color:#ad9fbc;text-align:right}
+.foot .status{font-size:.86cqw;color:#ad9fbc;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#marketConnectedWallet{display:flex;align-items:center;gap:.4cqw;padding:.25cqw .5cqw;border:1px solid #bc9357;border-radius:.3cqw;background:#21142def;color:#f5e9d7;box-shadow:0 2px 8px #0009;flex:0 1 auto;min-width:0;max-width:60%}
+#marketConnectedWallet[hidden]{display:none!important}
+#marketConnectedWallet .wallet-label{flex-shrink:0;color:#f7d797;font-size:.8cqw;font-weight:900;white-space:nowrap}
+#marketWalletAddress{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:.86cqw monospace;color:#e8cfff}
 footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;text-align:center;padding:.42cqw .2cqw;font-size:.94cqw;white-space:nowrap}
 .market{position:relative}
 .trade-buy,.trade-sell{font-weight:900;border-radius:.25cqw;padding:.28cqw .7cqw;font-size:.95cqw;white-space:nowrap;color:#fff}
@@ -148,7 +152,7 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 </section>
 </div>
 </div>
-<div class="foot"><a class="vhouse-btn back-button" href="./index.html">← BACK</a><span class="status" id="status" role="status">Loading market data…</span><button id="refresh" class="nav" type="button">Refresh ↻</button></div>
+<div class="foot"><a class="vhouse-btn back-button" href="./index.html">← BACK</a><div id="marketConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden><span class="wallet-label">CONNECTED WALLET</span><span id="marketWalletAddress"></span></div><span class="status" id="status" role="status">Loading market data…</span><button id="refresh" class="nav" type="button">Refresh ↻</button></div>
 <footer>Zetsumetsu EOe™ | Zetsu EDU™ | Zetsu R&amp;D LLC - CAGE : 20UB7 | © 2024 - 2026 Zetsumetsu Corporation™ | Artworqq Kevin Suber</footer>
 <div class="trade-layer" id="tradeLayer" hidden>
  <section class="trade-window" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
@@ -720,6 +724,45 @@ $("features").addEventListener("touchend",e=>{const distance=e.changedTouches[0]
 renderSpotlight();renderList();renderDetail();void refreshMarket();
 for(const a of assets)if(!a.native)void loadTokenImage(a);
 setInterval(()=>{if(!document.hidden)void refreshMarket()},60000);
+// Connected-wallet display follows Journey's existing account/Phantom checks.
+const marketWalletPanel=$("marketConnectedWallet"),marketWalletAddress=$("marketWalletAddress");
+async function updateMarketWallet(){
+  const auth=window.VHouseAuth;
+  if(!auth){marketWalletPanel.hidden=true;return;}
+  try{
+    await auth.ready;
+    const user=auth.getUser?.();
+    if(!user){marketWalletPanel.hidden=true;return;}
+    // The wallet linked to this VHouse account persists across page navigation.
+    const {data,error}=await auth.getClient().from("vhouse_accounts")
+      .select("wallet_address").eq("id",user.id).maybeSingle();
+    if(error)throw error;
+    if(auth.getUser?.()?.id!==user.id)return;
+    const wallet=String(data?.wallet_address||"");
+    const phantom=window.phantom?.solana||window.solana;
+    const connected=phantom?.isPhantom&&phantom.isConnected&&
+      phantom.publicKey?.toBase58?.()===wallet;
+    marketWalletAddress.textContent=connected?wallet:"";
+    marketWalletAddress.title=connected?wallet:"";
+    marketWalletPanel.hidden=!connected;
+  }catch(error){
+    console.warn("Market connected wallet:",error);
+    marketWalletPanel.hidden=true;
+  }
+}
+
+window.addEventListener("load",()=>{
+  void updateMarketWallet();
+  window.VHouseAuth?.subscribe?.(()=>void updateMarketWallet());
+  const phantom=window.phantom?.solana||window.solana;
+  if(phantom?.isPhantom && typeof phantom.on==="function"){
+    for(const event of ["connect","disconnect","accountChanged"]){
+      phantom.on(event,()=>void updateMarketWallet());
+    }
+  }
+});
+
+
 // Market renders first. Trading controls cannot block the existing DEX.
 try{initMarketTradeControls()}catch(error){console.warn("Trading setup unavailable",error)}
 </script>
