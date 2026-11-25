@@ -76,7 +76,13 @@ tr.active{background:#41334d}
 .supplyrow{display:flex;justify-content:space-between;gap:.4cqw;font-size:.94cqw;margin:.3cqw 0}
 .supplyrow b{white-space:nowrap}
 .foot{display:flex;justify-content:space-between;align-items:center;gap:.6cqw;padding:0 .75cqw .35cqw;flex:none}
-.foot .back-button{font-size:.9cqw;padding:.35cqw .65cqw;min-width:0;border-width:1px}
+.market-back-button {
+  position: absolute;
+  left: 5.56%;
+  top: 70%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+}
 .foot .status{font-size:.86cqw;color:#ad9fbc;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #marketConnectedWallet{display:flex;align-items:center;gap:.4cqw;padding:.25cqw .5cqw;border:1px solid #bc9357;border-radius:.3cqw;background:#21142def;color:#f5e9d7;box-shadow:0 2px 8px #0009;flex:0 1 auto;min-width:0;max-width:60%}
 #marketConnectedWallet[hidden]{display:none!important}
@@ -152,7 +158,7 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 </section>
 </div>
 </div>
-<div class="foot"><a class="vhouse-btn back-button" href="./index.html">← BACK</a><div id="marketConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden><span class="wallet-label">CONNECTED WALLET</span><span id="marketWalletAddress"></span></div><span class="status" id="status" role="status">Loading market data…</span><button id="refresh" class="nav" type="button">Refresh ↻</button></div>
+<div class="foot"><div id="marketConnectedWallet" role="status" aria-label="VHouse connected wallet" hidden><span class="wallet-label">CONNECTED WALLET</span><span id="marketWalletAddress"></span></div><span class="status" id="status" role="status">Loading market data…</span><button id="refresh" class="nav" type="button">Refresh ↻</button></div>
 <footer>Zetsumetsu EOe™ | Zetsu EDU™ | Zetsu R&amp;D LLC - CAGE : 20UB7 | © 2024 - 2026 Zetsumetsu Corporation™ | Artworqq Kevin Suber</footer>
 <div class="trade-layer" id="tradeLayer" hidden>
  <section class="trade-window" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
@@ -170,6 +176,7 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
  </section>
 </div>
 </div>
+<a class="vhouse-btn back-button market-back-button" href="./index.html">← BACK</a>
 </div>
 </main>
 <script>
