@@ -63,5 +63,36 @@
     root.querySelector(".rarity").textContent = team;
     return root;
   }
-  window.VHouseVCard = {render, defaultFooter};
+  // Shared animation for every completed UPGRADE, CUSTOMIZE and RAID.
+  const activeLevelAnimations=new WeakMap();
+  function levelUp(host,previous,next){
+    const info=host?.querySelector(".card-info");
+    if(!info||!Number.isFinite(Number(previous))||Number(next)<=Number(previous))return Promise.resolve();
+    activeLevelAnimations.get(info)?.();
+    const original=info.getAttribute("style");
+    info.textContent="LEVEL "+previous+" → "+next+" · LEVEL UP!";
+    info.style.setProperty("color","#ffdc72","important");
+    info.style.setProperty("background","#482b08","important");
+    info.style.textAlign="center";
+    info.style.fontSize="3.3cqw";
+    const animation=info.animate?.([
+      {boxShadow:"inset 0 0 0px #ffd76e",filter:"brightness(1)"},
+      {boxShadow:"inset 0 0 12px #ffd76e,0 0 12px #ffd76e",filter:"brightness(1.55)"},
+      {boxShadow:"inset 0 0 0px #ffd76e",filter:"brightness(1)"}
+    ],{duration:600,iterations:5,easing:"ease-in-out"});
+    return new Promise(resolve=>{
+      let timer;
+      const finish=()=>{
+        clearTimeout(timer);
+        animation?.cancel();
+        if(original===null)info.removeAttribute("style");else info.setAttribute("style",original);
+        info.textContent="LEVEL "+next;
+        activeLevelAnimations.delete(info);
+        resolve();
+      };
+      activeLevelAnimations.set(info,finish);
+      timer=setTimeout(finish,3000);
+    });
+  }
+  window.VHouseVCard = {render, levelUp, defaultFooter};
 })();
