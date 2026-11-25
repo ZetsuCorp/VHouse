@@ -268,6 +268,19 @@ button:disabled{opacity:.5;cursor:default}
 #creationUnit .upgrade-workspace #applyButton{display:block;width:calc(100% - 32px);margin:12px 16px;padding:13px 8px;background:linear-gradient(135deg,#6635a1,#351854);border-color:#e4b95b;font-size:15px;letter-spacing:.5px}
 #creationUnit .upgrade-workspace #applyButton[hidden]{display:none}
 #creationUnit .upgrade-workspace #applyButton:hover:not(:disabled){border-color:#fff0bb;background:#6635a1}
+/* CUSTOMIZE edits the existing artwork position and visual overlay only. */
+#creationUnit .customize-image-label{display:none}
+#creationUnit .customize-workspace #teamGroup,
+#creationUnit .customize-workspace #nameGroup,
+#creationUnit .customize-workspace #descriptionGroup,
+#creationUnit .customize-workspace #imageGroup .gallery,
+#creationUnit .customize-workspace #imageGroup .upload,
+#creationUnit .customize-workspace .image-choice-label{display:none!important}
+#creationUnit .customize-workspace .customize-image-label{display:inline}
+#creationUnit .customize-workspace #imageGroup .image-tools{grid-template-columns:1fr}
+#creationUnit .customize-workspace #effectGrid:not([hidden]){grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+#creationUnit .customize-workspace .effect-button{min-height:43px;padding:8px 5px;border-color:#526578;font-size:14px}
+#creationUnit .customize-workspace .effect-button.active{background:#48217a;border-color:#e4b95b;color:#fff;box-shadow:0 0 9px #c087ff55}
 .mint-load{margin-top:10px;display:flex;gap:8px}
 .mint-load input{min-width:0;flex:1;padding:9px;background:#08131d;border:1px solid #355066;border-radius:5px;color:#fff;font-size:11px}
 .mint-load button{padding:8px;color:#eaf9ff;background:#122f3e;border:1px solid #bc9357;border-radius:5px;font-size:10px;font-weight:bold}
@@ -277,6 +290,14 @@ button:disabled{opacity:.5;cursor:default}
 .vcard[data-effect="holo"] .card-art:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(125deg,transparent 18%,#ff5bd02e 37%,#5df2ff45 51%,transparent 68%);mix-blend-mode:screen}
 .vcard[data-effect="ember"] .card-art{box-shadow:inset 0 0 5cqw #ff7a21,0 0 4cqw #ff7a21}
 .vcard[data-effect="ember"] .vcard-inner{background:radial-gradient(circle at 50% 5%,#602c17,#090d13 60%)}
+/* Static artwork overlays are part of the rendered VCard, including its PNG. */
+.vcard .card-art{position:relative}
+.vcard .card-art .card-effect-overlay{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.vcard[data-effect="sparkle"] .card-effect-overlay{background:radial-gradient(circle at 18% 22%,#ffffffbb 0,transparent 9%),radial-gradient(circle at 84% 33%,#e8d0ff99 0,transparent 10%),radial-gradient(circle at 72% 80%,#fff1ae88 0,transparent 9%)}
+.card-effect-overlay .effect-star{position:absolute;color:#fff5dd;line-height:1;text-shadow:0 0 1.5cqw #fff,0 0 3cqw #e8b8ff;transform:translate(-50%,-50%)}
+.vcard[data-effect="gleam"] .card-effect-overlay{background:linear-gradient(122deg,transparent 15%,#ffefba16 30%,#fff4cc88 43%,#fffbe6bb 47%,#ffffff28 51%,transparent 65%),linear-gradient(0deg,#0000 76%,#fff6be44)}
+.vcard[data-effect="frost"] .card-effect-overlay{background:radial-gradient(ellipse at center,transparent 48%,#c5f4ff44 73%,#e8faffbb 100%),linear-gradient(145deg,#d4f6ff99,transparent 25%,transparent 75%,#a3e5ff99)}
+.vcard[data-effect="prism"] .card-effect-overlay{background:linear-gradient(135deg,#ff4e9b55 0%,#a05cff33 23%,#50eaff55 44%,#6bffb933 62%,#ffd96b55 82%,#ff799544 100%)}
 .status{margin-top:12px;padding:11px;border:1px solid #355066;border-radius:7px;background:#0b1723;color:#b8cbd6;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
 .status a{color:#e9c783}
 [hidden]{display:none!important}
@@ -492,7 +513,7 @@ button:disabled{opacity:.5;cursor:default}
         <small id="editorLevel">LEVEL 01</small>
       </div>
 
-      <div class="group">
+      <div class="group" id="teamGroup">
         <div class="group-label">
           <b>01</b> CHOOSE YOUR TEAM
         </div>
@@ -519,7 +540,7 @@ button:disabled{opacity:.5;cursor:default}
 
       <div class="group" id="imageGroup">
         <div class="group-label">
-          <b>03</b> CHOOSE YOUR IMAGE
+          <span class="image-choice-label"><b>03</b> CHOOSE YOUR IMAGE</span><span class="customize-image-label">POSITION YOUR IMAGE</span>
         </div>
         <div class="gallery">
           <button class="art-button selected" data-art="0">
@@ -625,6 +646,10 @@ button:disabled{opacity:.5;cursor:default}
           <button class="effect-button" data-effect="glow">GLOW</button>
           <button class="effect-button" data-effect="holo">HOLO</button>
           <button class="effect-button" data-effect="ember">EMBER</button>
+          <button class="effect-button" data-effect="sparkle">SPARKLE</button>
+          <button class="effect-button" data-effect="gleam">GLEAM</button>
+          <button class="effect-button" data-effect="frost">FROST</button>
+          <button class="effect-button" data-effect="prism">PRISM</button>
         </div>
         <div class="post-mint-note" id="operationNote">Select UPGRADE to edit name and description, or CUSTOMIZE to apply a card effect. USD price is converted to SOL when submitted; <span class="tag-fee">$0.50</span> goes to VHouse and <span class="tag-balance">$0.25</span> to this NFT.</div>
         <button class="action" id="applyButton" hidden>CONFIRM UPGRADE</button>
@@ -989,6 +1014,7 @@ function showScreen(screen) {
 function placeUpgradeControls(enabled) {
   const workspace = $("workspace"), editor = $("editor"), panel = $("postMint"), apply = $("applyButton");
   workspace.classList.toggle("upgrade-workspace",enabled);
+  workspace.classList.toggle("customize-workspace",minted && editMode === "customize" && !workspace.hidden);
   if (enabled) {
     if (panel.parentNode !== editor) editor.querySelector(".editor-head").after(panel);
     if (apply.parentNode !== editor) editor.append(apply);
@@ -1116,7 +1142,7 @@ function lock(value) {
   // Positioning is available as soon as an NFT image is loaded;
   // an UPDATE or CUSTOMIZE selection is not required to crop locally.
   const canPosition = !value && !pendingOperation &&
-    (!job || (minted && job.loaded && (!upgrading || !!editMode)));
+    (!job || (minted && (editMode === "customize" || (job.loaded && (!upgrading || !!editMode)))));
   $("positionImageButton").disabled = !canPosition;
 }
 
@@ -1311,6 +1337,23 @@ function renderCard(host,data) {
 
   const card = host.querySelector(".vcard");
   card.dataset.effect = data.effect || "none";
+  if (["sparkle","gleam","frost","prism"].includes(card.dataset.effect)) {
+    const overlay = document.createElement("div");
+    overlay.className = "card-effect-overlay";
+    overlay.setAttribute("aria-hidden","true");
+    if (card.dataset.effect === "sparkle") {
+      for (const [x,y,size] of [[18,22,11],[84,33,9],[72,80,10],[31,68,5],[58,14,5],[90,65,4],[8,49,4],[49,88,4]]) {
+        const star = document.createElement("span");
+        star.className = "effect-star";
+        star.textContent = "✦";
+        star.style.left = x + "%";
+        star.style.top = y + "%";
+        star.style.fontSize = size + "cqw";
+        overlay.append(star);
+      }
+    }
+    card.querySelector(".card-art").append(overlay);
+  }
 
   card.style.setProperty(
     "--accent",
@@ -1353,7 +1396,7 @@ let cropPointer = null;
 
 function mayPositionImage() {
   return !busy && !pendingOperation && !cropOpening &&
-    (!job || (minted && job.loaded && (!upgrading || !!editMode)));
+    (!job || (minted && (editMode === "customize" || (job.loaded && (!upgrading || !!editMode)))));
 }
 
 function cropGeometry() {
@@ -2886,6 +2929,7 @@ function setEditMode(mode) {
     return;
   }
   editMode = mode;
+  $("workspace").classList.toggle("customize-workspace",mode === "customize");
   cardFlip.classList.remove("flipped");
   cardFlip.setAttribute("aria-pressed","false");
   cardFlip.setAttribute("aria-label","Flip VCard to view receipt");
@@ -3135,6 +3179,7 @@ async function finishEdit(update) {
   if (update.png) saveVCardPNG(update.png,update.data);
   pendingOperation = null;
   editMode = null;
+  $("workspace").classList.remove("customize-workspace");
   $("updateModeButton").classList.remove("active");
   $("customModeButton").classList.remove("active");
   $("effectGrid").hidden = true;
