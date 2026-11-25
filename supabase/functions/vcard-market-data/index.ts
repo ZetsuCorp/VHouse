@@ -126,10 +126,13 @@ async function recordEdit(client:ReturnType<typeof createClient>,admin:ReturnTyp
  playerId:string,payload:O){
  const mint=str(payload.mintAddress),sign=str(payload.signature);
  const mode=str(payload.mode)?.toLowerCase(),owner=str(payload.ownerWallet);
+ const raidId=mode==="raid"?str(payload.raidId):null;
+ const requestedLevel=num(payload.level);
  if(!address(mint)||!signature(sign)||!address(owner)||
-    (mode!=="update"&&mode!=="customize"))return send({error:"Invalid VCard edit receipt"},400);
+    (mode!=="update"&&mode!=="customize"&&mode!=="raid")||
+    (mode==="raid"&&(!raidId||!requestedLevel)))return send({error:"Invalid VCard edit receipt"},400);
  const [cardResult,accountResult,inventoryResult]=await Promise.all([
-  client.from("vcard_list").select("card_id,mint_address,mint_receipt")
+  client.from("vcard_list").select("card_id,mint_address,mint_receipt,level")
     .eq("mint_address",mint).maybeSingle(),
   client.from("vhouse_accounts").select("wallet_address").eq("id",playerId).maybeSingle(),
   client.from("vhouse_player_inventory").select("thing")
@@ -142,6 +145,18 @@ async function recordEdit(client:ReturnType<typeof createClient>,admin:ReturnTyp
  if(storedOwner!==owner||accountResult.data?.wallet_address!==owner||
     !(inventoryResult.data||[]).some((row:O)=>row.thing===card.card_id))
    return send({error:"VCard is not owned by this VHouse player"},403);
+ if(mode==="raid"){
+  const {data:raid,error}=await client.from("vhouse_raid_records").select("card_id,status,card_snapshot")
+    .eq("id",raidId).eq("player_id",playerId).maybeSingle();
+  if(error)throw error;
+  if(!raid||raid.card_id!==card.card_id||!["RESULTS_READY","CONFIRMED"].includes(raid.status))
+    return send({error:"Raid receipt not ready"},409);
+  const award=obj(obj(raid.card_snapshot).levelAward);
+  if(award.level)return send({status:"ok",...award});
+ }
+ const previousLevels=obj(card.mint_receipt).verified_levels;
+ const prior=Array.isArray(previousLevels)?previousLevels.map(obj).find(x=>x.signature===sign&&x.mode===mode):null;
+ if(prior&&mode!=="raid")return send({status:"ok",...prior,counted:false});
  const tx=obj(await rpc("getTransaction",[sign,{
    encoding:"jsonParsed",maxSupportedTransactionVersion:0,commitment:"confirmed"
  }]));
@@ -164,10 +179,39 @@ async function recordEdit(client:ReturnType<typeof createClient>,admin:ReturnTyp
  const hasEdit=instructions.some(i=>i.programId===TOKEN_2022&&
    obj(obj(i.parsed).info).metadata===mint&&
    obj(i.parsed).type==="updateTokenMetadataField");
- if(!hasEdit||!paid)return send({error:"Paid VCard edit not found in transaction"},403);
- const {data,error}=await admin.rpc("vhouse_record_verified_vcard_edit",{
+ const raidMemo="VHOUSE:RAID_LEVEL:"+raidId;
+ const hasRaidMemo=instructions.some(i=>i.program==="spl-memo"&&i.parsed===raidMemo);
+ if(!hasEdit||(mode==="raid"?!hasRaidMemo:!paid))
+   return send({error:"VCard edit transaction not verified"},403);
+ // Old cached clients use the pre-level edit receipt path.
+ if(requestedLevel===null&&mode!=="raid"){
+  const {data,error}=await admin.rpc("vhouse_record_verified_vcard_edit",{
+   p_card_id:card.card_id,p_mint_address:mint,p_mode:mode,
+   p_signature:sign,p_confirmed_at:new Date(tx.blockTime*1000).toISOString()
+  });
+  if(error)throw error;
+  return send({status:"ok",...obj(data)});
+ }
+ const details=await mintDetails(mint!,obj(card.mint_receipt));
+ const actualLevel=num(details.attributes.find(x=>String(x.trait_type).toLowerCase()==="level")?.value);
+ const levelInstruction=instructions.some(i=>{
+  const info=obj(obj(i.parsed).info);
+  return i.programId===TOKEN_2022&&obj(i.parsed).type==="updateTokenMetadataField"&&
+    info.metadata===mint&&num(info.value)===requestedLevel&&
+    (typeof info.field==="string"?info.field.toLowerCase()==="level":
+     String(obj(info.field).key||obj(info.field).Key||"").toLowerCase()==="level");
+ });
+ if(actualLevel!==requestedLevel||!levelInstruction||details.updateAuthority!==owner||!details.metadataUri)
+   return send({error:"VCard level not verified on Solana"},409);
+ const metadata=await readNFTJSON(details.metadataUri);
+ const jsonLevel=num((Array.isArray(metadata.attributes)?metadata.attributes.map(obj):[])
+  .find(a=>String(a.trait_type).toLowerCase()==="level")?.value);
+ const image=str(metadata.image);
+ if(jsonLevel!==actualLevel||!image)return send({error:"VCard level metadata not available yet"},409);
+ const {data,error}=await admin.rpc("vhouse_record_verified_vcard_level",{
   p_card_id:card.card_id,p_mint_address:mint,p_mode:mode,
-  p_signature:sign,p_confirmed_at:new Date(tx.blockTime*1000).toISOString()
+  p_signature:sign,p_confirmed_at:new Date(tx.blockTime*1000).toISOString(),
+  p_level:actualLevel,p_metadata_uri:details.metadataUri,p_image_uri:image,p_raid_id:raidId
  });
  if(error)throw error;
  return send({status:"ok",...obj(data)});
