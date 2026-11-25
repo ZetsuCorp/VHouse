@@ -310,6 +310,8 @@ button:disabled{opacity:.5;cursor:default}
 .card-art{margin:2.1cqw;aspect-ratio:4/3;border:.9cqw solid var(--accent);border-radius:1.8cqw;background:#0b1620;overflow:hidden}
 .card-art img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
 .card-info{padding:2.4cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#0b131b;font-size:3.9cqw;font-weight:900}
+.level-up-flash{color:#ffdc72!important;background:#482b08!important;animation:vcardLevelFlash .6s ease-in-out 5;text-align:center}
+@keyframes vcardLevelFlash{50%{box-shadow:inset 0 0 12px #ffd76e,0 0 12px #ffd76e;color:#fff!important}}
 .card-description{box-sizing:content-box;height:17cqw;min-height:17cqw;max-height:17cqw;overflow:hidden;padding:2.7cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#10161b;color:#b8d7d7;font-size:3.3cqw;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
 .card-stats{display:flex;justify-content:space-around;padding:3cqw 2.4cqw;border-top:.6cqw solid var(--accent);background:#020508}
 .stat{flex:1;text-align:center}
@@ -1288,7 +1290,7 @@ function cardData() {
     description:limitedDescription(state.mode === "default"
       ? baseDescription
       : $("descriptionInput").value),
-    level:upgrading && job?.data ? job.data.level : 1,
+    level:minted && job?.data ? job.data.level : 1,
     atk:upgrading && job?.data ? job.data.atk : 100,
     def:upgrading && job?.data ? job.data.def : 100,
     price:NFT_PRICE_SOL,
@@ -1607,6 +1609,7 @@ $("descriptionInput").oninput = refresh;
 async function makePNG(data) {
   // Capture the visible full VCard.
   const host = $("vcardHost");
+  renderCard(host,data);
   const artwork = host.querySelector(".card-art img");
 
   if (!artwork) {
@@ -3159,7 +3162,8 @@ async function finishEdit(update) {
       mintAddress:job.mint.publicKey.toBase58(),
       ownerWallet:job.owner,
       mode:update.mode,
-      signature:update.signature
+      signature:update.signature,
+      level:update.data.level
     }
   });
   if(recordError || record?.error)throw Error(
@@ -3167,6 +3171,7 @@ async function finishEdit(update) {
     (record?.error || recordError?.message || "Unknown error") +
     ". Press CHECK again; no new charge."
   );
+  const previousLevel = Number(job.data.level);
   job.data = update.data;
   job.chainName = nftMetadataName(update.data.name);
   job.uri = update.uri;
@@ -3187,6 +3192,14 @@ async function finishEdit(update) {
   message("VCard " + editLabel(update.mode) + " verified on Solana. Click the VCard to flip and view its updated receipt.");
   lock(false);
   refresh();
+  $("editorLevel").textContent = "LEVEL " + String(update.data.level).padStart(2,"0");
+  if (update.data.level > previousLevel) {
+    const info = $("vcardHost").querySelector(".card-info");
+    info.textContent = "LEVEL " + previousLevel + " → " + update.data.level + " · LEVEL UP!";
+    info.classList.add("level-up-flash");
+    setTimeout(() => { if(info.isConnected){info.textContent = "LEVEL " + update.data.level;info.classList.remove("level-up-flash");} },3000);
+  }
+  await window.VHouseCardStore.refresh();
   window.dispatchEvent(new CustomEvent("vhouse:vcard-updated",{
     detail:{mintAddress:job.mint.publicKey.toBase58()}
   }));
@@ -3221,6 +3234,7 @@ $("applyButton").onclick = async () => {
         data.image === job.data.image) {
       throw Error("Change the card effect or position the image first.");
     }
+    data.level = Number(job.data.level || 1) + 1;
     const quote = await getEditQuote();
     // Upload current full card so visible changes match the on-chain JSON.
     const png = await makePNG(data);
@@ -3264,6 +3278,7 @@ $("applyButton").onclick = async () => {
         }
       } catch (_) {}
     }
+    if (!pendingOperation?.signature) renderCard($("vcardHost"),cardData());
     message("VCard edit error: " + shortError(error));
   } finally {
     lock(false);
