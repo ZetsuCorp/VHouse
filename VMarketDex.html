@@ -101,6 +101,23 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 .trade-actions button{flex:1;padding:.55cqw;font-size:1.1cqw}
 .trade-result{font-size:1cqw;text-align:center;padding:.35cqw;overflow-wrap:anywhere;flex:none}
 .trade-result a{color:#e8c987}
+.trade-asset{display:flex;align-items:center;gap:.6cqw;margin:.1cqw 0 .25cqw;flex:none}
+.trade-asset .art{width:2.8cqw;height:2.8cqw;border-radius:.3cqw;background:#302640}
+.trade-asset-info{display:flex;flex-direction:column;gap:.12cqw;min-width:0}
+.trade-asset-info b{font-size:1.25cqw}
+.trade-asset-info span{font-size:.95cqw;color:#ad9fbc}
+.trade-balance-row{display:flex;align-items:center;justify-content:space-between;gap:.3cqw;font-size:.95cqw}
+.trade-balance-row b{color:#59e0a2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trade-shortcuts{display:flex;gap:.25cqw}
+.trade-shortcuts button{flex:1}
+.trade-estimate{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trade-costs{display:grid;grid-template-columns:1fr auto;gap:.15cqw .4cqw;color:#ad9fbc;font-size:.9cqw}
+.trade-costs b{text-align:right;color:#eeeaf8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trade-form{gap:.3cqw}
+.trade-field{padding:.35cqw .55cqw;gap:.16cqw}
+.trade-window{width:min(94%,44cqw);height:96%;padding:.5cqw}
+.trade-actions button{padding:.4cqw}
+.trade-result{min-height:1.4cqw;padding:.2cqw;font-size:.9cqw}
 </style>
 </head>
 <body>
@@ -137,11 +154,13 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
  <section class="trade-window" role="dialog" aria-modal="true" aria-labelledby="tradeTitle">
   <div class="trade-heading"><span id="tradeTitle">BUY</span><button type="button" class="nav" id="closeTrade" aria-label="Close trading overlay">✕</button></div>
   <div class="trade-wallet"><span id="tradeWallet">Phantom</span><button type="button" class="nav" id="tradeConnect">CONNECT PHANTOM</button></div>
+  <div class="trade-asset" id="tradeAssetHeader"><div class="art" id="tradeArt"></div><div class="trade-asset-info"><b id="tradeAssetName"></b><span id="tradeAssetPrice"></span></div></div>
   <div class="trade-form" id="tradeForm">
-  <div class="trade-field"><label for="tradeAmount">You pay</label><div class="trade-input-row"><input id="tradeAmount" type="text" inputmode="decimal" autocomplete="off" maxlength="28" placeholder="0.00"><b id="tradeInputSymbol"></b></div></div>
+  <div class="trade-field"><div class="trade-balance-row"><label for="tradeAmount">You pay</label><span>Balance: <b id="tradeBalance">—</b></span></div><div class="trade-input-row"><input id="tradeAmount" type="text" inputmode="decimal" autocomplete="off" maxlength="28" placeholder="0.00"><b id="tradeInputSymbol"></b></div><div class="trade-shortcuts" id="tradeShortcuts"><button type="button" class="nav" data-percent="25">25%</button><button type="button" class="nav" data-percent="50">50%</button><button type="button" class="nav" data-percent="75">75%</button><button type="button" class="nav" data-percent="100">100%</button></div></div>
   <div class="trade-field"><span class="trade-caption">Estimated receive</span><div class="trade-input-row"><span class="trade-estimate" id="tradeOutput">—</span><b id="tradeOutputSymbol"></b></div></div>
-  <div class="trade-caption" id="tradeRoute">Pump.fun / PumpSwap · Slippage 1% · Network and trading fees apply</div>
-  <div class="trade-actions"><button type="button" class="nav" id="tradeQuote">GET QUOTE</button><button type="button" class="trade-buy" id="tradeSubmit" disabled>BUY</button></div>
+  <div class="trade-caption" id="tradeRoute">Pump.fun / PumpSwap · Slippage 1%</div>
+  <div class="trade-costs"><span>Trading fee</span><b id="tradeFee">—</b><span>Network fee</span><b id="tradeNetworkFee">—</b><span id="tradeLimitLabel">Maximum cost</span><b id="tradeLimit">—</b></div>
+  <div class="trade-actions"><button type="button" class="trade-buy" id="tradeSubmit" disabled>BUY</button></div>
  </div>
   <div class="trade-result" id="tradeResult" role="status"></div>
  </section>
@@ -364,11 +383,132 @@ async function loadChart(){
  }catch{if(ticket===chartRequest)chartNote("Historical price data unavailable")}
 }
 function choose(i){if(!assets[i])return;selected=i;renderList();renderDetail();void loadChart();void loadSupply(assets[i])}
-// Pump.fun trading is independent of the selected market chart.
-const PUMP_PROGRAMS=new Set(["6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P","pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"]);
-const SOL_MINT=assets[0].mint;
-let tradeAsset=null,tradeMode="BUY",tradeGeneration=0,tradeQuoteData=null,tradeBusy=false,tradeReturnFocus=null;
+// Trade controls and SDK loading are independent of the selected chart.
+let tradeAsset=null,tradeMode="BUY",tradeGeneration=0,tradeRevision=0,tradeQuoteData=null,tradeBusy=false,tradeReturnFocus=null,tradeTimer=null,tradeBalances=null,tradeBalanceRevision=0,tradeWalletAddress=null,tradeModule=null;
 function getMarketTradePhantom(){const p=window.phantom?.solana||window.solana;return p?.isPhantom?p:null}
+function currentTradeAddress(){const p=getMarketTradePhantom();return p?.isConnected&&p.publicKey?p.publicKey.toBase58():null}
+function pumpTradeModule(){
+ if(!tradeModule)tradeModule=Promise.resolve().then(()=>{
+// Official Pump SDKs, loaded only when trading is opened.
+let modules;
+async function sdk(){
+ if(!modules)modules=Promise.all([
+  import("https://esm.sh/@solana/web3.js@1.98.4?bundle"),
+  import("https://esm.sh/bn.js@5.2.2?bundle"),
+  import("https://esm.sh/@solana/spl-token@0.4.14?bundle&deps=@solana/web3.js@1.98.4"),
+  import("https://esm.sh/@pump-fun/pump-sdk@4.1.0?bundle&deps=@solana/web3.js@1.98.4,@solana/spl-token@0.4.14,bn.js@5.2.2"),
+  import("https://esm.sh/@pump-fun/pump-swap-sdk@2.1.0?bundle&deps=@solana/web3.js@1.98.4,@solana/spl-token@0.4.14,bn.js@5.2.2")
+ ]).catch(e=>{modules=null;throw e});
+ return modules;
+}
+const SOL="So11111111111111111111111111111111111111112";
+const PUMP="6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+const AMM="pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
+const allowed=new Set(["ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump","BGf97TZtX7SezpJs21B3DchsonwHvw8DiekDALXLpump","rdWAk8U5Zx3L5TjLtL7sb3XhEPmXhqcMLxVBDi3pump"]);
+async function withConnection(web3,fn){
+ let last;
+ for(const url of ["https://solana-rpc.publicnode.com","https://api.mainnet-beta.solana.com"]){
+  try{return await fn(new web3.Connection(url,{commitment:"confirmed",disableRetryOnRateLimit:true}))}
+  catch(e){last=e;if(!/fetch|network|429|403|502|503|504|timeout|failed to get/i.test(String(e?.message)))throw e}
+ }
+ throw last||Error("Solana RPC unavailable");
+}
+async function mintState(connection,web3,spl,mintAddress,wallet){
+ if(!allowed.has(mintAddress))throw Error("Unsupported Pump.fun asset.");
+ const mint=new web3.PublicKey(mintAddress),user=new web3.PublicKey(wallet);
+ const account=await connection.getAccountInfo(mint);
+ if(!account||![spl.TOKEN_PROGRAM_ID.toBase58(),spl.TOKEN_2022_PROGRAM_ID.toBase58()].includes(account.owner.toBase58()))throw Error("Token mint unavailable.");
+ const tokenProgram=account.owner;
+ if(spl.unpackMint(mint,account,tokenProgram).decimals!==6)throw Error("Unexpected token precision.");
+ const ata=spl.getAssociatedTokenAddressSync(mint,user,false,tokenProgram);
+ const [sol,ataInfo]=await Promise.all([connection.getBalance(user),connection.getAccountInfo(ata)]);
+ return {mint,user,tokenProgram,ataInfo,sol:String(sol),token:ataInfo?spl.unpackAccount(ata,ataInfo,tokenProgram).amount.toString():"0"};
+}
+async function balances(mint,wallet){
+ const [web3,,spl]=await sdk();
+ return withConnection(web3,async connection=>{
+  const {sol,token}=await mintState(connection,web3,spl,mint,wallet);
+  return {sol,token};
+ });
+}
+async function buildFromState({web3,BN,pump,amm,connection,state,rawAmount,side}){
+ const {mint,user,tokenProgram,ataInfo,sol,token}=state;
+ if(!["BUY","SELL"].includes(side)||!/^\d+$/.test(rawAmount)||BigInt(rawAmount)<=0n||BigInt(rawAmount)>18446744073709551615n)throw Error("Invalid trade amount.");
+ const buying=side==="BUY",amount=new BN(rawAmount,10),slippage=1;
+ if(amount.gt(new BN(buying?sol:token,10)))throw Error("Insufficient balance.");
+ const curveInfo=await connection.getAccountInfo(pump.bondingCurvePda(mint));
+ if(!curveInfo||curveInfo.owner.toBase58()!==PUMP)throw Error("Pump.fun bonding curve unavailable.");
+ const curve=pump.PUMP_SDK.decodeBondingCurve(curveInfo);
+ if(curve.quoteMint&&!["11111111111111111111111111111111",SOL].includes(curve.quoteMint.toBase58()))throw Error("This asset is not SOL-paired.");
+ let route,expected,ixs,tradeFee=null;
+ if(!curve.complete){
+  route="Pump.fun";
+  const online=new pump.OnlinePumpSdk(connection);
+  const [global,feeConfig]=await Promise.all([online.fetchGlobal(),online.fetchFeeConfig()]);
+  const args={global,feeConfig,mintSupply:curve.tokenTotalSupply,bondingCurve:curve};
+  const common={global,bondingCurveAccountInfo:curveInfo,bondingCurve:curve,associatedUserAccountInfo:ataInfo,mint,user,tokenProgram,slippage};
+  if(buying){
+   expected=pump.getBuyTokenAmountFromSolAmount({...args,amount});
+   if(expected.lten(0))throw Error("Amount too small.");
+   const cost=pump.getBuySolAmountFromTokenAmount({...args,amount:expected});
+   ixs=await pump.PUMP_SDK.buyInstructions({...common,amount:expected,solAmount:cost});
+  }else{
+   expected=pump.getSellSolAmountFromTokenAmount({...args,amount});
+   ixs=await pump.PUMP_SDK.sellInstructions({...common,amount,solAmount:expected,mayhemMode:curve.isMayhemMode??false,cashback:curve.isCashbackCoin??false});
+  }
+ }else{
+  route="PumpSwap";
+  const poolKey=amm.canonicalPumpPoolPda(mint);
+  const account=await connection.getAccountInfo(poolKey);
+  if(!account||account.owner.toBase58()!==AMM)throw Error("Coin is migrating or has no canonical PumpSwap pool.");
+  const swap=await new amm.OnlinePumpAmmSdk(connection).swapSolanaState(poolKey,user);
+  const {pool,poolBaseAmount,poolQuoteAmount,globalConfig,feeConfig,baseMint,baseMintAccount}=swap;
+  if(pool.quoteMint.toBase58()!==SOL||baseMint.toBase58()!==mint.toBase58())throw Error("Pool mint mismatch.");
+  const args={baseReserve:poolBaseAmount,quoteReserve:poolQuoteAmount,virtualQuoteReserves:pool.virtualQuoteReserves,feeBucketsTotal:pool.protocolFees?.add(pool.creatorFees),globalConfig,feeConfig,baseMint,baseMintAccount,coinCreator:pool.coinCreator,creator:pool.creator,quoteMint:pool.quoteMint,isMayhemMode:pool.isMayhemMode,creatorFeeBps:pool.creatorFeeBps,slippage};
+  if(buying){
+   const q=amm.buyQuoteInput({...args,quote:amount});
+   expected=q.base;
+   ixs=await amm.PUMP_AMM_SDK.buyQuoteInput(swap,amount,slippage);
+   const detail=amm.buyBaseInput({...args,base:expected});
+   tradeFee=detail.uiQuote.sub(detail.internalQuoteAmount).toString();
+  }else{
+   const q=amm.sellBaseInput({...args,base:amount});
+   expected=q.uiQuote;tradeFee=q.internalQuoteAmountOut.sub(expected).toString();
+   ixs=await amm.PUMP_AMM_SDK.sellBaseInput(swap,amount,slippage);
+  }
+ }
+ if(!expected||expected.lten(0)||!ixs?.length)throw Error("No valid trade at this amount.");
+ const program=route==="PumpSwap"?AMM:PUMP;
+ const tradeIx=ixs.find(ix=>ix.programId.toBase58()===program);
+ if(!tradeIx||tradeIx.data.length<24)throw Error("Missing or invalid Pump trade instruction.");
+ // Legacy buy/sell builders encode token amount followed by the SOL limit.
+ // Decode the actual signed instruction's bound instead of estimating it independently.
+ const bytes=new DataView(tradeIx.data.buffer,tradeIx.data.byteOffset,tradeIx.data.byteLength);
+ const limit=bytes.getBigUint64(16,true);
+ if(limit<=0n)throw Error("Invalid slippage limit.");
+ if(buying&&limit>BigInt(sol))throw Error("Insufficient SOL for maximum trade cost.");
+ const {blockhash,lastValidBlockHeight}=await connection.getLatestBlockhash("confirmed");
+ const message=new web3.TransactionMessage({payerKey:user,recentBlockhash:blockhash,instructions:[web3.ComputeBudgetProgram.setComputeUnitLimit({units:route==="PumpSwap"?400000:300000}),...ixs]}).compileToV0Message();
+ if(message.header.numRequiredSignatures!==1||!message.staticAccountKeys[0].equals(user))throw Error("Unexpected transaction signer.");
+ const tx=new web3.VersionedTransaction(message);
+ const fee=await connection.getFeeForMessage(message,"confirmed");
+ if(fee.value===null)throw Error("Network fee unavailable.");
+ if(BigInt(sol)<BigInt(fee.value)+(buying?limit:0n))throw Error("Insufficient SOL for network fee.");
+ return {tx,connection,lastValidBlockHeight,route,expected:expected.toString(),limit:limit.toString(),networkFee:String(fee.value),tradeFee,sol,token};
+}
+async function quote(mint,wallet,rawAmount,side){
+ const [web3,bn,spl,pump,amm]=await sdk();
+ return withConnection(web3,async connection=>buildFromState({web3,BN:bn.default,pump,amm,connection,state:await mintState(connection,web3,spl,mint,wallet),rawAmount,side}));
+}
+async function simulate(result){
+ const response=await result.connection.simulateTransaction(result.tx,{sigVerify:false,replaceRecentBlockhash:true,commitment:"confirmed"});
+ if(response.value.err)throw Error("Trade simulation failed: "+JSON.stringify(response.value.err));
+}
+
+ return {balances,quote,simulate};
+ }).catch(e=>{tradeModule=null;throw e});
+ return tradeModule;
+}
 function tradeMessage(message){$("tradeResult").textContent=message}
 function tradeReceipt(signature,message){
  tradeMessage(message+" · ");
@@ -387,79 +527,109 @@ function displayTradeUnits(value,decimals){
  const digits=String(value).padStart(decimals+1,"0");
  return digits.slice(0,-decimals)+(digits.slice(-decimals).replace(/0+$/,"")?"."+digits.slice(-decimals).replace(/0+$/,""):"");
 }
+function tradeInputDecimals(){return tradeMode==="BUY"?9:6}
+function tradeOutputDecimals(){return tradeMode==="BUY"?6:9}
 function clearTradeQuote(){
- tradeQuoteData=null;$("tradeOutput").textContent="—";$("tradeSubmit").disabled=true;
- $("tradeRoute").textContent="Pump.fun / PumpSwap · Slippage 1% · Network and trading fees apply";
+ tradeRevision++;clearTimeout(tradeTimer);tradeTimer=null;tradeQuoteData=null;
+ $("tradeOutput").textContent="—";$("tradeFee").textContent="—";$("tradeNetworkFee").textContent="—";$("tradeLimit").textContent="—";
+ $("tradeRoute").textContent="Pump.fun / PumpSwap · Slippage 1%";$("tradeSubmit").disabled=true;
 }
-function currentTradeAddress(){
- const p=getMarketTradePhantom();return p?.isConnected&&p.publicKey?p.publicKey.toBase58():null;
+function setTradeBalance(){
+ const address=currentTradeAddress(),balance=tradeBalances&&tradeBalances.user===address?tradeBalances:null;
+ const amount=balance?balance[tradeMode==="BUY"?"sol":"token"]:null;
+ $("tradeBalance").textContent=amount===null?"—":displayTradeUnits(amount,tradeInputDecimals())+" "+$("tradeInputSymbol").textContent;
+ for(const b of $("tradeShortcuts").querySelectorAll("button")){
+  b.hidden=tradeMode==="BUY"&&b.dataset.percent==="100";
+  b.disabled=tradeBusy||amount===null||BigInt(amount)<=0n;
+ }
 }
 function syncTradeWallet(){
  const address=currentTradeAddress();
  $("tradeWallet").textContent=address?"Phantom · "+address:"Phantom";
- $("tradeConnect").hidden=!!address;
- $("tradeConnect").disabled=tradeBusy;
+ $("tradeConnect").hidden=!!address;$("tradeConnect").disabled=tradeBusy;
  if(tradeQuoteData&&tradeQuoteData.user!==address)clearTradeQuote();
- $("tradeQuote").disabled=tradeBusy||!address||!tradeAsset||tradeAsset.native;
  $("tradeSubmit").disabled=tradeBusy||!tradeQuoteData||!address;
+ setTradeBalance();
 }
 function lockTrade(busy){tradeBusy=busy;$("tradeAmount").disabled=busy;$("closeTrade").disabled=busy;syncTradeWallet()}
+function tradeCurrent(generation,revision,user){return generation===tradeGeneration&&revision===tradeRevision&&user===currentTradeAddress()&&!$("tradeLayer").hidden}
+async function refreshTradeBalance(){
+ const a=tradeAsset,user=currentTradeAddress(),generation=tradeGeneration,balanceRevision=++tradeBalanceRevision;
+ tradeBalances=null;setTradeBalance();
+ if(!a||a.native||!user)return;
+ try{
+  const sdk=await pumpTradeModule(),data=await sdk.balances(a.mint,user);
+  if(generation!==tradeGeneration||balanceRevision!==tradeBalanceRevision||user!==currentTradeAddress())return;
+  tradeBalances={...data,user};setTradeBalance();
+ }catch(e){if(generation===tradeGeneration&&balanceRevision===tradeBalanceRevision&&user===currentTradeAddress()&&!$("tradeAmount").value)tradeMessage(e?.message||"Wallet balance unavailable.")}
+}
+function walletChanged(){
+ if(!tradeAsset||$("tradeLayer").hidden)return;
+ const address=currentTradeAddress();
+ if(address===tradeWalletAddress){syncTradeWallet();return}
+ tradeWalletAddress=address;clearTradeQuote();tradeBalances=null;
+ syncTradeWallet();void refreshTradeBalance();scheduleTradeQuote();
+}
 async function connectTrade(){
  if(tradeBusy)return;
  const p=getMarketTradePhantom();
  if(!p){tradeMessage("Open VHouse in a browser with Phantom installed.");return}
  lockTrade(true);
  try{await p.connect();if(!currentTradeAddress())throw Error("Phantom did not return a connected wallet.");tradeMessage("")}
- catch(error){tradeMessage(error?.message||"Phantom connection declined.")}
- finally{lockTrade(false)}
+ catch(e){tradeMessage(e?.message||"Phantom connection declined.")}
+ finally{lockTrade(false);walletChanged();if(currentTradeAddress()&&!tradeQuoteData)scheduleTradeQuote()}
 }
 function closeTrade(){
  if(tradeBusy)return;
- tradeGeneration++;clearTradeQuote();$("tradeLayer").hidden=true;tradeAsset=null;
+ tradeGeneration++;tradeBalanceRevision++;clearTradeQuote();$("tradeLayer").hidden=true;tradeAsset=null;tradeBalances=null;tradeWalletAddress=null;
  tradeReturnFocus?.focus?.();tradeReturnFocus=null;
 }
 function openTrade(i,mode){
  const a=assets[i];if(!a||tradeBusy)return;
  if(!$("tradeLayer").hidden)closeTrade();
- tradeGeneration++;tradeAsset=a;tradeMode=mode;tradeReturnFocus=document.activeElement;
+ tradeGeneration++;tradeAsset=a;tradeMode=mode;tradeReturnFocus=document.activeElement;tradeWalletAddress=currentTradeAddress();tradeBalances=null;
  clearTradeQuote();$("tradeAmount").value="";$("tradeTitle").textContent=mode+" "+a.symbol;
+ $("tradeAssetName").textContent=a.name+" · "+a.symbol;$("tradeAssetPrice").textContent="Market price: "+money(displayPrice(a));
+ const art=$("tradeArt");art.replaceChildren();art.style.setProperty("--accent",a.accent);
+ const mark=document.createElement("span");mark.className="mark";mark.textContent=a.symbol.slice(0,3);art.append(mark);
+ if(a.native){const icon=$("features").querySelector('[data-buy="0"] svg');if(icon){mark.hidden=true;art.append(icon.cloneNode(true))}}
+ else attachTokenImage(art,mark,[...(tokenImages.get(a.mint)||[]),...artworkUrls(pumpCoins.get(a.mint)?.image),...artworkUrls(pairFor(a)?.info?.imageUrl)]);
  $("tradeInputSymbol").textContent=mode==="BUY"?"SOL":a.symbol;
  $("tradeOutputSymbol").textContent=mode==="BUY"?a.symbol:"SOL";
- $("tradeSubmit").textContent=mode+" "+a.symbol;
- $("tradeSubmit").className=mode==="BUY"?"trade-buy":"trade-sell";
+ $("tradeLimitLabel").textContent=mode==="BUY"?"Maximum cost":"Minimum receive";
+ $("tradeSubmit").textContent=mode+" "+a.symbol;$("tradeSubmit").className=mode==="BUY"?"trade-buy":"trade-sell";
  $("tradeForm").hidden=!!a.native;$("tradeLayer").hidden=false;syncTradeWallet();
- tradeMessage(a.native?"SOL is the payment asset for Pump.fun token trades. Select AWT, SCRAPS or AMALIE.":"");
+ tradeMessage(a.native?"SOL is the payment asset for Pump.fun token trades.":"");
+ if(!a.native)void refreshTradeBalance();
  $("closeTrade").focus();
 }
-async function requestTradeQuote(){
- if(tradeBusy||!tradeAsset||tradeAsset.native)return;
+function scheduleTradeQuote(){
  clearTradeQuote();
- const user=currentTradeAddress();if(!user){tradeMessage("Connect Phantom first.");return}
- const a=tradeAsset,mode=tradeMode,generation=tradeGeneration;
- lockTrade(true);
+ if(tradeBusy||!tradeAsset||tradeAsset.native||$("tradeLayer").hidden)return;
+ const value=$("tradeAmount").value.trim();if(!value){tradeMessage("");return}
+ const user=currentTradeAddress();if(!user){tradeMessage("Connect Phantom to trade.");return}
+ let amount;try{amount=tradeUnits(value,tradeInputDecimals())}catch(e){tradeMessage(e.message);return}
+ const generation=tradeGeneration,revision=tradeRevision;
+ tradeMessage("Calculating return…");
+ tradeTimer=setTimeout(()=>{void requestTradeQuote({generation,revision,user,amount})},400);
+}
+async function requestTradeQuote({generation,revision,user,amount}){
+ if(!tradeCurrent(generation,revision,user)||tradeBusy)return;
+ const a=tradeAsset,mode=tradeMode;
  try{
-  const mintInfo=await rpc("getTokenSupply",[a.mint,{commitment:"confirmed"}]);
-  if(mintInfo?.decimals!==6)throw Error("Pump.fun token precision could not be verified.");
-  const amount=tradeUnits($("tradeAmount").value,mode==="BUY"?9:6);
-  const body={inputMint:mode==="BUY"?SOL_MINT:a.mint,outputMint:mode==="BUY"?a.mint:SOL_MINT,amount,user};
-  tradeMessage("Getting Pump.fun quote…");
-  await window.VHouseAuth.ready;
-  const {data,error}=await window.VHouseAuth.getClient().functions.invoke("vhouse-pump-trade",{body});
-  if(error){let detail="";try{detail=(await error.context.json()).error}catch{}throw Error(detail||error.message||"Pump.fun quote failed.")}
-  if(data?.error)throw Error(data.error);
-  if(generation!==tradeGeneration||currentTradeAddress()!==user)throw Error("Phantom account changed.");
-  if(typeof data?.transaction!=="string"||!/^\d{1,20}$/.test(data?.expectedOutAmount||"")||BigInt(data.expectedOutAmount)<=0n)throw Error("Invalid Pump.fun quote.");
-  const {VersionedTransaction}=await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
-  const tx=VersionedTransaction.deserialize(Uint8Array.from(atob(data.transaction),c=>c.charCodeAt(0)));
-  const msg=tx.message,keys=msg.staticAccountKeys;
-  if(msg.header.numRequiredSignatures!==1||keys[0]?.toBase58()!==user)throw Error("Unexpected transaction signer.");
-  if(!msg.compiledInstructions.some(ix=>PUMP_PROGRAMS.has(keys[ix.programIdIndex]?.toBase58())))throw Error("No Pump.fun trading instruction found.");
-  tradeQuoteData={tx,user,generation,amount,at:Date.now()};
-  $("tradeOutput").textContent=displayTradeUnits(data.expectedOutAmount,mode==="BUY"?6:9);
-  $("tradeRoute").textContent=(data.hasGraduated?"PumpSwap":"Pump.fun bonding curve")+" · Slippage 1% · Fees apply";
-  tradeMessage("Review the quote, then approve in Phantom.");
- }catch(error){clearTradeQuote();tradeMessage(error?.message||"Pump.fun quote failed.")}
- finally{lockTrade(false)}
+  const sdk=await pumpTradeModule(),q=await sdk.quote(a.mint,user,amount,mode);
+  if(!tradeCurrent(generation,revision,user)||tradeBusy)return;
+  if(!q.tx||!q.connection||!["Pump.fun","PumpSwap"].includes(q.route)||!/^\d+$/.test(q.expected)||BigInt(q.expected)<=0n)throw Error("Invalid SDK quote.");
+  tradeQuoteData={...q,user,generation,revision,amount,at:Date.now(),mode};
+  tradeBalances={sol:q.sol,token:q.token,user};setTradeBalance();
+  $("tradeOutput").textContent=displayTradeUnits(q.expected,tradeOutputDecimals());
+  $("tradeRoute").textContent=q.route+" · Slippage 1%";
+  $("tradeFee").textContent=q.tradeFee===null||q.tradeFee===undefined?"Included in estimate":displayTradeUnits(q.tradeFee,9)+" SOL";
+  $("tradeNetworkFee").textContent=displayTradeUnits(q.networkFee,9)+" SOL";
+  $("tradeLimit").textContent=displayTradeUnits(q.limit,9)+" SOL";
+  tradeMessage("");syncTradeWallet();
+  tradeTimer=setTimeout(()=>{if(tradeCurrent(generation,revision,user)&&!tradeBusy)scheduleTradeQuote()},15000);
+ }catch(e){if(tradeCurrent(generation,revision,user)){clearTradeQuote();tradeMessage(e?.message||"Pump.fun quote unavailable.")}}
 }
 async function confirmTradeSignature(signature){
  for(let i=0;i<30;i++){
@@ -476,32 +646,39 @@ async function confirmTradeSignature(signature){
 async function submitTrade(){
  if(tradeBusy||!tradeQuoteData)return;
  const quote=tradeQuoteData,p=getMarketTradePhantom();
- if(currentTradeAddress()!==quote.user||quote.generation!==tradeGeneration||Date.now()-quote.at>20000){clearTradeQuote();tradeMessage("Quote expired or wallet changed. Get a new quote.");syncTradeWallet();return}
- lockTrade(true);clearTradeQuote();let signature=null;
+ if(!tradeCurrent(quote.generation,quote.revision,quote.user)||Date.now()-quote.at>20000){scheduleTradeQuote();return}
+ clearTimeout(tradeTimer);lockTrade(true);let signature=null,confirmed=false;
  try{
   if(typeof p?.signAndSendTransaction!=="function")throw Error("Phantom transaction approval unavailable.");
-  tradeMessage("Review and approve the transaction in Phantom.");
+  const sdk=await pumpTradeModule();
+  tradeMessage("Checking transaction…");await sdk.simulate(quote);
+  if(!tradeCurrent(quote.generation,quote.revision,quote.user))throw Error("Trade or wallet changed.");
+  if(await quote.connection.getBlockHeight("confirmed")>=quote.lastValidBlockHeight)throw Error("Quote expired.");
+  tradeMessage("Approve in Phantom.");
   const result=await p.signAndSendTransaction(quote.tx,{skipPreflight:false});
   signature=result?.signature;
-  if(typeof signature!=="string"||!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature))throw Error("Phantom did not return a valid signature. Check wallet activity before retrying.");
-  tradeReceipt(signature,"Submitted · Checking Solana");
-  const status=await confirmTradeSignature(signature);
-  tradeReceipt(signature,status==="confirmed"?"Swap confirmed":status==="failed"?"Transaction failed":"Confirmation not yet verified. Check Solscan before retrying.");
-  if(status==="confirmed")void refreshMarket();
- }catch(error){if(signature)tradeReceipt(signature,"Check transaction status before retrying");else tradeMessage(error?.message||"Transaction not completed.")}
- finally{lockTrade(false)}
+  if(typeof signature!=="string"||!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)){signature=null;throw Error("No transaction signature returned. Check Phantom activity before retrying.")}
+  tradeReceipt(signature,"Submitted");const status=await confirmTradeSignature(signature);
+  confirmed=status==="confirmed";tradeReceipt(signature,confirmed?"Swap confirmed":status==="failed"?"Transaction failed":"Confirmation unverified. Check Solscan before retrying.");
+  if(confirmed)void refreshMarket();
+ }catch(e){if(signature)tradeReceipt(signature,"Check transaction status before retrying");else tradeMessage(e?.message||"Transaction not completed.")}
+ finally{
+  clearTradeQuote();$("tradeAmount").value="";lockTrade(false);
+  if(confirmed||signature)void refreshTradeBalance();
+ }
 }
 function initMarketTradeControls(){
- $("chartBuy").onclick=()=>openTrade(selected,"BUY");
- $("chartSell").onclick=()=>openTrade(selected,"SELL");
- $("closeTrade").onclick=closeTrade;
- $("tradeConnect").onclick=()=>void connectTrade();
- $("tradeAmount").oninput=()=>{clearTradeQuote();tradeMessage("");syncTradeWallet()};
- $("tradeQuote").onclick=()=>void requestTradeQuote();
+ $("chartBuy").onclick=()=>openTrade(selected,"BUY");$("chartSell").onclick=()=>openTrade(selected,"SELL");
+ $("closeTrade").onclick=closeTrade;$("tradeConnect").onclick=()=>void connectTrade();$("tradeAmount").oninput=scheduleTradeQuote;
  $("tradeSubmit").onclick=()=>void submitTrade();
+ $("tradeShortcuts").addEventListener("click",e=>{
+  const b=e.target.closest("[data-percent]");if(!b||b.disabled||tradeBusy||!tradeBalances||tradeBalances.user!==currentTradeAddress())return;
+  const balance=BigInt(tradeBalances[tradeMode==="BUY"?"sol":"token"]),amount=balance*BigInt(b.dataset.percent)/100n;
+  if(amount<=0n)return;$("tradeAmount").value=displayTradeUnits(amount,tradeInputDecimals());scheduleTradeQuote();
+ });
  $("tradeLayer").addEventListener("click",e=>{if(e.target===$("tradeLayer"))closeTrade()});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("tradeLayer").hidden)closeTrade()});
- try{const p=getMarketTradePhantom();if(typeof p?.on==="function")for(const event of ["connect","disconnect","accountChanged"])p.on(event,()=>{if(!$("tradeLayer").hidden)syncTradeWallet()})}catch(error){console.warn("Trade wallet events unavailable",error)}
+ try{const p=getMarketTradePhantom();if(typeof p?.on==="function")for(const event of ["connect","disconnect","accountChanged"])p.on(event,walletChanged)}catch(e){console.warn("Trade wallet events unavailable",e)}
 }
 async function refreshMarket(){
  if(refreshing)return;refreshing=true;$("refresh").disabled=true;
