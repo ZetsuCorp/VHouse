@@ -97,10 +97,10 @@ async function setActive(cardId){
     await loadPromise.catch(()=>{});
     const account=playerId();
     if(!account)throw Error("Sign in to assign a VCard.");
+    await refresh();
     const card=cards.find(c=>key(c.id)===id)||
       (activeSnapshot?.id===id?activeSnapshot:null);
     if(!card)throw Error("This VCard is not in your Closet.");
-    await refresh();
     if(getStatus(id).status!=="AVAILABLE")throw Error("This VCard is busy.");
     await auth().syncActiveVCard(card);
     if(playerId()!==account)throw Error("VHouse account changed during assignment.");
@@ -112,12 +112,29 @@ async function setActive(cardId){
 }
 /* LOAD's NFT ownership is verified by the Creator before this call.
    Do not insert external NFTs into the internal VCard inventory. */
+async function syncLoadedLevel(card,level){
+  if(card.external)return copy(card);
+  const expected=Number(level);
+  if(!Number.isSafeInteger(expected)||expected<1)throw Error("NFT level unavailable.");
+  if(Number(card.level)===expected)return copy(card);
+  const {data,error}=await auth().getClient().functions.invoke("vcard-market-data",{
+    body:{action:"sync_level",cardId:card.id}
+  });
+  if(error||data?.status!=="ok")throw Error(data?.error||error?.message||"VCard level was not saved.");
+  await refresh();
+  const updated=cards.find(c=>c.id===card.id);
+  if(Number(updated?.level)!==Number(data.level))throw Error("VCard level was not refreshed.");
+  return copy(updated);
+}
 async function assignLoaded(details){
   if(!details||!details.mint_address||!details.ownerWallet)
     throw Error("Verified NFT owner and mint address required.");
   await loadPromise.catch(()=>{});
   const existing=cards.find(c=>c.mint_address===details.mint_address);
-  if(existing)return setActive(existing.id);
+  if(existing){
+    await syncLoadedLevel(existing,details.level);
+    return setActive(existing.id);
+  }
   const account=playerId();
   if(!account)throw Error("Sign in to assign a loaded NFT.");
   const card={
@@ -169,7 +186,7 @@ const api={
   getLockedCards:()=>[...journeyStates.entries()].map(([id,entry])=>({cardId:id,...entry})),
   ready:()=>loadPromise,refresh,
   subscribe(fn){subscribers.add(fn);return()=>subscribers.delete(fn);},
-  setActive,assignLoaded,setJourneyStatus,
+  setActive,assignLoaded,syncLoadedLevel,setJourneyStatus,
   async saveCard(card){
     const service=auth();
     if(!service)throw Error("Sign in before creating a VCard.");
