@@ -133,6 +133,64 @@ let selected=0,start=0,page=0,filter="all",query="",period="24H",lastUpdated=nul
 const perPage=10,markets=new Map(),supplies=new Map(),chartCache=new Map(),supplyInflight=new Map();
 const cacheTime=60000;
 const pumpCoins=new Map();
+// Resolve artwork directly from mint metadata, independently of market data.
+const tokenImages=new Map();
+function artworkUrls(uri){
+ if(typeof uri!=="string"||!uri.trim())return [];
+ uri=uri.trim();
+ const ipfs=uri.match(/^ipfs:\/\/(?:ipfs\/)?(.+)$/i)||uri.match(/^https?:\/\/[^/]+\/ipfs\/(.+)$/i);
+ if(ipfs)return ["https://gateway.pinata.cloud/ipfs/"+ipfs[1],"https://ipfs.io/ipfs/"+ipfs[1]];
+ if(uri.startsWith("ar://"))return ["https://arweave.net/"+uri.slice(5)];
+ return /^https:\/\//i.test(uri)?[uri]:[];
+}
+function metadataUri(bytes,mintBytes){
+ if(bytes.length<69||bytes[0]!==4||!mintBytes.every((v,i)=>bytes[33+i]===v))throw Error("Invalid mint metadata");
+ const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ let offset=65;
+ const decoder=new TextDecoder();
+ const read=()=>{
+  if(offset+4>bytes.length)throw Error("Truncated metadata");
+  const length=view.getUint32(offset,true);offset+=4;
+  if(length>bytes.length-offset)throw Error("Truncated metadata string");
+  const value=decoder.decode(bytes.subarray(offset,offset+length)).replace(/\0/g,"").trim();offset+=length;return value;
+ };
+ read();read();return read();
+}
+async function mintMetadataUri(a){
+ try{
+  const value=await rpc("getAccountInfo",[a.mint,{encoding:"jsonParsed",commitment:"confirmed"}]);
+  const extension=value?.data?.parsed?.info?.extensions?.find(e=>e.extension==="tokenMetadata");
+  if(extension?.state?.uri&&(!extension.state.mint||extension.state.mint===a.mint))return extension.state.uri;
+ }catch{}
+ const {PublicKey}=await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+ const mint=new PublicKey(a.mint),program=new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+ const [pda]=PublicKey.findProgramAddressSync([new TextEncoder().encode("metadata"),program.toBytes(),mint.toBytes()],program);
+ const value=await rpc("getAccountInfo",[pda.toBase58(),{encoding:"base64",commitment:"confirmed"}]);
+ if(value?.owner!==program.toBase58()||!Array.isArray(value.data))throw Error("Mint metadata unavailable");
+ return metadataUri(Uint8Array.from(atob(value.data[0]),c=>c.charCodeAt(0)),mint.toBytes());
+}
+async function loadTokenImage(a){
+ try{
+  const uri=await mintMetadataUri(a);
+  for(const url of artworkUrls(uri)){
+   try{
+    const metadata=await json(url);
+    const raw=metadata.image||metadata.properties?.files?.find(f=>typeof f.type==="string"&&f.type.startsWith("image/"))?.uri;
+    let urls=artworkUrls(raw);
+    if(!urls.length&&typeof raw==="string"&&!/^[a-z][a-z0-9+.-]*:/i.test(raw))urls=artworkUrls(new URL(raw,url).href);
+    if(urls.length){tokenImages.set(a.mint,urls);renderSpotlight();return}
+   }catch{}
+  }
+ }catch(error){console.warn("Token artwork unavailable:",a.symbol,error)}
+}
+function attachTokenImage(art,mark,sources){
+ const urls=[...new Set(sources.filter(Boolean))];
+ if(!urls.length)return;
+ const img=document.createElement("img");img.alt="";let i=0;
+ img.onload=()=>mark.hidden=true;
+ img.onerror=()=>{if(++i<urls.length)img.src=urls[i];else{img.remove();mark.hidden=false}};
+ img.src=urls[0];art.append(img);
+}
 let pumpUnavailable=false;
 function displayPrice(a){return num(pumpCoins.get(a.mint)?.priceUsd)??num(pairFor(a)?.priceUsd)}
 function displayCap(a){return num(pumpCoins.get(a.mint)?.marketCap)??num(pairFor(a)?.marketCap)}
@@ -172,10 +230,7 @@ function renderSpotlight(){
   if(a.native){
    art.insertAdjacentHTML("beforeend",'<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="10" fill="#12121a"/><defs><linearGradient id="solIconGradient" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#9945ff"/><stop offset="1" stop-color="#14f195"/></linearGradient></defs><path fill="url(#solIconGradient)" d="M13 13h25l-5 5H8z M8 21h25l5 5H13z M13 29h25l-5 5H8z"/></svg>');
   }else{
-   const src=pumpCoins.get(a.mint)?.image||p?.info?.imageUrl;
-   if(typeof src==="string"&&/^https:\/\//i.test(src)){
-    const img=document.createElement("img");img.alt="";img.src=src;img.onload=()=>mark.hidden=true;img.onerror=()=>{img.remove();mark.hidden=false};art.append(img);
-   }
+   attachTokenImage(art,mark,[...(tokenImages.get(a.mint)||[]),...artworkUrls(pumpCoins.get(a.mint)?.image),...artworkUrls(p?.info?.imageUrl)]);
   }
   const desc=document.createElement("div");desc.className="desc";desc.textContent=a.symbol;button.append(art,desc);$("features").append(button);
  }
@@ -308,6 +363,7 @@ let touchStart=0;
 $("features").addEventListener("touchstart",e=>{touchStart=e.touches[0].clientX},{passive:true});
 $("features").addEventListener("touchend",e=>{const distance=e.changedTouches[0].clientX-touchStart;if(Math.abs(distance)>40)slide(start+(distance<0?1:-1))},{passive:true});
 renderSpotlight();renderList();renderDetail();void refreshMarket();
+for(const a of assets)if(!a.native)void loadTokenImage(a);
 setInterval(()=>{if(!document.hidden)void refreshMarket()},60000);
 </script>
 </body>
