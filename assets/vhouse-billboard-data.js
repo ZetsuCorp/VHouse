@@ -272,8 +272,6 @@
     const current=window.VHouseCardStore?.getActive?.()||card;
     showStat(root,"atk",current.atk,current.amalieBonusAtk);
     showStat(root,"def",current.def,current.amalieBonusDef);
-    field(root,"updates",dataNumber(row?.updates));
-    field(root,"customizations",dataNumber(row?.customizations));
     const receipt=row?.mint_receipt||{};
     if(safeUri(receipt.image_uri))field(root,"ipfsImage",receipt.image_uri);
   }
@@ -339,6 +337,13 @@
   function renderHistory(root,view){
     const chain=view.chain?.chain||{},snapshots=chain.snapshots||[];
     const edits=levelActivity(view.row,chain.transactions||[]);
+    // Count the same signature-deduplicated operations displayed on the chart.
+    // Preserve older recorded totals if the available history is incomplete.
+    for(const [id,mode] of [["updates","update"],["customizations","customize"]]){
+      const recorded=dataNumber(view.row?.[id]);
+      const count=edits.filter(e=>e.mode===mode).length;
+      field(root,id,recorded===null&&!count&&!view.chain?null:Math.max(recorded??0,count));
+    }
     const points=edits.map((e,i)=>({time:e.confirmed_at,value:i+1,label:activityLabel(e),level:e.level??null}));
     // Recorded paid edits, not invented monetary valuations.
     const updates=dataNumber(view.row?.updates),custom=dataNumber(view.row?.customizations);
