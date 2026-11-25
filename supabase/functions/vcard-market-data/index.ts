@@ -253,6 +253,7 @@ Deno.serve(async(request:Request)=>{
    const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
    return await recordEdit(client,admin,playerId,payload);
   }
+  const syncOnly=payload.action==="sync_level";
   const cardId=payload.cardId;
   if(typeof cardId!=="string"||!cardId||cardId.length>150)return send({error:"Active VCard required"},400);
   const [accountResult,invResult,cardResult]=await Promise.all([
@@ -264,10 +265,11 @@ Deno.serve(async(request:Request)=>{
   ]);
   for(const result of [accountResult,invResult,cardResult])if(result.error)throw result.error;
   const account=accountResult.data;
-  if(!account?.active_vcard_id)return send({status:"no_active"});
-  if(account.active_vcard_id!==cardId)return send({error:"Active VCard changed"},409);
+  if(!account||(!syncOnly&&!account.active_vcard_id))return send({status:"no_active"});
+  if(!syncOnly&&account.active_vcard_id!==cardId)return send({error:"Active VCard changed"},409);
+  if(syncOnly&&(!invResult.data||!cardResult.data))return send({error:"VCard is not in player\x27s inventory"},403);
   const snapshot=obj(account.active_vcard_snapshot);
-  const external=snapshot.external===true&&snapshot.id===cardId&&
+  const external=!syncOnly&&snapshot.external===true&&snapshot.id===cardId&&
    address(snapshot.mint_address)&&cardId==="nft:"+snapshot.mint_address;
   if(!external&&(!invResult.data||!cardResult.data))return send({error:"VCard is not in player's inventory"},403);
   const card:O=external?{
@@ -282,6 +284,26 @@ Deno.serve(async(request:Request)=>{
   const chainRead=address(mint)?mintDetails(mint!,receipt).catch(e=>{
    warnings.push("Solana NFT metadata: "+String(e));return null;
   }):Promise.resolve(null);
+  const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const admin=serviceKey?createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}):null;
+  // Share the existing verified mint read and save step with the VCard loader.
+  const levelSync=chainRead.then(async loaded=>{
+   const mintLevel=num(loaded?.attributes.find(x=>String(x.trait_type).toLowerCase()==="level")?.value);
+   if(!admin||external||loaded?.tokenStandard!=="Token-2022"||mintLevel===null||mintLevel<1)return null;
+   if(mintLevel!==num(card.level)){
+    const {data:synced,error}=await admin.from("vcard_list").update({level:mintLevel})
+     .eq("card_id",cardId).eq("mint_address",mint).eq("level",card.level)
+     .select("level").maybeSingle();
+    if(error||!synced){warnings.push("VCard level synchronization: "+(error?.message||"record changed"));return null;}
+    card.level=synced.level;
+   }
+   return mintLevel;
+  }).catch(e=>{warnings.push("VCard level synchronization: "+String(e));return null;});
+  if(syncOnly){
+   const level=await levelSync;
+   if(level===null)return send({error:warnings.at(-1)||"NFT level unavailable"},409);
+   return send({status:"ok",level});
+  }
   const storedUri=str(receipt.metadata_uri);
   const imageRead=(async()=>{
    const stored=await readNFTJSON(storedUri);
@@ -358,8 +380,6 @@ Deno.serve(async(request:Request)=>{
      return transactions;
     }catch(e){warnings.push("Solana transactions: "+String(e));return [];}
    })();
-   const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-   const admin=serviceKey?createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}):null;
    const historyRead=(async()=>{
     if(!admin||external)return [];
     try{
@@ -373,15 +393,7 @@ Deno.serve(async(request:Request)=>{
    const [loaded,origin,currentOwner,transactions,history]=await Promise.all([
     chainRead,mintOrigin(mint!,receipt),ownerRead,transactionsRead,historyRead
    ]);
-   // Reuse the mint metadata already read for the Billboard.
-   const mintLevel=num(loaded?.attributes.find(x=>String(x.trait_type).toLowerCase()==="level")?.value);
-   if(admin&&!external&&loaded?.tokenStandard==="Token-2022"&&mintLevel!==null&&mintLevel>=1&&mintLevel!==num(card.level)){
-    const {data:synced,error}=await admin.from("vcard_list").update({level:mintLevel})
-     .eq("card_id",cardId).eq("mint_address",mint).eq("level",card.level)
-     .select("level").maybeSingle();
-    if(error)warnings.push("VCard level synchronization: "+error.message);
-    else if(synced)card.level=synced.level;
-   }
+   await levelSync;
    let balanceLamports=loaded?.mintAccountLamports??null;
    if(balanceLamports===null){
     try{balanceLamports=num(obj(await rpc("getBalance",[mint,{commitment:"confirmed"}])).value);}
