@@ -214,7 +214,7 @@
     }
     window.VHouseVCard.render(preview, card);
   }
-  async function loadMintedVCardImage(root, card, client, isCurrent) {
+  async function loadMintedVCardImage(root, card, client, isCurrent, result) {
     // Same full minted PNG source as the Closet VCard Record.
     if (!client || card.external || !card.id) return;
     try {
@@ -222,7 +222,12 @@
         .select("mint_receipt").eq("card_id",String(card.id)).maybeSingle();
       if(error)throw error;
       if(!isCurrent())return;
-      const uri=data?.mint_receipt?.image_uri;
+      const jsonLevel=dataNumber(traitValue(result?.image?.attributes,"Level"));
+      const displayedLevel=billboardLevel(card,null,result);
+      // Do not replace a current-level preview with a PNG from an older mint receipt.
+      const uri=result?.chain?.loaded?.metadataUri
+        ? (jsonLevel===displayedLevel ? result?.image?.imageUri : null)
+        : data?.mint_receipt?.image_uri;
       if(typeof uri!=="string")return;
       const url=uri.startsWith("ipfs://")
         ?"https://gateway.pinata.cloud/ipfs/"+uri.slice(7).replace(/^ipfs\//,""):uri;
@@ -253,12 +258,17 @@
       extra.title="Amalie bonus";el.append(extra);
     }
   }
-  function renderVHouse(root,card,row){
+  function billboardLevel(card,row,result){
+    const mintLevel=dataNumber(traitValue(result?.chain?.loaded?.attributes,"Level"));
+    const jsonLevel=dataNumber(traitValue(result?.image?.attributes,"Level"));
+    return mintLevel??jsonLevel??row?.level??card.level;
+  }
+  function renderVHouse(root,card,row,result){
     field(root,"vcardId",card.id);
     field(root,"mintAddress",card.mint_address??row?.mint_address??row?.mint_receipt?.mint_address);
     field(root,"nftDescription",row?.description??card.description);
     field(root,"team",row?.designation??card.team);
-    field(root,"level",row?.level??card.level);
+    field(root,"level",billboardLevel(card,row,result));
     const current=window.VHouseCardStore?.getActive?.()||card;
     showStat(root,"atk",current.atk,current.amalieBonusAtk);
     showStat(root,"def",current.def,current.amalieBonusDef);
@@ -416,7 +426,7 @@
         const view=sameCard&&displayedView?{...displayedView,chainState:"LOADING"}:
           {row:null,checks:[],events:[],chain:null,chainState:"LOADING"};
         displayedView=view;
-        renderVHouse(root,card,view.row);
+        renderVHouse(root,card,view.row,view.chain);
         renderHistory(root,view);
         const rowRead=(async()=>{
           if(card.external)return;
@@ -426,7 +436,7 @@
               .eq("card_id",String(card.id)).maybeSingle();
             if(error)throw error;
             if(!isCurrent())return;
-            view.row=data;renderVHouse(root,card,data);renderHistory(root,view);
+            view.row=data;renderVHouse(root,card,data,view.chain);renderHistory(root,view);
           }catch(error){if(isCurrent())console.error("[VHouse Billboard] VCard List",error);}
         })();
         const activityRead=async(table,column,key)=>{
@@ -454,7 +464,7 @@
             if(!data?.chain)throw Error("Blockchain data unavailable");
             view.chain=data;
             view.chainState=dataNumber(data.chain.balanceLamports)!==null?"VERIFIED":"UNAVAILABLE";
-            renderBlockchain(root,data);renderHistory(root,view);
+            renderBlockchain(root,data);field(root,"level",billboardLevel(card,view.row,data));renderHistory(root,view);
           }catch(error){
             if(!isCurrent())return;
             view.chainState="UNAVAILABLE";renderHistory(root,view);
@@ -464,8 +474,10 @@
         try{
           await prepareVCard(root);
           if(!isCurrent())return;
-          renderActiveVCard(root,card);
-          void loadMintedVCardImage(root,card,client,isCurrent);
+          await Promise.all([rowRead,marketRead]);
+          if(!isCurrent())return;
+          renderActiveVCard(root,{...card,level:billboardLevel(card,view.row,view.chain)});
+          void loadMintedVCardImage(root,card,client,isCurrent,view.chain);
         }catch(error){console.error("[VHouse Billboard] VCard image",error);}
         await Promise.all([rowRead,marketRead]);
       }catch(error){
