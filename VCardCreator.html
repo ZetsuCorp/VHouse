@@ -724,7 +724,7 @@ button:disabled{opacity:.5;cursor:default}
 <script src="assets/vhouse-auth.js"></script>
 <script src="assets/vhouse-scrap-stats.js"></script>
 <script src="assets/vhouse-amalie-stats.js"></script>
-<script src="assets/vhouse-cards.js"></script>
+<script src="assets/vhouse-cards.js?v=4cd24b1"></script>
 <script type="module">
 import {toCanvas} from
   "https://esm.sh/html-to-image@1.11.13";
@@ -3537,6 +3537,7 @@ $("upgradeIntroContinueButton").onclick = async () => {
       return value;
     };
     const level = stat("Level",v.level ?? card.level);
+    await window.VHouseCardStore.syncLoadedLevel(card,level);
     const atk = stat("ATK",v.atk ?? card.atk);
     const def = stat("DEF",v.def ?? card.def);
     const artIndex = [0,1,2].includes(v.artIndex) ? v.artIndex : 0;
