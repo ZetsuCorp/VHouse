@@ -310,6 +310,8 @@ button:disabled{opacity:.5;cursor:default}
 .card-art{margin:2.1cqw;aspect-ratio:4/3;border:.9cqw solid var(--accent);border-radius:1.8cqw;background:#0b1620;overflow:hidden}
 .card-art img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
 .card-info{padding:2.4cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#0b131b;font-size:3.9cqw;font-weight:900}
+.level-up-flash{color:#ffdc72!important;background:#482b08!important;animation:vcardLevelFlash .6s ease-in-out 5;text-align:center}
+@keyframes vcardLevelFlash{50%{box-shadow:inset 0 0 12px #ffd76e,0 0 12px #ffd76e;color:#fff!important}}
 .card-description{box-sizing:content-box;height:17cqw;min-height:17cqw;max-height:17cqw;overflow:hidden;padding:2.7cqw 3.8cqw;border-top:.6cqw solid var(--accent);background:#10161b;color:#b8d7d7;font-size:3.3cqw;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
 .card-stats{display:flex;justify-content:space-around;padding:3cqw 2.4cqw;border-top:.6cqw solid var(--accent);background:#020508}
 .stat{flex:1;text-align:center}
@@ -721,7 +723,6 @@ button:disabled{opacity:.5;cursor:default}
 <script src="assets/vhouse-scrap-stats.js"></script>
 <script src="assets/vhouse-amalie-stats.js"></script>
 <script src="assets/vhouse-cards.js"></script>
-<script src="assets/vhouse-vcard.js?v=fd22273"></script>
 <script type="module">
 import {toCanvas} from
   "https://esm.sh/html-to-image@1.11.13";
@@ -3192,7 +3193,12 @@ async function finishEdit(update) {
   lock(false);
   refresh();
   $("editorLevel").textContent = "LEVEL " + String(update.data.level).padStart(2,"0");
-  void window.VHouseVCard.levelUp($("vcardHost"),previousLevel,update.data.level);
+  if (update.data.level > previousLevel) {
+    const info = $("vcardHost").querySelector(".card-info");
+    info.textContent = "LEVEL " + previousLevel + " → " + update.data.level + " · LEVEL UP!";
+    info.classList.add("level-up-flash");
+    setTimeout(() => { if(info.isConnected){info.textContent = "LEVEL " + update.data.level;info.classList.remove("level-up-flash");} },3000);
+  }
   await window.VHouseCardStore.refresh();
   window.dispatchEvent(new CustomEvent("vhouse:vcard-updated",{
     detail:{mintAddress:job.mint.publicKey.toBase58()}
