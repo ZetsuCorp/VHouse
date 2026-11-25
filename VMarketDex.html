@@ -24,7 +24,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:1cqw;pa
 .company{font-size:1.3cqw;color:#e5cb93;font-weight:bold;white-space:nowrap}
 .search{display:flex;align-items:center;gap:.6cqw;width:42%;border-radius:3cqw;background:#29233b;padding:.5cqw 1.2cqw}
 .search input{width:100%;min-width:0;background:transparent;border:0;outline:none;font-size:1.15cqw}
-.body{flex:1;min-height:0;display:grid;grid-template-rows:39% minmax(0,1fr);padding:.75cqw;gap:.65cqw}
+.body{flex:1;min-height:0;display:grid;grid-template-rows:27% minmax(0,1fr);padding:.75cqw;gap:.65cqw}
 .spot,.panel{background:#1b1628;border:1px solid #43354f;border-radius:.45cqw;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden;padding:.65cqw}
 .heading{display:flex;align-items:center;justify-content:space-between;gap:.4cqw;font-size:1.45cqw;font-weight:bold;min-height:1.8cqw;flex:none}
 .controls{display:flex;align-items:center;gap:.35cqw}
@@ -118,10 +118,10 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 <script>
 "use strict";
 const assets=[
- {name:"Scraps",symbol:"SCRAPS",mint:"BGf97TZtX7SezpJs21B3DchsonwHvw8DiekDALXLpump",category:"Rewards",accent:"#d9b36a",glow:"#815330",mark:"⚙"},
+ {name:"Solana",symbol:"SOL",mint:"So11111111111111111111111111111111111111112",category:"Network",accent:"#64d5b5",glow:"#206b64",mark:"≋",native:true},
  {name:"AWT",symbol:"AWT",mint:"ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump",category:"Ecosystem",accent:"#bc92ea",glow:"#65429d",mark:"A"},
- {name:"Amalie",symbol:"AMALIE",mint:"rdWAk8U5Zx3L5TjLtL7sb3XhEPmXhqcMLxVBDi3pump",category:"Bonus points",accent:"#e89bbf",glow:"#933f76",mark:"✦"},
- {name:"Solana",symbol:"SOL",mint:"So11111111111111111111111111111111111111112",category:"Network",accent:"#64d5b5",glow:"#206b64",mark:"≋",native:true}
+ {name:"Scraps",symbol:"SCRAPS",mint:"BGf97TZtX7SezpJs21B3DchsonwHvw8DiekDALXLpump",category:"Rewards",accent:"#d9b36a",glow:"#815330",mark:"⚙"},
+ {name:"Amalie",symbol:"AMALIE",mint:"rdWAk8U5Zx3L5TjLtL7sb3XhEPmXhqcMLxVBDi3pump",category:"Bonus points",accent:"#e89bbf",glow:"#933f76",mark:"✦"}
 ];
 const $=id=>document.getElementById(id);
 const num=v=>v===null||v===undefined||v===""||!Number.isFinite(Number(v))?null:Number(v);
