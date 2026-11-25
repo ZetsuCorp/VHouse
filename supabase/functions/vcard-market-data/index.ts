@@ -316,7 +316,25 @@ Deno.serve(async(request:Request)=>{
        const after=Array.isArray(post)&&index>=0?num(post[index]):null;
        const before=Array.isArray(pre)&&index>=0?num(pre[index]):null;
        if(after===null||typeof tx.blockTime!=="number")return null;
-       return {signature:row.signature,time:new Date(tx.blockTime*1000).toISOString(),lamports:after,beforeLamports:before,slot:row.slot};
+       // Billboard history: read the actual Level change and other metadata
+       // instructions from this already-confirmed transaction, not the balance delta.
+       const message=obj(obj(tx.transaction).message);
+       const instructions=Array.isArray(message.instructions)?message.instructions.map(obj):[];
+       const fields=instructions.filter(i=>i.programId===TOKEN_2022&&
+        obj(i.parsed).type==="updateTokenMetadataField"&&obj(obj(i.parsed).info).metadata===mint)
+        .map(i=>obj(obj(i.parsed).info));
+       const fieldName=(f:O)=>String(typeof f.field==="string"?f.field:obj(f.field).key||obj(f.field).Key||"").toLowerCase();
+       const level=num(fields.find(f=>fieldName(f)==="level")?.value);
+       const transfers=instructions.filter(i=>i.program==="system"&&obj(i.parsed).type==="transfer")
+        .map(i=>obj(obj(i.parsed).info));
+       const paid=transfers.some(h=>h.destination===VHOUSE_TREASURY&&transfers.some(m=>
+        m.destination===mint&&h.source===m.source&&(num(h.lamports)??0)>=100000&&
+        (num(m.lamports)??0)>=50000&&Math.abs((num(h.lamports)??0)-2*(num(m.lamports)??0))<=3));
+       const mode=instructions.some(i=>i.program==="spl-memo"&&typeof i.parsed==="string"&&i.parsed.startsWith("VHOUSE:RAID_LEVEL:"))?"raid":
+        paid&&fields.some(f=>["name","team","description"].includes(fieldName(f)))?"update":
+        paid&&fields.some(f=>fieldName(f)==="effect")?"customize":null;
+       return {signature:row.signature,time:new Date(tx.blockTime*1000).toISOString(),lamports:after,beforeLamports:before,slot:row.slot,
+        level:level!==null&&level>1?level:null,mode,paidEdit:paid&&fields.length>0};
       }));
       for(const result of batch)if(result.status==="fulfilled"&&result.value)transactions.push(result.value);
      }
