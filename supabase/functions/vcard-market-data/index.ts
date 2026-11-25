@@ -373,6 +373,15 @@ Deno.serve(async(request:Request)=>{
    const [loaded,origin,currentOwner,transactions,history]=await Promise.all([
     chainRead,mintOrigin(mint!,receipt),ownerRead,transactionsRead,historyRead
    ]);
+   // Reuse the mint metadata already read for the Billboard.
+   const mintLevel=num(loaded?.attributes.find(x=>String(x.trait_type).toLowerCase()==="level")?.value);
+   if(admin&&!external&&loaded?.tokenStandard==="Token-2022"&&mintLevel!==null&&mintLevel>=1&&mintLevel!==num(card.level)){
+    const {data:synced,error}=await admin.from("vcard_list").update({level:mintLevel})
+     .eq("card_id",cardId).eq("mint_address",mint).eq("level",card.level)
+     .select("level").maybeSingle();
+    if(error)warnings.push("VCard level synchronization: "+error.message);
+    else if(synced)card.level=synced.level;
+   }
    let balanceLamports=loaded?.mintAccountLamports??null;
    if(balanceLamports===null){
     try{balanceLamports=num(obj(await rpc("getBalance",[mint,{commitment:"confirmed"}])).value);}
