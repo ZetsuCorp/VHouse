@@ -131,50 +131,47 @@
         (i?" | "+(delta>0?"+":"")+amount(delta)+" SOL":" | START")+
         " | "+new Date(b.t).toLocaleString(),circle);
     }
-    // Reserve non-overlapping text rectangles across both chart series.
-    // Latest balance and latest operation take priority over older SOL deltas.
-    const occupiedLabels=[];
-    function chartLabelPosition(point,width,preferBelow){
-      const minX=left+2,maxX=right-width-2;
-      if(maxX<minX)return null;
-      const clampX=v=>Math.max(minX,Math.min(maxX,v));
-      const preferredY=point.y+(preferBelow?13:-9);
-      const xs=[point.x-width/2,point.x-width-5,point.x+5,minX,maxX];
-      for(let xx=minX;xx<=maxX;xx+=8)xs.push(xx);
-      const ys=[preferredY,point.y+(preferBelow?-9:13),point.y-20,point.y+24];
-      for(let yy=20;yy<=73;yy+=10)ys.push(yy);
-      const candidates=[];
-      for(const yy of ys)for(const xx of xs){
-        const x=clampX(xx),y=Math.max(20,Math.min(73,yy));
-        const rect={left:x-2,right:x+width+2,top:y-8,bottom:y+3};
-        if(occupiedLabels.some(b=>rect.left<b.right&&rect.right>b.left&&rect.top<b.bottom&&rect.bottom>b.top))continue;
-        const score=Math.abs(y-preferredY)*2+Math.abs(x+width/2-point.x);
-        candidates.push({x,y,rect,score});
-      }
-      candidates.sort((a,b)=>a.score-b.score);
-      const best=candidates[0];
-      if(best)occupiedLabels.push(best.rect);
-      return best||null;
-    }
-    function placeChartLabel(point,value,color,preferBelow){
+    // Separate vertical lanes: balance, operation and SOL change.
+    // Never place different types of annotations on the same text row.
+    const annotationRows={balance:27,operation:44,delta:61};
+    const occupied=[];
+    function placeChartLabel(point,value,color,lane){
       if(!value.trim())return;
-      const node=label(left,20,value,color,"start");
-      let measured=0;
-      try{measured=node.getComputedTextLength();}catch{}
-      const width=Math.max(measured||0,value.length*4.65);
-      const position=chartLabelPosition(point,width,preferBelow);
-      if(!position){node.remove();return;}
-      node.setAttribute("x",position.x);
-      node.setAttribute("y",position.y);
+      const y=annotationRows[lane];
+      const node=label(0,y,value,color,"start");
+      node.style.setProperty("font-size","7.5px","important");
+      node.style.setProperty("font-family","monospace","important");
+      let bounds;
+      try{bounds=node.getBBox();}catch{}
+      const width=Math.max(bounds?.width||0,value.length*4.65);
+      const minX=left+3,maxX=right-width-3;
+      if(maxX<minX){node.remove();return;}
+      const clamp=v=>Math.max(minX,Math.min(maxX,v));
+      const preferred=clamp(point.x-width/2);
+      const candidates=[preferred,clamp(point.x-width-5),clamp(point.x+5),minX,maxX];
+      for(let xx=minX;xx<=maxX;xx+=5)candidates.push(xx);
+      candidates.sort((a,b)=>Math.abs(a-preferred)-Math.abs(b-preferred));
+      for(const x of candidates){
+        node.setAttribute("x",x);
+        let b;
+        try{b=node.getBBox();}catch{}
+        const rect={left:Math.min(x,b?.width?b.x:x)-2,right:Math.max(x+width,b?.width?b.x+b.width:x+width)+2,
+          top:Math.min(y-8,b?.height?b.y:y-8)-1,bottom:Math.max(y+2,b?.height?b.y+b.height:y+2)+1};
+        if(occupied.some(a=>rect.left<a.right&&rect.right>a.left&&rect.top<a.bottom&&rect.bottom>a.top))continue;
+        occupied.push(rect);
+        return;
+      }
+      // An older delta without room is still available on its chart marker.
+      node.remove();
     }
     const last=sol.length-1;
     if(last>=0){
       const p=solPoints[last],b=sol[last];
-      placeChartLabel(p,amount(b.lamports)+" SOL","#e8fff1",p.y<32);
+      placeChartLabel(p,amount(b.lamports)+" SOL","#e8fff1","balance");
     }
     if(gameValues.length){
       const p=gameValues[gameValues.length-1];
-      placeChartLabel(p,((p.label||"")+" "+(p.level!==null?"LV "+p.level:"")).trim(),"#f5c97c",p.y<30);
+      placeChartLabel(p,((p.label||"")+" "+(p.level!==null?"LV "+p.level:"")).trim(),"#f5c97c","operation");
     }
     if(last>=0){
       const used=[solPoints[last].x];
@@ -184,7 +181,7 @@
         if(i!==last&&(used.some(xx=>Math.abs(xx-at.x)<72)||used.length>=4))continue;
         used.push(at.x);
         const deltaText=(delta>0?"+":"−")+amount(Math.abs(delta))+" SOL";
-        placeChartLabel(at,deltaText,delta>0?"#4bea9b":"#ff7575",at.y<=48);
+        placeChartLabel(at,deltaText,delta>0?"#4bea9b":"#ff7575","delta");
       }
     }
     for(const p of gameValues){
