@@ -194,6 +194,23 @@ async function recordEdit(client:ReturnType<typeof createClient>,admin:ReturnTyp
  }
  const details=await mintDetails(mint!,obj(card.mint_receipt));
  const actualLevel=num(details.attributes.find(x=>String(x.trait_type).toLowerCase()==="level")?.value);
+ // Paid UPGRADE/CUSTOMIZE: synchronize the verified mint Level with the
+ // existing VCard row, using the same confirmed edit receipt.
+ if(mode==="update"||mode==="customize"){
+  if(actualLevel===null||actualLevel<1||actualLevel<requestedLevel||
+     details.tokenStandard!=="Token-2022"||details.updateAuthority!==owner)
+    return send({error:"VCard level not verified on Solana"},409);
+  const {data,error}=await admin.rpc("vhouse_record_verified_vcard_edit",{
+   p_card_id:card.card_id,p_mint_address:mint,p_mode:mode,
+   p_signature:sign,p_confirmed_at:new Date(tx.blockTime*1000).toISOString()
+  });
+  if(error)throw error;
+  const {error:levelError}=await admin.from("vcard_list")
+   .update({level:actualLevel}).eq("card_id",card.card_id).eq("mint_address",mint)
+   .lt("level",actualLevel);
+  if(levelError)throw levelError;
+  return send({status:"ok",...obj(data),level:actualLevel});
+ }
  const levelInstruction=instructions.some(i=>{
   const info=obj(obj(i.parsed).info);
   return i.programId===TOKEN_2022&&obj(i.parsed).type==="updateTokenMetadataField"&&
