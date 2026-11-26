@@ -146,6 +146,16 @@ html, body {
 .zshop-detail-name{font:700 clamp(14px,2.1cqw,22px)/1.08 Georgia,serif;color:#ffe0a7}
 .zshop-detail-description{font-size:clamp(11px,1.65cqw,17px);font-weight:600;
   color:#f2e9dd;line-height:1.12;overflow-wrap:break-word}
+.zshop-purchase-tile{position:relative;min-height:0;min-width:0;overflow:hidden;display:flex}
+.zshop-purchase-tile .zshop-item{width:100%;height:100%}
+.zshop-purchase-tile .zshop-item-art{height:48%;max-height:7cqw;aspect-ratio:1;display:grid;place-items:center;min-height:0;flex-shrink:1;overflow:hidden;font-size:clamp(24px,4cqw,48px);line-height:1}
+.zshop-item-art img{width:100%;height:100%;object-fit:contain;display:block}
+.zshop-detail-icon.zshop-item-art{width:min(14cqw,105px);height:min(14cqw,105px);max-height:32%;aspect-ratio:1;display:grid;place-items:center;min-height:0;flex-shrink:1;font-size:clamp(30px,7cqw,76px);overflow:hidden}
+.zshop-hover-buy{position:absolute;bottom:.35cqw;left:.35cqw;right:.35cqw;width:calc(100% - .7cqw);opacity:0;pointer-events:none;transition:opacity .12s;background:linear-gradient(#60447d,#2e2043);color:#ffe2ab;border-color:#e5bd6d;font-size:clamp(10px,1.45cqw,15px);min-height:2.6cqw}
+.zshop-purchase-tile:hover .zshop-hover-buy,.zshop-purchase-tile:focus-within .zshop-hover-buy{opacity:1;pointer-events:auto}
+@media (hover:none){.zshop-purchase-tile:has(.selected) .zshop-hover-buy{opacity:1;pointer-events:auto}}
+.zshop-purchase-tile:hover .zshop-item-owned,.zshop-purchase-tile:focus-within .zshop-item-owned{visibility:hidden}
+.zshop-status a{color:#ffdda5;text-decoration:underline}
 .zshop-detail-price{font-size:clamp(14px,1.8cqw,20px);font-weight:900;color:#ffd794}
 .zshop-action{width:100%;min-height:3.25cqw;flex-shrink:0;
   border:1px solid #ffe6b5;border-radius:.35cqw;
@@ -368,14 +378,14 @@ let activeShop = "Mission Boosts";
 let shopStatus = "";
 
 const boosts = [
-  { name:"Lucky Charm", icon:"🍀", price:600, desc:"Journey only. Each charm grants 1 Lucky Retry and +1% to player stats. Maximum 5. Consumed when a retry is used." },
-  { name:"Lucky Stone", label:"Raid Stones", icon:"🪨", price:600, desc:"Raid only. Each stone grants 1 Lucky Retry and +1% to Raid stats. Maximum 5. Consumed when a Raid retry is used." },
-  { name:"Swift Boots", icon:"🥾", price:1200, desc:"Each pair in inventory grants +1 SPEED. Use a pair to reduce Journey time by 15 seconds, once per Stage. Used boots are consumed, reducing SPEED by 1." },
-  { name:"Hunt Lantern", icon:"🏮", price:1800, desc:"Nullifies the Stage's RPS advantage for one encounter, once. The lantern is consumed after use." },
-  { name:"Stage Ticket", icon:"🎟️", price:2400, desc:"Enter one Stage without paying its entry fee. One ticket is consumed per entry." }
+  { name:"Lucky Charm", icon:"🍀", image:null, currency:"VCASH", price:2000, desc:"Journey only. Each charm grants 1 Lucky Retry and +1% to player stats. Maximum 5. Consumed when a retry is used." },
+  { name:"Lucky Stone", label:"Raid Stones", icon:"☄️", image:null, currency:"AWT", price:3, desc:"Raid only. Each stone grants 1 Lucky Retry and +1% to Raid stats. Maximum 5. Consumed when a Raid retry is used." },
+  { name:"Swift Boots", icon:"🥾", image:null, currency:"VCASH", price:3000, desc:"Each pair in inventory grants +1 SPEED. Use a pair to reduce Journey time by 15 seconds, once per Stage. Used boots are consumed, reducing SPEED by 1." },
+  { name:"Hunt Lantern", icon:"🔮", image:null, currency:"VCASH", price:5000, desc:"Nullifies the Stage's RPS advantage for one encounter, once. The lantern is consumed after use." },
+  { name:"Stage Ticket", icon:"🎟️", image:null, currency:"AWT", price:3, desc:"Enter one Stage without paying its entry fee. One ticket is consumed per entry." }
 ];
 const services = [
-  { name:"Emergency Recall Ticket", icon:"🚨", price:5000, desc:"Bring 1 VCard or ALL VCards home early from active Journeys. Keep rewards already earned; forfeit rewards from unresolved encounters." }
+  { name:"Emergency Recall Ticket", icon:"🚨", image:null, currency:"AWT", price:5, desc:"Bring 1 VCard or ALL VCards home early from active Journeys. Keep rewards already earned; forfeit rewards from unresolved encounters." }
 ];
 const tradeCatalog = {
   scrap:{name:"Scrap Metal",icon:"⚙️",value:15},
@@ -452,6 +462,51 @@ async function loadShopPlayer(){
     }
   }
 }
+const shopPrice=item=>item.currency==="AWT"?"$"+item.price.toFixed(2)+" IN AWT":item.price.toLocaleString()+" VCASH";
+const shopDisabled=item=>shopBusy||shopLoading||shopCash===null||
+  (item.currency==="VCASH"&&shopCash<item.price)||
+  ((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&
+    (shopInventory.get(item.name)||0)+(item.name==="Lucky Stone"?shopReservedStones:0)>=5);
+const shopArt=(item,detail=false)=>'<span class="zshop-item-art'+(detail?' zshop-detail-icon':'')+'">'+
+  (item.image?'<img src="'+shopSafe(item.image)+'" alt="'+shopSafe(item.name)+'">':shopSafe(item.icon))+'</span>';
+let shopPaymentSignature="",pendingShopPayment=null;
+async function buyShopAwt(item,auth){
+  const buyer=auth.getUser()?.id;
+  const client=auth.getClient();
+  async function request(body){
+    const {data,error}=await client.functions.invoke("vhouse-shop-awt",{body:{thing:item.name,...body}});
+    if(error){let detail;try{detail=await error.context?.json?.()}catch{}throw Error(detail?.error||error.message)}
+    if(data?.error)throw Error(data.error);
+    if(auth.getUser()?.id!==buyer)throw Error("Account changed during purchase.");
+    return data;
+  }
+  if(pendingShopPayment&& (pendingShopPayment.buyer!==buyer||pendingShopPayment.thing!==item.name))
+    throw Error("Finish the previous AWT purchase first.");
+  if(!pendingShopPayment){
+    const phantom=window.phantom?.solana||window.solana;
+    if(!phantom?.isPhantom||!phantom.signAndSendTransaction)throw Error("Connect Phantom to purchase with AWT.");
+    const connected=await phantom.connect(),wallet=connected.publicKey.toBase58();
+    const quote=await request({action:"quote",walletAddress:wallet});
+    if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
+    if(!quote.quoteId||quote.walletAddress!==wallet||quote.usdCents!==item.price*100||!quote.transaction)throw Error("SHOP_QUOTE_MISMATCH");
+    const {Transaction}=await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+    const tx=Transaction.from(Uint8Array.from(atob(quote.transaction),c=>c.charCodeAt(0)));
+    shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
+    const receipt=await phantom.signAndSendTransaction(tx,{skipPreflight:false,preflightCommitment:"confirmed"});
+    const signature=typeof receipt==="string"?receipt:receipt?.signature;
+    if(!signature)throw Error("Phantom returned no transaction signature.");
+    pendingShopPayment={buyer,thing:item.name,quoteId:quote.quoteId,signature};
+  }
+  const payment=pendingShopPayment;
+  shopPaymentSignature=payment.signature;
+  for(let i=0;i<30;i++){
+    shopStatus="Payment submitted. Checking Solana confirmation.";renderShop();
+    const data=await request({action:"verify",quoteId:payment.quoteId,signature:payment.signature});
+    if(data?.verified){pendingShopPayment=null;return data;}
+    await new Promise(resolve=>setTimeout(resolve,2000));
+  }
+  throw Error("Payment submitted. Select the same item to check confirmation; no second charge.");
+}
 async function buyShopItem(item){
   if(shopBusy||shopLoading)return;
   const auth=window.VHouseAuth;
@@ -466,7 +521,7 @@ async function buyShopItem(item){
     renderShop();
     return;
   }
-  if(shopCash===null||shopCash<item.price){
+  if(item.currency==='VCASH'&&(shopCash===null||shopCash<item.price)){
     shopStatus="Insufficient VCARD CASH.";
     renderShop();
     return;
@@ -475,7 +530,10 @@ async function buyShopItem(item){
   renderShop();
   try{
     const buyerId=shopPlayerId;
-    const {data,error}=await auth.getClient().rpc("vhouse_buy_shop_item",{p_thing:item.name});
+    if(!pendingShopPayment)shopPaymentSignature="";
+    const {data,error}=item.currency==="AWT"
+      ?{data:await buyShopAwt(item,auth),error:null}
+      :await auth.getClient().rpc("vhouse_buy_shop_item",{p_thing:item.name});
     if(error)throw error;
     if(auth.getUser()?.id!==buyerId)throw Error("Account changed during purchase.");
     const balance=Number(data?.igm_balance),quantity=Number(data?.quantity);
@@ -492,7 +550,7 @@ async function buyShopItem(item){
       message.includes("LUCKY_STONE_LIMIT_5")?"Maximum 5 Raid Stones.":
        message.includes("LUCKY_CHARM_LIMIT_5")?"Maximum 5 Lucky Charms.":
       message.includes("SIGN_IN_REQUIRED")?"Sign in to buy items.":
-      "Purchase unsuccessful. No items granted.";
+      item.currency==="AWT"?message||"AWT purchase could not be verified.": "Purchase unsuccessful. No items granted.";
     // Fetch authoritative state again if the connection failed after the server processed a purchase.
     shopBusy=false;
     await loadShopPlayer();
@@ -556,9 +614,10 @@ function renderShop(){
     const items=isBoost?boosts:services;
     const selected=isBoost?selectedBoost:selectedService;
     const item=items[selected];
-    const list=items.map((v,i)=>shopItem(v,v.price?v.price.toLocaleString()+" IGM":"FREE",
-      "OWNED: "+(shopInventory.get(v.name)||0),
-      isBoost?"select-boost":"select-service",i,selected===i)).join("");
+    const list=items.map((v,i)=>'<div class="zshop-purchase-tile">'+
+      '<button type="button" class="zshop-item'+(selected===i?' selected':'')+'" data-shop-action="'+(isBoost?"select-boost":"select-service")+'" data-index="'+i+'" aria-pressed="'+(selected===i)+'">'+
+      shopArt(v)+'<span class="zshop-item-name">'+shopSafe(v.label||v.name)+'</span><span class="zshop-item-owned">OWNED: '+(shopInventory.get(v.name)||0)+'</span></button>'+
+      '<button type="button" class="zshop-action zshop-hover-buy" data-shop-action="'+(isBoost?"buy-boost":"use-service")+'" data-index="'+i+'"'+(shopDisabled(v)?' disabled':'')+'>BUY · '+shopPrice(v)+'</button></div>').join("");
     const recallOwned=shopInventory.get("Emergency Recall Ticket")||0;
     const recallControls=!isBoost
       ?'<div class="shop-recall-controls" style="display:grid;gap:5px;width:100%;font-size:11px">'+
@@ -573,17 +632,13 @@ function renderShop(){
         (shopBusy||shopLoading||recallOwned<1||!shopActiveJourneys.length?' disabled':'')+'>RECALL ALL</button>'+
         '</div></div>':'';
     const detail='<div class="zshop-details">'+
-      '<div class="zshop-detail-icon">'+item.icon+'</div>'+
+      shopArt(item,true)+
       '<strong class="zshop-detail-name">'+(item.label||item.name)+'</strong>'+
       '<p class="zshop-detail-description">'+item.desc+'</p>'+
       (item.name==="Lucky Stone"&&shopReservedStones>0
-        ?'<small>🪨 ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(item.name)||0)+'</small>':'')+
-      '<strong class="zshop-detail-price">'+(item.price?item.price.toLocaleString()+" IGM":"FREE")+'</strong>'+
+        ?'<small>☄️ ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(item.name)||0)+'</small>':'')+
       '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
-      '"'+(shopBusy||shopLoading||shopCash===null||shopCash<item.price||
-        ((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&
-         (shopInventory.get(item.name)||0)+(item.name==="Lucky Stone"?shopReservedStones:0)>=5)?' disabled':'')+
-      '>'+(isBoost?"BUY BOOST":"BUY TICKET")+'</button>'+recallControls+'</div>';
+      '"'+(shopDisabled(item)?' disabled':'')+'>BUY · '+shopPrice(item)+'</button>'+recallControls+'</div>';
     body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"TICKETS","AVAILABLE",
       '<div class="zshop-grid'+(isBoost?' boost-grid':' service-grid')+'">'+list+'</div>')+
       shopPanel("DETAILS","SELECTED",detail)+'</div>';
@@ -605,7 +660,8 @@ function renderShop(){
       '<div class="zshop-trade-actions"><button class="zshop-action" data-shop-action="confirm-trade"'+
       (canTrade?'':' disabled')+'>CONFIRM TRADE</button></div>';
   }
-  if(shopStatus)footer='<div class="zshop-status" role="status">'+shopStatus+'</div>';
+  if(shopStatus||shopPaymentSignature)footer='<div class="zshop-status" role="status">'+shopSafe(shopStatus)+
+    (shopPaymentSignature?' · <a target="_blank" rel="noopener noreferrer" href="https://solscan.io/tx/'+encodeURIComponent(shopPaymentSignature)+'">VIEW ON SOLSCAN</a>':'')+'</div>';
   shopMenuContent.innerHTML='<div class="zshop">'+
     '<h2 class="zshop-title">'+title+'</h2>'+body+footer+'</div>';
   shopMenuWindow.setAttribute("aria-label",activeShop);
@@ -625,6 +681,7 @@ shopMenuContent.addEventListener("click",event=>{
     return;
   }
   if(action==="buy-boost"||action==="use-service"){
+    if(index!==undefined){if(action==="buy-boost")selectedBoost=Number(index);else selectedService=Number(index);}
     const item=action==="buy-boost"?boosts[selectedBoost]:services[selectedService];
     void buyShopItem(item);
     return;
