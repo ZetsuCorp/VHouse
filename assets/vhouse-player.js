@@ -143,6 +143,11 @@ function mount(host){
     const locked=state.status!=="AVAILABLE";
     const ready=state.status==="RESULTS_READY";
     const raid=state.activity==="RAID";
+    host.classList.toggle("is-locked",locked);
+    host.classList.toggle("results-ready",ready);
+    status.hidden=!locked;
+    status.textContent=ready?"RESULTS":raid?"ON RAID":"LOCKED";
+    const paint=card=>{
     if(card&&typeof card.image==="string"&&
       /^(https?:\/\/|blob:|data:image\/(?:svg\+xml|jpeg|png|webp|gif))/i.test(card.image)){
       art.src=card.image;
@@ -150,14 +155,12 @@ function mount(host){
     }else{
       art.removeAttribute("src");host.classList.remove("has-vcard");
     }
-    host.classList.toggle("is-locked",locked);
-    host.classList.toggle("results-ready",ready);
-    status.hidden=!locked;
-    status.textContent=ready?"RESULTS":raid?"ON RAID":"LOCKED";
     host.setAttribute("aria-label",card?
       "Active VCard: "+card.name+(locked?", "+(ready?"results ready":raid?"on Raid":"on Journey"):""):
       "Player VCard placeholder");
     selected.textContent=card?String(card.name||"VCard"):"NO VCARD ASSIGNED";
+    };
+    if(window.VHouseNFTVisuals)window.VHouseNFTVisuals.bind(host,card,paint);else paint(card);
     details.textContent=!card?"Assign a VCard from Mint, Load, or Closet."
       :state.status==="ON_JOURNEY"?"ON JOURNEY · STAGE "+(state.stageId??"—")
       :state.status==="ON_RAID"?"ON RAID"
@@ -177,9 +180,11 @@ function mount(host){
       for(const entry of lockedCards){
         const row=document.createElement("div");
         const known=store?.getCards?.().find(c=>c.id===entry.cardId);
-        row.textContent=(known?.name||entry.cardId)+" · "+
+        const suffix=" · "+
           (entry.status==="RESULTS_READY"?"RESULTS READY · "+(entry.activity==="RAID"?"RAID":"JOURNEY"):
             entry.status==="ON_RAID"?"ON RAID":"ON JOURNEY");
+        const paint=visual=>{row.textContent=(visual?.name||entry.cardId)+suffix;};
+        if(window.VHouseNFTVisuals)window.VHouseNFTVisuals.bind(row,known,paint);else paint(known);
         journey.append(row);
       }
     }
