@@ -252,3 +252,217 @@ if(service){
   console.error("VHouse Auth must load before VCard store.");
 }
 })();
+
+/* Read-only NFT display data. Same confirmed mint and IPFS sources as Upgrade.
+   Never change VHouse card records, stats, game snapshots or transactions. */
+(function(){
+"use strict";
+function portrait(p,index) {
+  const helmets = [
+    '<path d="M210 245 Q175 85 320 91 Q465 85 430 245 L405 190 Q320 120 235 190Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/>',
+    '<path d="M205 250 L205 130 L265 73 L375 73 L435 130 L435 250 L400 205 L390 135 L250 135 L240 205 L430 245 L405 190 Q320 120 235 190Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/>',
+    '<path d="M205 245 L185 170 L240 175 L230 108 L285 145 L330 88 L350 142 L425 115 L405 196 L445 235Z" fill="#211c29" stroke="LIGHT" stroke-width="7"/>'
+  ];
+
+  let svg = `
+  <svg xmlns="http://www.w3.org/2000/svg"
+       width="640" height="480" viewBox="0 0 640 480">
+    <defs>
+      <radialGradient id="sky">
+        <stop stop-color="LIGHT" stop-opacity=".5"/>
+        <stop offset="1" stop-color="BG"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="640" height="480" fill="url(#sky)"/>
+    <circle cx="320" cy="205" r="158"
+            fill="none" stroke="LIGHT"
+            stroke-width="5" opacity=".5"/>
+
+    <path d="M0 345 L110 250 L180 305
+             L260 230 L350 315 L440 255
+             L530 315 L640 260 V480 H0Z"
+          fill="#0b1524"/>
+
+    <path d="M115 480 L145 380 Q165 320
+             260 305 H380 Q475 320 495 380
+             L525 480Z"
+          fill="ARMOR" stroke="#0a111b"
+          stroke-width="12"/>
+
+    <path d="M285 280 H355 L360 353
+             L320 389 L280 353Z"
+          fill="FACE"/>
+
+    <ellipse cx="320" cy="225"
+             rx="89" ry="120"
+             fill="FACE"
+             stroke="#16202b"
+             stroke-width="9"/>
+
+    ${helmets[index]}
+
+    <path d="M258 232 H300 M340 232 H382"
+          stroke="#17202a"
+          stroke-width="15"
+          stroke-linecap="round"/>
+
+    <path d="M265 232 H295 M345 232 H375"
+          stroke="LIGHT" stroke-width="5"/>
+
+    <path d="M290 295 Q320 313 350 295"
+          fill="none" stroke="#50343b"
+          stroke-width="6"/>
+
+    <path d="M320 400 L340 430
+             L320 462 L300 430Z"
+          fill="LIGHT"/>
+  </svg>`;
+
+  svg = svg.replace(
+    /\b(BG|LIGHT|ARMOR|FACE)\b/g,
+    key => ({
+      BG:p.bg,
+      LIGHT:p.light,
+      ARMOR:p.armor,
+      FACE:p.face
+    })[key]
+  );
+
+  return "data:image/svg+xml;charset=utf-8," +
+    encodeURIComponent(svg);
+}
+
+const arts = [
+  portrait({
+    bg:"#152b40",
+    light:"#2c9bd7",
+    armor:"#347b99",
+    face:"#d6a47c"
+  },0),
+
+  portrait({
+    bg:"#30263c",
+    light:"#aa67dd",
+    armor:"#8276ac",
+    face:"#b98979"
+  },1),
+
+  portrait({
+    bg:"#42282d",
+    light:"#ff815f",
+    armor:"#bb6056",
+    face:"#bc8667"
+  },2)
+];
+
+
+const RPC_URLS=["https://solana-rpc.publicnode.com","https://rpc.solanatracker.io/public","https://api.mainnet-beta.solana.com"];
+const TOKEN_2022="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const cache=new Map(),bindings=new WeakMap(),queue=[];
+let running=0;
+function pump(){while(running<4&&queue.length){running++;void queue.shift()();}}
+function schedule(work){
+  return new Promise((resolve,reject)=>{
+    queue.push(()=>Promise.resolve().then(work).then(resolve,reject).finally(()=>{running--;pump()}));pump();
+  });
+}
+function mintFor(card){
+  if(!card)return null;
+  const mint=card.mint_address||window.VHouseCardStore?.getCards()?.find(c=>String(c.id)===String(card.id))?.mint_address;
+  return typeof mint==="string"&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)?mint:null;
+}
+function mediaURLs(uri){
+  if(typeof uri!=="string"||!uri)return [];
+  const ipfs=uri.match(/^ipfs:\/\/(.+)$/i)||uri.match(/^https?:\/\/[^/]+\/ipfs\/(.+)$/i);
+  if(ipfs){
+    const suffix=ipfs[1].replace(/^ipfs\//i,"");
+    return ["https://gateway.pinata.cloud/ipfs/"+suffix,"https://ipfs.io/ipfs/"+suffix,"https://dweb.link/ipfs/"+suffix];
+  }
+  if(/^ar:\/\//i.test(uri))return ["https://arweave.net/"+uri.slice(5)];
+  return /^https:\/\//i.test(uri)?[uri]:[];
+}
+async function mintMetadata(mint){
+  let last;
+  for(const url of RPC_URLS){
+    try{
+      const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method:"getAccountInfo",params:[mint,{encoding:"jsonParsed",commitment:"confirmed"}]}),signal:AbortSignal.timeout(5500)});
+      if(!res.ok)throw Error("RPC HTTP "+res.status);
+      const body=await res.json(),account=body.result?.value;
+      const meta=account?.data?.parsed?.info?.extensions?.find(e=>String(e.extension).toLowerCase()==="tokenmetadata")?.state;
+      if(account?.owner!==TOKEN_2022||!meta?.uri)throw Error("Token-2022 metadata unavailable");
+      return meta;
+    }catch(error){last=error;}
+  }
+  throw last||Error("NFT mint unavailable");
+}
+async function readJSON(uri){
+  let last;
+  for(const url of mediaURLs(uri)){
+    try{
+      const response=await fetch(url,{signal:AbortSignal.timeout(5000)});
+      if(!response.ok)throw Error("NFT JSON HTTP "+response.status);
+      const json=await response.json();
+      if(!json||typeof json!=="object")throw Error("Invalid NFT JSON");
+      return json;
+    }catch(error){last=error;}
+  }
+  throw last||Error("NFT metadata unavailable");
+}
+function extract(meta,json){
+  const v=json.properties?.vhouse||{};
+  const fields=new Map(Array.isArray(meta.additionalMetadata)?meta.additionalMetadata:[]);
+  const attrs=Array.isArray(json.attributes)?json.attributes:[];
+  const trait=key=>fields.get(key)??attrs.find(a=>String(a?.trait_type).toLowerCase()===key.toLowerCase())?.value??v[key.toLowerCase()];
+  const visual={};
+  const name=String(meta.name||json.name||"").replace(/^Vcard\s+/i,"");
+  if(name)visual.name=name;
+  if(typeof json.description==="string")visual.description=json.description;
+  const team=({STONE:"R",WIND:"P",BLADE:"S",R:"R",P:"P",S:"S"})[String(trait("Team")||"").toUpperCase()];
+  if(team)visual.team=team;
+  const rawLevel=trait("Level"),level=Number(rawLevel);
+  if(rawLevel!=null&&Number.isFinite(level)&&level>=1)visual.level=level;
+  visual.effect=String(trait("Effect")||"none").toLowerCase();
+  if(v.imageMode==="preset"&&Number.isInteger(v.artIndex)&&arts[v.artIndex])visual.image=arts[v.artIndex];
+  else if(v.sourceImage)visual.image=mediaURLs(v.sourceImage)[0];
+  else if(!json.properties?.vhouse)visual.image=mediaURLs(json.image)[0];
+  if(!visual.image)delete visual.image;
+  return visual;
+}
+function request(mint){
+  const prior=cache.get(mint);
+  if(prior?.pending||prior&&Date.now()<prior.expires)return prior;
+  const entry={visual:prior?.visual||null,pending:true,expires:Infinity};
+  cache.set(mint,entry);
+  entry.promise=schedule(async()=>{
+    const meta=await mintMetadata(mint);
+    return extract(meta,await readJSON(meta.uri));
+  }).then(visual=>{entry.visual=visual;entry.expires=Date.now()+60000;return visual;},error=>{
+    console.warn("[VHouse NFT visuals]",mint,error);
+    entry.expires=Date.now()+15000;return entry.visual;
+  }).finally(()=>{entry.pending=false});
+  return entry;
+}
+function bind(host,card,paint){
+  if(!host)return;
+  const mint=mintFor(card),previous=bindings.get(host);
+  if(!mint){bindings.delete(host);paint(card);return;}
+  const entry=request(mint),binding=previous?.entry===entry?previous:{entry};
+  binding.card=card;binding.paint=paint;
+  bindings.set(host,binding);
+  paint({...card,...entry.visual});
+  if(binding.waiting||!entry.pending)return;
+  binding.waiting=true;
+  void entry.promise.then(visual=>{
+    binding.waiting=false;
+    if(bindings.get(host)!==binding||!host.isConnected||!visual)return;
+    binding.paint({...binding.card,...visual});
+  });
+}
+window.addEventListener("vhouse:vcard-updated",event=>{
+  const mint=event.detail?.mintAddress;
+  if(mint)cache.delete(mint);
+});
+window.addEventListener("pageshow",event=>{if(event.persisted)cache.clear();});
+window.VHouseNFTVisuals={bind};
+})();
