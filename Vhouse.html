@@ -647,6 +647,10 @@ billboardButton.addEventListener("click", event => {
   billboardOverlay.hidden = false;
   void loadBillboard();
 });
+// Open the existing SOL Billboard overlay from Town navigation.
+if (new URLSearchParams(location.search).get("billboard")==="1") {
+  window.addEventListener("load",()=>billboardButton.click(),{once:true});
+}
 billboardOverlay.addEventListener("click", event => {
   if (event.target === billboardOverlay) billboardOverlay.hidden = true;
 });
