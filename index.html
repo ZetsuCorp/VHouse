@@ -269,6 +269,38 @@ html, body {
 #townMarketTicker:hover .ticker-track,#townMarketTicker:focus-visible .ticker-track{animation-play-state:paused}
 @keyframes town-market-scroll{to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){#townMarketTicker .ticker-track{animation:none}}
+
+/* Town navigation: anchored to the same edge as the live market ticker. */
+#townNav{position:absolute;left:32%;right:1%;top:5%;z-index:26;container-type:inline-size;color:#ffe6b7;pointer-events:none}
+#townNav[hidden],#townNav [hidden]{display:none!important}
+#townNav .tn-row{display:flex;align-items:center;gap:.7cqw}
+#townNav .tn-toggle{width:5.5cqw;height:5.5cqw;min-width:25px;min-height:25px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;background:#160b23;border:1px solid #dfb45d;border-radius:5px;cursor:pointer;pointer-events:auto}
+#townNav .tn-toggle i{display:block;width:55%;height:2px;background:#ffdb86;border-radius:2px;transition:.25s}
+#townNav.open .tn-toggle i:nth-child(1){transform:translateY(5px) rotate(45deg)}
+#townNav.open .tn-toggle i:nth-child(2){opacity:0}
+#townNav.open .tn-toggle i:nth-child(3){transform:translateY(-5px) rotate(-45deg)}
+#townNav .tn-reveal{flex:1;min-width:0;clip-path:inset(0 100% 0 0);transition:clip-path .4s;pointer-events:none}
+#townNav.open .tn-reveal{clip-path:inset(0);pointer-events:auto}
+#townNav .tn-bar{position:relative;height:8cqw;min-height:29px;display:flex;align-items:center;background:#160b23;border:1px solid #bd9959;border-radius:5px}
+#townNav .tn-categories{display:flex;width:65%;gap:.8cqw;padding:0 .7cqw;z-index:3}
+#townNav .tn-categories button{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:.55cqw;height:4.8cqw;min-height:20px;border:1px solid #b08a50;border-radius:99px;background:linear-gradient(#2c1939,#150a22);color:#fff0d7;font:700 clamp(8px,1.65cqw,16px) Arial;white-space:nowrap;cursor:pointer;padding:0 .7cqw}
+#townNav .tn-categories svg{flex:none;width:2.5cqw;height:2.5cqw;stroke:#ffcd65;fill:none;stroke-width:2.3;stroke-linejoin:round;stroke-linecap:round}
+#townNav .tn-categories button:hover,#townNav .tn-categories button.active{background:#48235c;border-color:#ffdc8a;box-shadow:0 0 1cqw #ffb72d70}
+#townNav .tn-crest{position:absolute;right:3%;width:28%;height:94%;filter:drop-shadow(0 0 .4cqw #ffad4590)}
+#townNav .tn-frame,#townNav .tn-inner{clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%)}
+#townNav .tn-frame{height:100%;padding:.35cqw;background:linear-gradient(155deg,#81461f,#ffdc86 20%,#a15a2a 36%,#ffd368 48%,#fff1b3 52%,#ad6428 67%,#ffd16b 90%)}
+#townNav .tn-inner{height:100%;display:flex;align-items:center;justify-content:center;color:#ffdb79;background:radial-gradient(ellipse,#401c50,#15091c 80%);font:900 3.2cqw Arial;letter-spacing:.05em}
+#townNav .tn-gem{position:absolute;top:50%;width:1.8cqw;height:1.8cqw;transform:translateY(-50%) rotate(45deg);background:linear-gradient(135deg,#fff1a9,#b26b1b);border:1px solid #ffd473}
+#townNav .tn-gem:after{content:"";position:absolute;inset:20%;background:linear-gradient(135deg,#fff,#ed72ff 40%,#8800c7 80%)}
+#townNav .tn-gem-left{left:-.6cqw}
+#townNav .tn-gem-right{right:-.6cqw}
+#townNav .tn-dropdown{position:absolute;top:100%;width:min(46%,260px);margin-top:4px;border:1px solid #bc9357;border-radius:5px;background:linear-gradient(135deg,#271536,#160c24);padding:4px;color:#f4d79f;font:700 clamp(9px,1.5cqw,14px) Arial;pointer-events:auto}
+#townNav .tn-option{display:flex;width:100%;align-items:center;justify-content:space-between;padding:clamp(4px,.9cqw,9px) 8px;border:0;border-bottom:1px solid #ba945533;background:transparent;color:#ffe6b7;text-align:left;text-decoration:none;font:inherit;cursor:pointer}
+#townNav .tn-option:last-child{border-bottom:0}
+#townNav .tn-option:hover{background:#462657;color:#fff}
+#townNav .tn-children{padding:2px 0 2px 7px;border-left:1px solid #bc9357;margin-left:7px}
+#townNav .tn-children .tn-option{font-weight:500;color:#ecdbf6}
+@media(prefers-reduced-motion:reduce){#townNav *{transition:none!important}}
 /* Journey overlay, aligned to the second marked rectangle. */
 .journey-overlay {
   position: absolute;
@@ -486,6 +518,25 @@ html, body {
       <span class="ticker-track"><span class="ticker-group"></span><span class="ticker-group" aria-hidden="true"></span></span>
     </a>
 
+
+    <nav id="townNav" aria-label="VHouse navigation" hidden>
+      <div class="tn-row">
+        <button type="button" class="tn-toggle" aria-label="Navigation menu" aria-expanded="false"><i></i><i></i><i></i></button>
+        <div class="tn-reveal" inert>
+          <div class="tn-bar">
+            <div class="tn-categories">
+              <button type="button" data-menu="how" aria-expanded="false"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M11 11a5 5 0 1 1 8 4c-3 2-3 3-3 5M16 24h.01"/></svg>How 2</button>
+              <button type="button" data-menu="earn" aria-expanded="false"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12"/><path d="M16 7v18M22 11H13a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8"/></svg>Earn</button>
+              <button type="button" data-menu="vcard" aria-expanded="false"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="21" rx="3"/><path d="M6 12h20M8 21h7M22 17v7M19 20h6"/></svg>VCard</button>
+              <button type="button" data-menu="market" aria-expanded="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 12L6 4h20l3 8M3 12h26v5H3zM6 17v12h20V17M13 29V20h7v9M11 4l-2 8M21 4l2 8"/></svg>Market</button>
+            </div>
+            <div class="tn-crest" aria-hidden="true"><div class="tn-frame"><div class="tn-inner">VHOUSE</div></div><i class="tn-gem tn-gem-left"></i><i class="tn-gem tn-gem-right"></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="tn-dropdown" hidden></div>
+    </nav>
+
     <!-- Journey displays only the menu -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
       <div class="journey-window">
@@ -651,6 +702,66 @@ document.addEventListener("keydown", (event) => {
  render();place();void refresh();
  setInterval(()=>{if(!document.hidden)void refresh()},api.refreshMs);
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refresh()});
+})();
+</script>
+
+<script>
+(()=>{
+ const menu=document.getElementById("townNav"),ticker=document.getElementById("townMarketTicker");
+ const stage=menu.closest(".map-container"),toggle=menu.querySelector(".tn-toggle"),reveal=menu.querySelector(".tn-reveal"),drop=menu.querySelector(".tn-dropdown"),buttons=[...menu.querySelectorAll("[data-menu]")];
+ const entries={
+  how:[],
+  earn:[["Mission Journeys",null,"journey"],["Raids","./TowerRaidInfo.html"],["Eggs","./TowerRaidInfo.html"]],
+  vcard:[["Create",[["Mint VCard","./VCardCreator.html"],["Load NFT","./VCardCreator.html"],["Upgrade VCard","./VCardCreator.html"],["Burn VCard","./VCardCreator.html"]]],["Billboard",[["SOL","./billboard.html"],["Journey","./billboard.html"],["Raid","./billboard.html"]]]],
+  market:[["VMarket DEX",[["Coins","./VMarketDex.html"]]],["Shop",[["Items","./Vshop.html"]]]]
+ };
+ let active=null;
+ function clearCategory(){active=null;drop.hidden=true;buttons.forEach(b=>{b.classList.remove("active");b.setAttribute("aria-expanded","false")});}
+ function close(){menu.classList.remove("open");toggle.setAttribute("aria-expanded","false");reveal.inert=true;clearCategory();}
+ function position(){
+  const b=ticker.getBoundingClientRect(),frame=stage.getBoundingClientRect();
+  if(ticker.hidden||!b.width||!b.height){menu.hidden=true;close();return;}
+  menu.style.left=(b.left-frame.left)+"px";
+  menu.style.top=(b.bottom-frame.top+Math.max(3,frame.width*.003))+"px";
+  menu.hidden=false;
+  if(active&&!drop.hidden)alignDrop(active);
+ }
+ function alignDrop(button){
+  const offset=button.getBoundingClientRect().left-menu.getBoundingClientRect().left;
+  drop.style.left=Math.max(0,Math.min(offset,menu.clientWidth-drop.offsetWidth))+"px";
+ }
+ function row(label,href){
+  const b=document.createElement(href?"a":"button");
+  if(href)b.href=href;else b.type="button";
+  b.className="tn-option";b.textContent=label;return b;
+ }
+ toggle.addEventListener("click",()=>{
+  if(menu.classList.contains("open")){close();return;}
+  menu.classList.add("open");toggle.setAttribute("aria-expanded","true");reveal.inert=false;
+ });
+ buttons.forEach(button=>button.addEventListener("click",()=>{
+  if(active===button){clearCategory();return;}
+  clearCategory();active=button;button.classList.add("active");
+  drop.replaceChildren();
+  const items=entries[button.dataset.menu];
+  if(!items.length)return;
+  items.forEach(([label,destination,action])=>{
+   const parent=row(label,typeof destination==="string"?destination:null);drop.append(parent);
+   if(Array.isArray(destination)){
+    const arrow=document.createElement("span");arrow.textContent="⌄";parent.append(arrow);parent.setAttribute("aria-expanded","false");
+    const children=document.createElement("div");children.className="tn-children";children.hidden=true;
+    destination.forEach(([name,href])=>children.append(row(name,href)));
+    drop.append(children);
+    parent.addEventListener("click",()=>{children.hidden=!children.hidden;parent.setAttribute("aria-expanded",String(!children.hidden));arrow.textContent=children.hidden?"⌄":"⌃";});
+   }else if(action==="journey"){parent.addEventListener("click",()=>{close();document.getElementById("journeyButton").click();});}
+  });
+  drop.hidden=false;button.setAttribute("aria-expanded","true");alignDrop(button);
+ }));
+ document.addEventListener("click",e=>{if(menu.classList.contains("open")&&!menu.contains(e.target))close();});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&menu.classList.contains("open")){close();toggle.focus();}});
+ const observer=new ResizeObserver(position);observer.observe(stage);observer.observe(ticker);
+ new MutationObserver(position).observe(ticker,{attributes:true,attributeFilter:["style","hidden"]});
+ position();
 })();
 </script>
 </body>
