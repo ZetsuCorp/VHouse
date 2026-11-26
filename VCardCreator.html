@@ -2583,23 +2583,29 @@ async function mintInPhantom(phantom,owner) {
     const logs = (simulation.value.logs || []).filter(line => /failed|error|insufficient/i.test(line)).slice(-4).join(" | ");
     throw Error("Mint simulation failed: " + JSON.stringify(simulation.value.err) + (logs ? " — " + logs : "") + ". No SOL was sent.");
   }
-  // Preserve Phantom sign-and-send and the existing mint account signature.
-  tx.partialSign(job.mint);
-
-  let response;
+  // Phantom signs first; the mint keypair signs the returned transaction.
+  // Keep payment and mint atomic and submit with RPC preflight enabled.
+  let signature;
   try {
-    response = await phantom.signAndSendTransaction(tx,{
+    if (typeof phantom.signTransaction !== "function") {
+      throw Error("Phantom transaction signing is unavailable.");
+    }
+    const expectedMessage = tx.serializeMessage();
+    const signed = await phantom.signTransaction(tx);
+    const actualMessage = signed.serializeMessage();
+    if (actualMessage.length !== expectedMessage.length ||
+        !expectedMessage.every((byte,index) => byte === actualMessage[index])) {
+      throw Error("Phantom returned a modified mint transaction. No SOL was sent.");
+    }
+    signed.partialSign(job.mint);
+    const raw = signed.serialize({requireAllSignatures:true,verifySignatures:true});
+    signature = await chain.sendRawTransaction(raw,{
       skipPreflight:false,
       preflightCommitment:"confirmed"
     });
   } catch (error) {
     throw Error(await phantomMintFailure(error,owner,tx,mintRent));
   }
-
-  const signature =
-    typeof response === "string"
-      ? response
-      : response?.signature;
 
   if (!signature) {
     throw Error(
