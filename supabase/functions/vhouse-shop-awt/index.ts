@@ -20,20 +20,15 @@ function unitsForUsdCents(usdCents: bigint, price: number, decimals: number) {
   return (usdCents * den * 10n ** BigInt(decimals) +
     100n * num - 1n) / (100n * num);
 }
-async function priceUsd(awtMint: string) {
-  const response = await fetch("https://frontend-api-v3.pump.fun/coins-v2/" + awtMint, {
-    headers: { Accept: "application/json" }, signal: AbortSignal.timeout(7000),
+async function priceUsd(auth: ReturnType<typeof createClient>, token: string, awtMint: string) {
+  const {data,error}=await auth.functions.invoke("vhouse-pump-market",{
+    headers:{Authorization:"Bearer "+token},
+    body:{}
   });
-  if (!response.ok) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  const coin = await response.json();
-  if (coin.mint !== awtMint) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  const number = (v: unknown) => v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v);
-  const rawSupply = number(coin.total_supply);
-  const decimals = number(coin.decimals) ?? 6;
-  const supply = rawSupply !== null && rawSupply > 0 && Number.isInteger(decimals) && decimals >= 0 && decimals <= 18 ? rawSupply / 10 ** decimals : null;
-  const cap = number(coin.usd_market_cap ?? coin.market_cap_usd);
-  const price = number(coin.price_usd ?? coin.usd_price) ?? (cap !== null && supply !== null && supply > 0 ? cap / supply : null);
-  if (price === null || !Number.isFinite(price) || price <= 0) throw Error("CRYPTO_MARKET_UNAVAILABLE");
+  if(error||!Array.isArray(data?.coins))throw Error("CRYPTO_MARKET_UNAVAILABLE");
+  const coin=data.coins.find((c:{mint:string;ok:boolean;priceUsd:number|null})=>c.mint===awtMint&&c.ok);
+  const price=Number(coin?.priceUsd);
+  if(!Number.isFinite(price)||price<=0)throw Error("CRYPTO_MARKET_UNAVAILABLE");
   return price;
 }
 
@@ -127,7 +122,7 @@ Deno.serve(async(req)=>{
   if(!program||(!program.equals(TOKEN_PROGRAM_ID)&&!program.equals(TOKEN_2022_PROGRAM_ID)))throw Error("AWT_MINT_UNAVAILABLE");
   const decimals=unpackMint(MINT,mintInfo,program).decimals;
   if(!Number.isInteger(decimals)||decimals<0||decimals>18)throw Error("AWT_DECIMALS_UNAVAILABLE");
-  const amount=unitsForUsdCents(BigInt(PRICES[thing]),await priceUsd(MINT.toBase58()),decimals);
+  const amount=unitsForUsdCents(BigInt(PRICES[thing]),await priceUsd(auth,token,MINT.toBase58()),decimals);
   if(amount<=0n||amount>18446744073709551615n)throw Error("SHOP_AMOUNT_INVALID");
   const id=crypto.randomUUID();
   const {data:q,error}=await db.rpc("vhouse_shop_awt_reserve",{p_id:id,p_player:player,p_thing:thing,p_wallet:owner.toBase58(),p_cents:PRICES[thing],p_amount:amount.toString(),p_decimals:decimals,p_tx:null,p_height:null});
