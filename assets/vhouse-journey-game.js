@@ -305,7 +305,8 @@ function journeyPaymentStatus(message){
     host.append(document.createTextNode(" · "),link);
   }
 }
-const JOURNEY_ENTRY_LAMPORTS=1_000_000;
+const JOURNEY_STAGE_CENTS=[15,15,25,45,55,65,75,75,95,100];
+const journeyStagePrice=id=>"$"+(JOURNEY_STAGE_CENTS[Number(id)-1]/100).toFixed(2);
 const JOURNEY_TREASURY="CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK";
 const JOURNEY_MEMO_PROGRAM="MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const managedPending=new Set();
@@ -764,7 +765,7 @@ function renderStageInfo(){
     ?(mission.status==="ready"?"VIEW RESULTS":"VIEW JOURNEY")
     :(itemControl("useStageTicket")?.checked
       ?"START JOURNEY · STAGE TICKET"
-      :"START JOURNEY · 0.001 SOL");
+      :"START JOURNEY · "+(validStage(stage)?journeyStagePrice(stage.id):""));
   $("startButton").disabled=!pending&&(!validStage(stage)||!!locked||
     (!!store&&!assigned));
 }
@@ -947,27 +948,37 @@ async function payJourneyEntry(mission){
       }catch(error){console.warn("Journey blockhash lookup:",endpoint,error);}
     }
     if(!latest)throw Error("Solana RPC unavailable for Journey payment.");
+    const {data:quote,error:quoteError}=await client.functions.invoke("vhouse-journey-entry-verify",{
+      body:{action:"quote",missionId:mission.id,stageId:mission.stageId}
+    });
+    if(quoteError||!quote||quote.error)throw Error(quote?.error||quoteError?.message||"JOURNEY_ENTRY_QUOTE_FAILED");
+    if(quote.walletAddress!==address||quote.treasury!==JOURNEY_TREASURY||
+       quote.usdCents!==JOURNEY_STAGE_CENTS[mission.stageId-1]||
+       !Number.isSafeInteger(quote.lamports)||quote.lamports<=0||
+       !Number.isSafeInteger(quote.expiresAt)||quote.expiresAt<=Date.now()||
+       !/^[a-f0-9]{64}$/.test(quote.quoteToken||""))
+      throw Error("JOURNEY_ENTRY_QUOTE_INVALID");
     const owner=new PublicKey(address);
     const tx=new Transaction();
     tx.add(SystemProgram.transfer({
       fromPubkey:owner,
       toPubkey:new PublicKey(JOURNEY_TREASURY),
-      lamports:JOURNEY_ENTRY_LAMPORTS
+      lamports:quote.lamports
     }));
     tx.add(new TransactionInstruction({
       programId:new PublicKey(JOURNEY_MEMO_PROGRAM),
       keys:[],
-      data:new TextEncoder().encode("VHOUSE:JOURNEY:"+mission.id)
+      data:new TextEncoder().encode("VHOUSE:JOURNEY:"+mission.id+":"+mission.stageId+":"+quote.quoteToken)
     }));
     tx.feePayer=owner;
     tx.recentBlockhash=latest.blockhash;
-    $("setupStatus").textContent="Approve 0.001 SOL Journey entry in Phantom.";
+    $("setupStatus").textContent="Approve "+journeyStagePrice(mission.stageId)+" Journey entry ("+(quote.lamports/1e9).toFixed(9)+" SOL) in Phantom.";
     const receipt=await phantom.signAndSendTransaction(tx,{
       skipPreflight:false,preflightCommitment:"confirmed"
     });
     const signature=typeof receipt==="string"?receipt:receipt?.signature;
     if(!signature)throw Error("Phantom did not return the payment transaction.");
-    pendingEntryPayment={mission:structuredClone(mission),signature};
+    pendingEntryPayment={mission:structuredClone(mission),signature,quote};
   }
   const signature=pendingEntryPayment.signature;
   journeyPaymentStatus("Verifying your Journey payment on Solana.");
@@ -977,7 +988,9 @@ async function payJourneyEntry(mission){
   while(pendingEntryPayment?.signature===signature){
     try{
       const {data,error}=await client.functions.invoke("vhouse-journey-entry-verify",{
-        body:{missionId:mission.id,signature}
+        body:{action:"verify",missionId:mission.id,stageId:mission.stageId,signature,
+          lamports:pendingEntryPayment.quote.lamports,expiresAt:pendingEntryPayment.quote.expiresAt,
+          quoteToken:pendingEntryPayment.quote.quoteToken}
       });
       if(error){
         let reason=error.message||"PAYMENT_VERIFICATION_FAILED";
