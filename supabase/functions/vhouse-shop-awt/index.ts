@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { Connection, PublicKey, Transaction, TransactionInstruction } from "npm:@solana/web3.js@1.98.4";
-import { TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction,unpackMint,unpackAccount } from "npm:@solana/spl-token@0.4.14";
+import { TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction,unpackMint } from "npm:@solana/spl-token@0.4.14";
 const MINT=new PublicKey("ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump");
 const TREASURY=new PublicKey("CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK");
 const MEMO=new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -156,10 +156,6 @@ Deno.serve(async(req)=>{
   if(amount<=0n||amount>18446744073709551615n)throw Error("SHOP_AMOUNT_INVALID");
   const source=getAssociatedTokenAddressSync(MINT,owner,false,program);
   const destination=getAssociatedTokenAddressSync(MINT,TREASURY,false,program);
-  const sourceInfo=await rpcRead(c=>c.getAccountInfo(source,"confirmed"));
-  if(!sourceInfo)throw Error("INSUFFICIENT_AWT");
-  const balance=unpackAccount(source,sourceInfo,program);
-  if(!balance.owner.equals(owner)||!balance.mint.equals(MINT)||balance.amount<amount)throw Error("INSUFFICIENT_AWT");
   const latest=await rpcRead(c=>c.getLatestBlockhash("finalized")),id=crypto.randomUUID();
   const tx=new Transaction({feePayer:owner,recentBlockhash:latest.blockhash});
   if(!await rpcRead(c=>c.getAccountInfo(destination,"confirmed")))tx.add(createAssociatedTokenAccountIdempotentInstruction(owner,destination,TREASURY,MINT,program));
