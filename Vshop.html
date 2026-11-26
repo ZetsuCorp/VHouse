@@ -187,7 +187,7 @@ html, body {
 /* Thin market ticker follows the actual name/cash HUD width. */
 #townMarketTicker{
  position:absolute;z-index:25;display:block;height:clamp(17px,1.6cqw,26px);
- top:1%;right:1%;left:32%;overflow:hidden;white-space:nowrap;
+ top:1%;right:6.56%;left:32%;overflow:hidden;white-space:nowrap;
  border:1px solid #d7ad61;border-radius:4px;background:#21142def;
  color:#fff;text-decoration:none;font:700 clamp(8px,.72cqw,12px) Arial,sans-serif;
  line-height:1;box-shadow:0 1px 5px #0008;
@@ -205,7 +205,7 @@ html, body {
 @media(prefers-reduced-motion:reduce){#townMarketTicker .ticker-track{animation:none}}
 
 /* Town navigation: anchored to the same edge as the live market ticker. */
-#townNav{position:absolute;left:32%;right:1%;top:5%;z-index:26;container-type:inline-size;color:#ffe6b7;pointer-events:none}
+#townNav{position:absolute;left:32%;right:6.56%;top:5%;z-index:26;container-type:inline-size;color:#ffe6b7;pointer-events:none}
 #townNav[hidden],#townNav [hidden]{display:none!important}
 #townNav .tn-row{display:flex;align-items:center;gap:.7cqw}
 #townNav .tn-toggle{width:5.5cqw;height:5.5cqw;min-width:25px;min-height:25px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;background:#160b23;border:1px solid #dfb45d;border-radius:5px;cursor:pointer;pointer-events:auto}
@@ -644,7 +644,7 @@ document.addEventListener("keydown",event=>{
   if(!b||!b.width||!b.height||!frame.width){ticker.hidden=true;return;}
   const gap=Math.max(5,frame.width*.006);
   const left=b.right-frame.left+gap;
-  if(frame.width-left-gap<90){ticker.hidden=true;return;}
+  if(frame.width*.9344-left<90){ticker.hidden=true;return;}
   ticker.style.left=left+"px";ticker.style.top=(b.top-frame.top)+"px";
   ticker.hidden=false;
  }
