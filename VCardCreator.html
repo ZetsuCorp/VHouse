@@ -736,6 +736,7 @@ import {
   PublicKey,
   Keypair,
   Transaction,
+  VersionedTransaction,
   SystemProgram
 } from "@solana/web3.js";
 
@@ -2421,7 +2422,7 @@ async function buildMintTransaction(owner) {
   );
 
   const latest =
-    await chain.getLatestBlockhash("confirmed");
+    await chain.getLatestBlockhash("finalized");
 
   tx.feePayer = owner;
   tx.recentBlockhash = latest.blockhash;
@@ -2445,8 +2446,6 @@ async function buildMintTransaction(owner) {
   if (withAttributes > 1232) {
     tx.instructions.splice(-attributeInstructions.length);
   }
-
-  tx.partialSign(job.mint);
 
   const size = tx.serialize({
     requireAllSignatures:false,
@@ -2574,6 +2573,18 @@ async function mintInPhantom(phantom,owner) {
   }
 
   const {tx,latest,mintRent} = await buildMintTransaction(owner);
+
+  // Simulate the exact legacy message without broadcasting or requiring wallet signatures.
+  const simulation = await chain.simulateTransaction(
+    new VersionedTransaction(tx.compileMessage()),
+    {commitment:"confirmed",sigVerify:false,replaceRecentBlockhash:false}
+  );
+  if (simulation.value.err) {
+    const logs = (simulation.value.logs || []).filter(line => /failed|error|insufficient/i.test(line)).slice(-4).join(" | ");
+    throw Error("Mint simulation failed: " + JSON.stringify(simulation.value.err) + (logs ? " — " + logs : "") + ". No SOL was sent.");
+  }
+  // Preserve Phantom sign-and-send and the existing mint account signature.
+  tx.partialSign(job.mint);
 
   let response;
   try {
