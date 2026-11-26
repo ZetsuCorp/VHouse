@@ -385,6 +385,24 @@ html, body {
   font:11px monospace;
   color:#e8cfff;
 }
+/* Journey Messenger introduction, inside the existing game frame. */
+.journey-intro-overlay{position:absolute;inset:0;z-index:30;background:#0007;display:grid;place-items:center}
+.journey-intro-overlay[hidden]{display:none!important}
+.journey-intro-window{width:86%;height:92%;padding:1cqw;border:1px solid #bc9357;border-radius:.65cqw;background:#101b29;display:flex;flex-direction:column;overflow:hidden;color:#eaf9ff}
+.journey-intro-heading{flex:none;text-align:center;font-size:1.1cqw;font-weight:900;letter-spacing:.08em;color:#e4c58f;margin:0 0 .9cqw}
+.journey-intro-panel{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:2cqw;align-items:center;border:1px solid #bc9357;border-radius:.65cqw;background:#0b1826;padding:1.5cqw 1.8cqw;overflow:hidden}
+.journey-intro-figure{height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}
+.journey-intro-figure img{display:block;width:100%;height:100%;object-fit:contain;max-height:35cqw;filter:drop-shadow(0 0 1.1cqw #9c61d077)}
+.journey-intro-copy{min-width:0;color:#eaf9ff;text-align:left}
+.journey-intro-copy h2{font-size:1.65cqw;line-height:1.2;color:#e4c58f;margin:0 0 .8cqw}
+.journey-intro-copy p,.journey-intro-copy ol{font-size:1.12cqw;line-height:1.4;margin:0 0 .7cqw}
+.journey-intro-copy h3{font-size:1.15cqw;color:#e4c58f;letter-spacing:.025em;margin:1cqw 0 .5cqw}
+.journey-intro-copy ol{padding-left:1.6cqw}
+.journey-intro-copy li{margin-bottom:.3cqw}
+.journey-intro-actions{display:flex;gap:.8cqw;align-items:center;margin-top:1cqw}
+.journey-intro-actions button{padding:.8cqw 1.5cqw;border:1px solid #bc9357;border-radius:.4cqw;background:#122433;color:#e4c58f;font:900 1.05cqw Arial,sans-serif;cursor:pointer}
+.journey-intro-actions .finish-button{width:auto;min-width:14cqw;height:auto;border:2px solid #00eaff;color:#fff;background:linear-gradient(100deg,#164b55,#0e263b);letter-spacing:0}
+.journey-intro-actions button:hover,.journey-intro-actions button:focus-visible{filter:brightness(1.3)}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
@@ -537,6 +555,33 @@ html, body {
       <div class="tn-dropdown" hidden></div>
     </nav>
 
+
+    <div id="journeyIntroOverlay" class="journey-intro-overlay" hidden>
+      <section class="journey-intro-window" role="dialog" aria-modal="true" aria-labelledby="journeyIntroTitle">
+        <div class="journey-intro-heading">VHOUSE</div>
+        <div class="journey-intro-panel">
+          <div class="journey-intro-figure"><img src="assets/Messenger.png" alt="VHouse Messenger" draggable="false"></div>
+          <div class="journey-intro-copy">
+            <h2 id="journeyIntroTitle">MISSION JOURNEYS</h2>
+            <p>Send your VCards on Journeys to explore different Stages, complete encounters and earn rewards.</p>
+            <h3>HOW IT WORKS</h3>
+            <ol>
+              <li>Select your VCard and choose a Stage.</li>
+              <li>Equip available items to improve your chances.</li>
+              <li>Complete each HUNT or FIGHT encounter.</li>
+              <li>Earn VCard Cash, Scrap tokens, SOL and $AWT depending on the Stage.</li>
+              <li>Review and confirm your Journey receipt to collect your rewards.</li>
+            </ol>
+            <p>Multiple VCards can travel on separate Journeys simultaneously.</p>
+            <div class="journey-intro-actions">
+              <button type="button" id="journeyIntroBack">BACK</button>
+              <button type="button" class="finish-button" id="journeyIntroContinue">CONTINUE</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <!-- Journey displays only the menu -->
     <div id="journeyOverlay" class="journey-overlay" hidden>
       <div class="journey-window">
@@ -623,11 +668,30 @@ window.addEventListener("load",()=>{
   }
 });
 
-journeyButton.addEventListener("click", () => {
+const journeyIntroOverlay = document.getElementById("journeyIntroOverlay");
+const journeyIntroBack = document.getElementById("journeyIntroBack");
+const journeyIntroContinue = document.getElementById("journeyIntroContinue");
+function openJourney(){
   void updateJourneyWallet();
   journeyOverlay.hidden = false;
   // Keep one Journey instance alive when the menu is closed and reopened.
   void VHouseJourney.load(document.getElementById("journeyContent"), {embedded:true});
+}
+function closeJourneyIntro(restoreFocus=true){
+  journeyIntroOverlay.hidden=true;
+  if(restoreFocus)journeyButton.focus();
+}
+journeyButton.addEventListener("click", () => {
+  journeyIntroOverlay.hidden=false;
+  journeyIntroBack.focus();
+});
+journeyIntroBack.addEventListener("click",()=>closeJourneyIntro());
+journeyIntroContinue.addEventListener("click",()=>{
+  closeJourneyIntro(false);
+  openJourney();
+});
+journeyIntroOverlay.addEventListener("click",event=>{
+  if(event.target===journeyIntroOverlay)closeJourneyIntro();
 });
 /* Placeholder's Journey action opens the existing Town Journey box. */
 if (new URLSearchParams(location.search).get("journey")==="1") {
@@ -642,7 +706,8 @@ journeyOverlay.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    journeyOverlay.hidden = true;
+    if(!journeyIntroOverlay.hidden)closeJourneyIntro();
+    else journeyOverlay.hidden = true;
   }
 });
 </script>
