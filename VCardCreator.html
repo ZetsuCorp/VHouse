@@ -318,6 +318,8 @@ button:disabled{opacity:.5;cursor:default}
 .stat+.stat{border-left:.35cqw solid #34414b}
 .stat-label{display:block;font-size:3.3cqw;font-weight:900;color:#9abbbe}
 .stat-value{font-size:7.1cqw;font-weight:900;color:#fff}
+.stat-bonus{display:block;font-size:3cqw;font-weight:900;color:#ffd76e;line-height:1.15;white-space:nowrap}
+.stat-bonus:empty{display:none}
 .meta-bottom{position:relative;padding:3cqw 9.5cqw 3cqw 1cqw;border-top:.6cqw solid var(--accent);background:#111;text-align:center}
 .meta-footer-text{color:#cfcfcf;font-size:1.6cqw;white-space:nowrap}
 .rarity{position:absolute;right:1.8cqw;top:50%;transform:translateY(-50%);padding:.9cqw 1.5cqw;border-radius:1.2cqw;background:var(--accent);color:white;font-size:3.3cqw;font-weight:900}
@@ -1303,7 +1305,29 @@ function cardData() {
   };
 }
 
-function renderCard(host,data) {
+function renderUpgradeStats(root) {
+  if (!upgrading || !job || !root) return;
+  const card = window.VHouseCardStore.getActive();
+  const mint = job.mint?.publicKey?.toBase58();
+  const current = card && mint && card.mint_address === mint ? card : null;
+  for (const field of ["atk","def"]) {
+    const node = root.querySelector('[data-stat="'+field+'"]');
+    const bonusNode = root.querySelector('[data-bonus="'+field+'"]');
+    const value = String(current?.[field] ?? "—");
+    const bonus = Number(current?.[field === "atk" ? "amalieBonusAtk" : "amalieBonusDef"]);
+    const bonusText = Number.isFinite(bonus) && bonus > 0
+      ? "+"+bonus.toLocaleString(undefined,{maximumFractionDigits:1})+" AMALIE" : "";
+    node.textContent = value;
+    node.style.fontSize = Math.min(7.1,60/Math.max(1,value.length))+"cqw";
+    node.style.display = "inline-block";
+    node.style.whiteSpace = "nowrap";
+    node.parentElement.style.minWidth = "0";
+    bonusNode.textContent = bonusText;
+    bonusNode.style.fontSize = bonusText ? Math.min(3,72/bonusText.length)+"cqw" : "";
+  }
+}
+
+function renderCard(host,data,nftExport=false) {
   host.innerHTML = `
     <div class="vcard">
       <div class="vcard-inner">
@@ -1323,12 +1347,14 @@ function renderCard(host,data) {
             <span class="stat-label">ATK</span>
             <span class="stat-value"
                   data-stat="atk"></span>
+            <span class="stat-bonus" data-bonus="atk"></span>
           </div>
 
           <div class="stat">
             <span class="stat-label">DEF</span>
             <span class="stat-value"
                   data-stat="def"></span>
+            <span class="stat-bonus" data-bonus="def"></span>
           </div>
         </div>
 
@@ -1382,6 +1408,8 @@ function renderCard(host,data) {
   card.querySelector('[data-stat="def"]').textContent =
     data.def;
 
+  if (!nftExport) renderUpgradeStats(card);
+
   card.querySelector(".meta-footer-text").textContent =
     data.footer;
 
@@ -1392,6 +1420,11 @@ function renderCard(host,data) {
 function refresh() {
   if (!busy && (!job || minted)) renderCard($("vcardHost"),cardData());
 }
+
+// Keep the Upgrade preview in sync with the same VHouse stats as the other cards.
+window.VHouseCardStore.subscribe(()=>{
+  if(upgrading && !busy)renderUpgradeStats($("vcardHost").querySelector(".vcard"));
+});
 
 /* Position/crop image: drag by mouse or touch and crop only on CONFIRM. */
 let cropSession = null;
@@ -1609,25 +1642,20 @@ $("descriptionInput").oninput = refresh;
 /* Artwork and metadata upload */
 
 async function makePNG(data) {
-  // Capture the visible full VCard.
+  // Capture the NFT artwork with its existing metadata stats; live VHouse
+  // balances and bonuses belong to the game preview, not the published NFT.
   const host = $("vcardHost");
-  renderCard(host,data);
-  const artwork = host.querySelector(".card-art img");
-
-  if (!artwork) {
-    throw Error("VCard preview is unavailable.");
+  renderCard(host,data,true);
+  let canvas;
+  try {
+    const artwork = host.querySelector(".card-art img");
+    if (!artwork) throw Error("VCard preview is unavailable.");
+    await artwork.decode();
+    if (document.fonts?.ready) await document.fonts.ready;
+    canvas = await toCanvas(host,{pixelRatio:3,backgroundColor:"#080808"});
+  } finally {
+    renderUpgradeStats(host.querySelector(".vcard"));
   }
-
-  await artwork.decode();
-
-  if (document.fonts?.ready) {
-    await document.fonts.ready;
-  }
-
-  const canvas = await toCanvas(host,{
-    pixelRatio:3,
-    backgroundColor:"#080808"
-  });
 
   if (canvas.width < 100 || canvas.height < 100) {
     throw Error("VCard PNG capture has invalid dimensions.");
@@ -3580,7 +3608,7 @@ $("upgradeIntroContinueButton").onclick = async () => {
     $("operationNote").textContent = "Select UPGRADE to edit team, name, image or description, or CUSTOMIZE to apply a card effect. Each costs $0.75: a $0.50 VHouse service fee and a $0.25 SOL deposit into this NFT, recoverable through VHouse BURN.";
     showPostMintUI();
     showScreen("workspace");
-    refresh();
+    renderCard($("vcardHost"),cardData());
     message("Active VCard loaded. Select UPGRADE or CUSTOMIZE.");
   } catch (error) {
     console.error("Active VCard upgrade:",error);
