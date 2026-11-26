@@ -649,7 +649,19 @@ billboardButton.addEventListener("click", event => {
 });
 // Open the existing SOL Billboard overlay from Town navigation.
 if (new URLSearchParams(location.search).get("billboard")==="1") {
-  window.addEventListener("load",()=>billboardButton.click(),{once:true});
+  window.addEventListener("load",async()=>{
+    try {
+      const auth=window.VHouseAuth,store=window.VHouseCardStore;
+      await auth.ready;
+      await store.ready();
+      const user=auth.getUser();
+      if(user&&store.getLoadedPlayerId()!==user.id)await store.refresh();
+      if(user&&(auth.getUser()?.id!==user.id||store.getLoadedPlayerId()!==user.id))return;
+      if(billboardOverlay.hidden)billboardButton.click();
+    }catch(error){
+      console.warn("SOL Billboard startup:",error);
+    }
+  },{once:true});
 }
 billboardOverlay.addEventListener("click", event => {
   if (event.target === billboardOverlay) billboardOverlay.hidden = true;
