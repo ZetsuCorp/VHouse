@@ -885,6 +885,28 @@ html, body {
     render();
   });
   render();
+  // Town Journey Billboard opens the existing stats panel for the assigned VCard.
+  if (new URLSearchParams(location.search).get("stats")==="1") {
+    let opened=false;
+    async function openActiveStats(){
+      if(opened)return;
+      await window.VHouseAuth.ready;
+      await store.ready();
+      if(opened)return;
+      const card=store.getActive();
+      if(!card)return;
+      opened=true;
+      const index=items.findIndex(item=>item?.id===card.id);
+      if(index>=0)selected=index;
+      render();
+      void openCardStats(card);
+    }
+    const stop=store.subscribe(()=>{
+      if(opened){stop();return;}
+      if(store.getActive()){stop();void openActiveStats().catch(error=>console.warn("Journey Billboard:",error));}
+    });
+    void openActiveStats().catch(error=>console.warn("Journey Billboard:",error));
+  }
 })();
 </script>
 
