@@ -1,10 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { Connection, PublicKey, TransactionInstruction, TransactionMessage } from "npm:@solana/web3.js@1.98.4";
-import { TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync,createTransferCheckedInstruction,unpackMint } from "npm:@solana/spl-token@0.4.14";
+import { TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync,createTransferInstruction,unpackMint } from "npm:@solana/spl-token@0.4.14";
 const MINT=new PublicKey("ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump");
 const TREASURY=new PublicKey("CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK");
-const MEMO=new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 const PRICES:Record<string,number>={"Lucky Stone":300,"Stage Ticket":300,"Emergency Recall Ticket":500};
 const CORS={"Access-Control-Allow-Origin":"https://zetsucorp.github.io","Access-Control-Allow-Headers":"authorization, apikey, x-client-info, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
 const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...CORS,"Content-Type":"application/json"}});
@@ -21,29 +20,20 @@ function unitsForUsdCents(usdCents: bigint, price: number, decimals: number) {
   return (usdCents * den * 10n ** BigInt(decimals) +
     100n * num - 1n) / (100n * num);
 }
-async function priceUsd(symbol: string, awtMint?: string) {
-  if (symbol === "SOL") {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd", {
-      headers: { accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(8500),
-    });
-    if (!res.ok) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-    const price = Number((await res.json())?.solana?.usd);
-    if (!Number.isFinite(price) || price <= 0) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-    return price;
-  }
-  if (!awtMint) throw Error("AWT_MINT_NOT_CONFIGURED");
-  const res = await fetch("https://api.dexscreener.com/token-pairs/v1/solana/" + awtMint, {
-    headers: { accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(8500),
+async function priceUsd(awtMint: string) {
+  const response = await fetch("https://frontend-api-v3.pump.fun/coins-v2/" + awtMint, {
+    headers: { Accept: "application/json" }, signal: AbortSignal.timeout(7000),
   });
-  if (!res.ok) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  const pairs = await res.json();
-  if (!Array.isArray(pairs)) throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  const valid = pairs.filter(p => p?.chainId === "solana" &&
-    p?.baseToken?.address === awtMint &&
-    Number.isFinite(Number(p?.priceUsd)) && Number(p?.priceUsd) > 0);
-  valid.sort((a, b) => Number(b?.liquidity?.usd || 0) - Number(a?.liquidity?.usd || 0));
-  const price = Number(valid[0]?.priceUsd);
-  if (!Number.isFinite(price) || price <= 0) throw Error("CRYPTO_MARKET_UNAVAILABLE");
+  if (!response.ok) throw Error("CRYPTO_MARKET_UNAVAILABLE");
+  const coin = await response.json();
+  if (coin.mint !== awtMint) throw Error("CRYPTO_MARKET_UNAVAILABLE");
+  const number = (v: unknown) => v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v);
+  const rawSupply = number(coin.total_supply);
+  const decimals = number(coin.decimals) ?? 6;
+  const supply = rawSupply !== null && rawSupply > 0 && Number.isInteger(decimals) && decimals >= 0 && decimals <= 18 ? rawSupply / 10 ** decimals : null;
+  const cap = number(coin.usd_market_cap ?? coin.market_cap_usd);
+  const price = number(coin.price_usd ?? coin.usd_price) ?? (cap !== null && supply !== null && supply > 0 ? cap / supply : null);
+  if (price === null || !Number.isFinite(price) || price <= 0) throw Error("CRYPTO_MARKET_UNAVAILABLE");
   return price;
 }
 
@@ -87,18 +77,18 @@ async function settle(db:any,q:any,signature:string){
   if(!program||(!program.equals(TOKEN_PROGRAM_ID)&&!program.equals(TOKEN_2022_PROGRAM_ID)))throw Error("AWT_MINT_UNAVAILABLE");
   const source=getAssociatedTokenAddressSync(MINT,owner,false,program);
   const destination=getAssociatedTokenAddressSync(MINT,TREASURY,false,program);
-  const expected=createTransferCheckedInstruction(source,MINT,destination,owner,BigInt(q.amount_atomic),Number(q.token_decimals),[],program);
+  const expected=createTransferInstruction(source,destination,owner,BigInt(q.amount_atomic),[],program);
   const matches=(ix:TransactionInstruction)=>ix.programId.equals(expected.programId)&&
    ix.keys.length===expected.keys.length&&ix.keys.every((key,i)=>key.pubkey.equals(expected.keys[i].pubkey))&&
    ix.data.length===expected.data.length&&expected.data.every((byte,i)=>byte===ix.data[i]);
   const payments=message.instructions.filter(matches);
-  const memos=message.instructions.filter(ix=>ix.programId.equals(MEMO)&&new TextDecoder().decode(ix.data)==="VHOUSE:SHOP:"+q.id);
   const keys=tx.transaction.message.getAccountKeys({accountKeysFromLookups:tx.meta.loadedAddresses});
   const destinationIndex=Array.from({length:keys.length},(_,i)=>i).find(i=>keys.get(i)?.equals(destination));
   const before=tx.meta.preTokenBalances?.find(b=>b.accountIndex===destinationIndex&&b.mint===MINT.toBase58());
   const after=tx.meta.postTokenBalances?.find(b=>b.accountIndex===destinationIndex&&b.mint===MINT.toBase58());
   if(!message.payerKey.equals(owner)||tx.transaction.message.header.numRequiredSignatures!==1||
-    payments.length!==1||memos.length!==1||!after||after.owner!==TREASURY.toBase58()||
+    payments.length!==1||!after||after.owner!==TREASURY.toBase58()||
+    typeof tx.blockTime!=="number"||tx.blockTime<Math.floor(Date.parse(q.created_at)/1000)||
     BigInt(after.uiTokenAmount.amount)-BigInt(before?.uiTokenAmount.amount||"0")<BigInt(q.amount_atomic))
    throw Error("SHOP_PAYMENT_RECEIPT_MISMATCH");
  }
@@ -137,15 +127,13 @@ Deno.serve(async(req)=>{
   if(!program||(!program.equals(TOKEN_PROGRAM_ID)&&!program.equals(TOKEN_2022_PROGRAM_ID)))throw Error("AWT_MINT_UNAVAILABLE");
   const decimals=unpackMint(MINT,mintInfo,program).decimals;
   if(!Number.isInteger(decimals)||decimals<0||decimals>18)throw Error("AWT_DECIMALS_UNAVAILABLE");
-  const amount=unitsForUsdCents(BigInt(PRICES[thing]),await priceUsd("AWT",MINT.toBase58()),decimals);
+  const amount=unitsForUsdCents(BigInt(PRICES[thing]),await priceUsd(MINT.toBase58()),decimals);
   if(amount<=0n||amount>18446744073709551615n)throw Error("SHOP_AMOUNT_INVALID");
-  const destination=getAssociatedTokenAddressSync(MINT,TREASURY,false,program);
-  const createDestination=!await rpcRead(c=>c.getAccountInfo(destination,"confirmed"));
   const id=crypto.randomUUID();
   const {data:q,error}=await db.rpc("vhouse_shop_awt_reserve",{p_id:id,p_player:player,p_thing:thing,p_wallet:owner.toBase58(),p_cents:PRICES[thing],p_amount:amount.toString(),p_decimals:decimals,p_tx:null,p_height:null});
   if(error)throw Error(error.message);
   return reply({quoteId:q.id,thing:q.thing,usdCents:q.usd_cents,amountAtomic:q.amount_atomic,
    decimals:q.token_decimals,mint:MINT.toBase58(),treasury:TREASURY.toBase58(),
-   tokenProgram:program.toBase58(),createDestination,walletAddress:q.wallet_address});
+   tokenProgram:program.toBase58(),walletAddress:q.wallet_address});
  }catch(error){console.error("[shop-awt]",String(error));return reply({error:error instanceof Error?error.message:"SHOP_PAYMENT_UNAVAILABLE"},409);}
 });
