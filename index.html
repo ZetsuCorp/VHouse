@@ -604,7 +604,7 @@ document.addEventListener("keydown", (event) => {
  const groups=ticker.querySelectorAll(".ticker-group");
  const api=window.VHouseMarketData;
  if(!api)return;
- const market=api.create();
+ const market=api.create({sessionCache:true});
  let busy=false,stale=false,account=null;
  const resize=new ResizeObserver(place);
  function place(){

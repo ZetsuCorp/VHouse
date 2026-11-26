@@ -130,7 +130,12 @@
       throw Error("Player and Raid preload unavailable.");
     $("authStatus").textContent="Loading player information and Raid records…";
     preloadedPlayerId=null;
-    const data=await authAdapter.preloadPlayerData();
+    const [data]=await Promise.all([
+      authAdapter.preloadPlayerData(),
+      Promise.resolve().then(()=>window.VHouseMarketData?.preload()).catch(error=>{
+        console.warn("VHouse market preload unavailable:",error);
+      })
+    ]);
     if(data?.playerId!==user.id)throw Error("Player and Raid preload failed.");
     preloadedPlayerId=user.id;
   }

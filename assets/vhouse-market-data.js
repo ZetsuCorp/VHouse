@@ -15,9 +15,30 @@ function selectPair(pairs,asset){
  .sort((a,b)=>(num(b.liquidity?.usd)??0)-(num(a.liquidity?.usd)??0))[0]||null;
 }
 
-function create(){
+const SESSION_CACHE="vhouse-index-market-preload-v1";
+function create({sessionCache=false}={}){
  const markets=new Map(),pumpCoins=new Map();
  let pumpUnavailable=false;
+ if(sessionCache){
+  try{
+   const cached=JSON.parse(sessionStorage.getItem(SESSION_CACHE)||"null");
+   if(cached&&Array.isArray(cached.markets)&&Array.isArray(cached.pumpCoins)){
+    for(const a of assets){
+     const pair=cached.markets.find(entry=>Array.isArray(entry)&&entry[0]===a.mint);
+     const coin=cached.pumpCoins.find(entry=>Array.isArray(entry)&&entry[0]===a.mint);
+     if(pair)markets.set(a.mint,pair[1]);
+     if(coin)pumpCoins.set(a.mint,coin[1]);
+    }
+    pumpUnavailable=Boolean(cached.pumpUnavailable);
+   }
+  }catch{}
+ }
+ function saveSessionMarket(){
+  if(!sessionCache)return;
+  try{sessionStorage.setItem(SESSION_CACHE,JSON.stringify({
+   markets:[...markets],pumpCoins:[...pumpCoins],pumpUnavailable
+  }));}catch{}
+ }
  function pairFor(a){return markets.get(a.mint)||null}
  function displayPrice(a){return num(pumpCoins.get(a.mint)?.priceUsd)??num(pairFor(a)?.priceUsd)}
  function displayCap(a){return num(pumpCoins.get(a.mint)?.marketCap)??num(pairFor(a)?.marketCap)}
@@ -40,9 +61,20 @@ function create(){
   })]);
   if(results[0].status==="rejected")pumpUnavailable=true;
   if(results.every(x=>x.status==="rejected"))throw Error("Market unavailable");
+  saveSessionMarket();
   return {pumpUnavailable};
  }
  return {markets,pumpCoins,pairFor,displayPrice,displayCap,changeFor,refresh};
 }
-window.VHouseMarketData={assets,num,money,percent,create,refreshMs:60000};
+async function preload(){
+ const market=create({sessionCache:true});
+ let timeout;
+ try{
+  await Promise.race([
+   market.refresh(),
+   new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error("Market preload timed out")),12000);})
+  ]);
+ }finally{clearTimeout(timeout);}
+}
+window.VHouseMarketData={assets,num,money,percent,create,preload,refreshMs:60000};
 })();
