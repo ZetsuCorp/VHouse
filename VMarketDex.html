@@ -185,6 +185,24 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 #townNav .tn-children{padding:2px 0 2px 7px;border-left:1px solid #bc9357;margin-left:7px}
 #townNav .tn-children .tn-option{font-weight:500;color:#ecdbf6}
 @media(prefers-reduced-motion:reduce){#townNav *{transition:none!important}}
+/* Page Messenger introduction, inside the existing game frame. */
+.page-intro-overlay{position:absolute;inset:0;z-index:60;background:#0007;display:grid;place-items:center}
+.page-intro-overlay[hidden]{display:none!important}
+.page-intro-window{width:86%;height:92%;padding:1cqw;border:1px solid #bc9357;border-radius:.65cqw;background:#101b29;display:flex;flex-direction:column;overflow:hidden;color:#eaf9ff}
+.page-intro-heading{flex:none;text-align:center;font-size:1.1cqw;font-weight:900;letter-spacing:.08em;color:#e4c58f;margin:0 0 .9cqw}
+.page-intro-panel{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:2cqw;align-items:center;border:1px solid #bc9357;border-radius:.65cqw;background:#0b1826;padding:1.5cqw 1.8cqw;overflow:hidden}
+.page-intro-figure{height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}
+.page-intro-figure img{display:block;width:100%;height:100%;object-fit:contain;max-height:35cqw;filter:drop-shadow(0 0 1.1cqw #9c61d077)}
+.page-intro-copy{min-width:0;color:#eaf9ff;text-align:left}
+.page-intro-copy h2{font-size:1.65cqw;line-height:1.2;color:#e4c58f;margin:0 0 .8cqw}
+.page-intro-copy p,.page-intro-copy ol{font-size:1.12cqw;line-height:1.4;margin:0 0 .7cqw}
+.page-intro-copy h3{font-size:1.15cqw;color:#e4c58f;letter-spacing:.025em;margin:1cqw 0 .5cqw}
+.page-intro-copy ol{padding-left:1.6cqw}
+.page-intro-copy li{margin-bottom:.3cqw}
+.page-intro-actions{display:flex;gap:.8cqw;align-items:center;margin-top:1cqw}
+.page-intro-actions button{padding:.8cqw 1.5cqw;border:1px solid #bc9357;border-radius:.4cqw;background:#122433;color:#e4c58f;font:900 1.05cqw Arial,sans-serif;cursor:pointer}
+.page-intro-actions .finish-button{width:auto;min-width:14cqw;height:auto;border:2px solid #00eaff;color:#fff;background:linear-gradient(100deg,#164b55,#0e263b);letter-spacing:0}
+.page-intro-actions button:hover,.page-intro-actions button:focus-visible{filter:brightness(1.3)}
 </style>
 </head>
 <body>
@@ -261,8 +279,47 @@ footer{flex:none;border-top:1px solid #59462d;background:#0c0914;color:#cbb78c;t
 </div>
 </div>
 <a class="vhouse-btn back-button market-back-button" href="./index.html">← BACK</a>
+    <div id="pageIntroOverlay" class="page-intro-overlay">
+      <section class="page-intro-window" role="dialog" aria-modal="true" aria-labelledby="pageIntroTitle">
+        <div class="page-intro-heading">VHOUSE</div>
+        <div class="page-intro-panel">
+          <div class="page-intro-figure"><img src="assets/Messenger.png" alt="VHouse Messenger" draggable="false"></div>
+          <div class="page-intro-copy">
+            <h2 id="pageIntroTitle">VHOUSE MARKET DEX</h2>
+            <p>Explore and trade cryptocurrency within the Zetsu ecosystem.</p>
+            <h3>HOW IT WORKS</h3>
+            <ol>
+              <li>Explore Zetsu ecosystem tokens like SOL, $AWT, Scrap tokens and AMALIE.</li>
+              <li>Track live prices, market capitalization and trading activity.</li>
+              <li>Review price charts and token statistics.</li>
+              <li>Buy and sell supported tokens directly through your connected Phantom wallet.</li>
+            </ol>
+            <div class="page-intro-actions">
+              <button type="button" id="pageIntroBack">BACK</button>
+              <button type="button" class="finish-button" id="pageIntroContinue">CONTINUE</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
 </div>
 </main>
+<script>
+(()=>{
+ const overlay=document.getElementById("pageIntroOverlay");
+ const back=document.getElementById("pageIntroBack");
+ const next=document.getElementById("pageIntroContinue");
+ const background=[...overlay.parentElement.children].filter(el=>el!==overlay);
+ const previous=background.map(el=>el.inert);
+ background.forEach(el=>{el.inert=true;});
+ back.addEventListener("click",()=>{location.href="./index.html";});
+ next.addEventListener("click",()=>{
+  overlay.hidden=true;
+  background.forEach((el,i)=>{el.inert=previous[i];});
+ });
+ back.focus({preventScroll:true});
+})();
+</script>
 <script>
 "use strict";
 const {assets,num,money,percent,refreshMs}=window.VHouseMarketData;
