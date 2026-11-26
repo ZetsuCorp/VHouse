@@ -369,6 +369,25 @@ html, body {
 .house-wallet-note{margin:0;text-align:center;font-size:1cqw;line-height:1.3;color:#f2e3c7}
 .house-wallet-note a{color:#ffe9a4;text-decoration:underline}
 .login-options [hidden]{display:none!important}
+
+/* House Messenger introductions, inside the existing game frame. */
+.house-intro-overlay{position:absolute;inset:0;z-index:30;background:#0007;display:grid;place-items:center}
+.house-intro-overlay[hidden]{display:none!important}
+.house-intro-window{width:86%;height:92%;padding:1cqw;border:1px solid #bc9357;border-radius:.65cqw;background:#101b29;display:flex;flex-direction:column;overflow:hidden;color:#eaf9ff}
+.house-intro-heading{flex:none;text-align:center;font-size:1.1cqw;font-weight:900;letter-spacing:.08em;color:#e4c58f;margin:0 0 .9cqw}
+.house-intro-panel{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:2cqw;align-items:center;border:1px solid #bc9357;border-radius:.65cqw;background:#0b1826;padding:1.5cqw 1.8cqw;overflow:hidden}
+.house-intro-figure{height:100%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}
+.house-intro-figure img{display:block;width:100%;height:100%;object-fit:contain;max-height:35cqw;filter:drop-shadow(0 0 1.1cqw #9c61d077)}
+.house-intro-copy{min-width:0;color:#eaf9ff;text-align:left}
+.house-intro-copy h2{font-size:1.65cqw;line-height:1.2;color:#e4c58f;margin:0 0 .8cqw}
+.house-intro-copy p,.house-intro-copy ol{font-size:1.12cqw;line-height:1.4;margin:0 0 .7cqw}
+.house-intro-copy h3{font-size:1.15cqw;color:#e4c58f;letter-spacing:.025em;margin:1cqw 0 .5cqw}
+.house-intro-copy ol{padding-left:1.6cqw}
+.house-intro-copy li{margin-bottom:.3cqw}
+.house-intro-actions{display:flex;gap:.8cqw;align-items:center;margin-top:1cqw}
+.house-intro-actions button{padding:.8cqw 1.5cqw;border:1px solid #bc9357;border-radius:.4cqw;background:#122433;color:#e4c58f;font:900 1.05cqw Arial,sans-serif;cursor:pointer}
+.house-intro-actions .finish-button{width:auto;min-width:14cqw;height:auto;border:2px solid #00eaff;color:#fff;background:linear-gradient(100deg,#164b55,#0e263b);letter-spacing:0}
+.house-intro-actions button:hover,.house-intro-actions button:focus-visible{filter:brightness(1.3)}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
@@ -454,6 +473,25 @@ html, body {
     </div>
     <div class="hud-layer">
       <div class="hud-player-icon" data-vhouse-player role="img" aria-label="Active VCard"></div>
+    </div>
+
+    <div id="houseIntroOverlay" class="house-intro-overlay" hidden>
+      <section class="house-intro-window" role="dialog" aria-modal="true" aria-labelledby="houseIntroTitle">
+        <div class="house-intro-heading">VHOUSE</div>
+        <div class="house-intro-panel">
+          <div class="house-intro-figure"><img src="assets/Messenger.png" alt="VHouse Messenger" draggable="false"></div>
+          <div class="house-intro-copy">
+            <h2 id="houseIntroTitle"></h2>
+            <p id="houseIntroDescription"></p>
+            <h3>HOW IT WORKS</h3>
+            <ol id="houseIntroSteps"></ol>
+            <div class="house-intro-actions">
+              <button type="button" id="houseIntroBack">BACK</button>
+              <button type="button" class="finish-button" id="houseIntroContinue">CONTINUE</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
     <div id="loginOverlay" class="login-overlay" hidden>
       <div class="login-window" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
@@ -642,11 +680,10 @@ async function loadBillboard() {
     showBillboardLoading(false);
   }
 }
-billboardButton.addEventListener("click", event => {
-  event.preventDefault();
+function openHouseBillboard(){
   billboardOverlay.hidden = false;
   void loadBillboard();
-});
+}
 // Open the existing SOL Billboard overlay from Town navigation.
 if (new URLSearchParams(location.search).get("billboard")==="1") {
   window.addEventListener("load",async()=>{
@@ -658,7 +695,7 @@ if (new URLSearchParams(location.search).get("billboard")==="1") {
       if(user&&store.getLoadedPlayerId()!==user.id)await store.refresh();
       if(user&&(auth.getUser()?.id!==user.id||store.getLoadedPlayerId()!==user.id))return;
       await new Promise(resolve=>setTimeout(resolve,2000));
-      if(billboardOverlay.hidden)billboardButton.click();
+      if(billboardOverlay.hidden)openHouseBillboard();
     }catch(error){
       console.warn("SOL Billboard startup:",error);
     }
@@ -702,18 +739,18 @@ async function loadStuff() {
     stuffLoading = false;
   }
 }
-stuffButton.addEventListener("click", () => {
+function openHouseStuff(){
   stuffOverlay.hidden = false;
   loadStuff();
-});
+}
 stuffOverlay.addEventListener("click", (event) => {
   if (event.target === stuffOverlay) stuffOverlay.hidden = true;
 });
 
-loginButton.addEventListener("click", () => {
+function openHouseLogin(){
   loginOverlay.hidden = false;
   updateHouseAccount();
-});
+}
 function updateHouseAccount(){
   const auth=window.VHouseAuth;
   const user=auth?.getUser();
@@ -775,6 +812,109 @@ document.addEventListener("keydown", (event) => {
     billboardOverlay.hidden = true;
   }
 });
+
+/* House-only introductions. Continue reuses the existing destination or overlay. */
+(()=>{
+  const overlay=document.getElementById("houseIntroOverlay");
+  const back=document.getElementById("houseIntroBack");
+  const next=document.getElementById("houseIntroContinue");
+  const steps=document.getElementById("houseIntroSteps");
+  const entries=[
+  {
+    "selector": ".hotspot-closet",
+    "title": "VCARD CLOSET — MANAGE YOUR COLLECTION",
+    "description": "Browse your VCards, assign your active character and access the VCard Billboard.",
+    "steps": [
+      "Browse your owned VCards.",
+      "Select a VCard to open its VCard Billboard.",
+      "Review Journey history, total earnings, wins, losses and character stats.",
+      "Assign a VCard as your active character."
+    ]
+  },
+  {
+    "selector": ".hotspot-billboard",
+    "title": "SOL BILLBOARD — TRACK YOUR NFT",
+    "description": "Watch your VCard grow both inside VHouse and on the Solana blockchain.",
+    "steps": [
+      "Review your active VCard's NFT details.",
+      "Track its SOL balance and recoverable value.",
+      "View upgrades, customizations and blockchain activity.",
+      "Monitor your VCard's growth over time."
+    ]
+  },
+  {
+    "selector": ".hotspot-create",
+    "title": "CREATE VCARD — BUILD YOUR CHARACTER",
+    "description": "Create a new character or bring an existing NFT into VHouse. Customize your VCard and make it your own.",
+    "steps": [
+      "MINT: Create a new VCard NFT.",
+      "LOAD: Bring an existing NFT into VHouse.",
+      "UPGRADE: Edit or customize your VCard and increase its level.",
+      "BURN: Destroy your VCard and reclaim its recoverable SOL."
+    ]
+  },
+  {
+    "selector": ".hotspot-chest",
+    "title": "STUFF — EXPLORE YOUR INVENTORY",
+    "description": "See what you've collected throughout your VHouse adventures.",
+    "steps": [
+      "Review your owned items and VCards.",
+      "Track your available resources.",
+      "Collect items from the Shop to improve your Journey and Raid experiences."
+    ]
+  },
+  {
+    "selector": ".hotspot-login",
+    "title": "LOG IN — CONNECT TO VHOUSE",
+    "description": "Your VHouse account connects your characters, progress, inventory and rewards.",
+    "steps": [
+      "Sign in using Discord or email.",
+      "Connect and link your Phantom wallet.",
+      "Access your VCards and saved game progress."
+    ]
+  }
+];
+  const actions=[
+    button=>{location.href=button.href;},
+    openHouseBillboard,
+    button=>{location.href=button.href;},
+    openHouseStuff,
+    openHouseLogin
+  ];
+  let active=null;
+  function closeIntro(restoreFocus=true){
+    const previous=active;
+    active=null;
+    overlay.hidden=true;
+    if(restoreFocus)previous?.button.focus();
+    return previous;
+  }
+  entries.forEach((entry,index)=>{
+    const button=document.querySelector(entry.selector);
+    button.addEventListener("click",event=>{
+      event.preventDefault();
+      active={button,action:actions[index]};
+      document.getElementById("houseIntroTitle").textContent=entry.title;
+      document.getElementById("houseIntroDescription").textContent=entry.description;
+      steps.replaceChildren(...entry.steps.map(text=>{
+        const li=document.createElement("li");
+        li.textContent=text;
+        return li;
+      }));
+      overlay.hidden=false;
+      back.focus();
+    });
+  });
+  back.addEventListener("click",()=>closeIntro());
+  next.addEventListener("click",()=>{
+    const entry=closeIntro(false);
+    if(entry)entry.action(entry.button);
+  });
+  overlay.addEventListener("click",event=>{if(event.target===overlay)closeIntro();});
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape"&&!overlay.hidden)closeIntro();
+  });
+})();
 </script>
 <script src="assets/vhouse-cards.js"></script>
 <script src="assets/vhouse-stuff.js"></script>
