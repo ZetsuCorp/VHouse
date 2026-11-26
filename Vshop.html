@@ -482,68 +482,75 @@ async function buyShopAwt(item,auth){
     return data;
   }
   const paymentKey=JSON.stringify([buyer,item.name]);
-  let pendingShopPayment=pendingShopPayments.get(paymentKey);
-  if(!pendingShopPayment){
+  let payment=pendingShopPayments.get(paymentKey);
+  if(!payment){
     const phantom=window.phantom?.solana||window.solana;
     if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)throw Error("Connect Phantom to purchase with AWT.");
     const connection=await phantom.connect();
     const wallet=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
     if(!wallet)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
+
     const {Connection,PublicKey,Transaction,TransactionInstruction}=
       await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
     const {getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction}=
       await import("https://esm.sh/@solana/spl-token@0.4.14?bundle&deps=@solana/web3.js@1.99.0");
+
+    const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser"});
+    if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
+    if(!quote.quoteId)throw Error("SHOP_QUOTE_FAILED");
+
     const rpcEndpoints=["https://solana-rpc.publicnode.com","https://api.mainnet-beta.solana.com"];
     let latest=null;
     for(const endpoint of rpcEndpoints){
       try{
-        latest=await new Connection(endpoint,"confirmed").getLatestBlockhash("confirmed");
+        const rpc=new Connection(endpoint,"confirmed");
+        latest=await rpc.getLatestBlockhash("confirmed");
         if(latest)break;
       }catch(error){console.warn("Shop blockhash lookup:",endpoint,error);}
     }
     if(!latest)throw Error("Solana RPC unavailable for Shop payment.");
-    const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser",blockhash:latest.blockhash,lastValidBlockHeight:latest.lastValidBlockHeight});
-    if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
-    if(!quote.quoteId||quote.walletAddress!==wallet||quote.usdCents!==item.price*100||
-      quote.mint!=="ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump"||
-      quote.treasury!=="CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK"||
-      !quote.blockhash||!["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"].includes(quote.tokenProgram))
-      throw Error("SHOP_QUOTE_MISMATCH");
-    const owner=new PublicKey(wallet),mint=new PublicKey(quote.mint),treasury=new PublicKey(quote.treasury);
+
+    const owner=new PublicKey(wallet);
+    const mint=new PublicKey(quote.mint);
+    const treasury=new PublicKey(quote.treasury);
     const program=new PublicKey(quote.tokenProgram);
     const source=getAssociatedTokenAddressSync(mint,owner,false,program);
     const destination=getAssociatedTokenAddressSync(mint,treasury,false,program);
-    const amount=BigInt(quote.amountAtomic),decimals=Number(quote.decimals);
-    if(amount<=0n||amount>18446744073709551615n||!Number.isInteger(decimals)||decimals<0||decimals>18)throw Error("SHOP_QUOTE_MISMATCH");
     const tx=new Transaction();
     if(quote.createDestination){
       tx.add(createAssociatedTokenAccountIdempotentInstruction(owner,destination,treasury,mint,program));
     }
-    tx.add(createTransferCheckedInstruction(source,mint,destination,owner,amount,decimals,[],program));
+    tx.add(createTransferCheckedInstruction(source,mint,destination,owner,BigInt(quote.amountAtomic),Number(quote.decimals),[],program));
     tx.add(new TransactionInstruction({
       programId:new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
       keys:[],data:new TextEncoder().encode("VHOUSE:SHOP:"+quote.quoteId)
     }));
     tx.feePayer=owner;
-    // Use the fresh browser hash for a new payment, preserving the reserved
-    // hash only for a retry of the same quote (no second payment).
-    tx.recentBlockhash=quote.blockhash===latest.blockhash?latest.blockhash:quote.blockhash;
+    tx.recentBlockhash=latest.blockhash;
     shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
-    const receipt=await phantom.signAndSendTransaction(tx,{skipPreflight:false,preflightCommitment:"confirmed"});
+    const receipt=await phantom.signAndSendTransaction(tx,{
+      skipPreflight:false,preflightCommitment:"confirmed"
+    });
     const signature=typeof receipt==="string"?receipt:receipt?.signature;
-    if(!signature)throw Error("Phantom returned no transaction signature.");
-    pendingShopPayment={buyer,thing:item.name,quoteId:quote.quoteId,signature};
-    pendingShopPayments.set(paymentKey,pendingShopPayment);
+    if(!signature)throw Error("Phantom did not return the payment transaction.");
+    payment={quoteId:quote.quoteId,signature};
+    pendingShopPayments.set(paymentKey,payment);
   }
-  const payment=pendingShopPayment;
   shopPaymentSignature=payment.signature;
-  for(let i=0;i<30;i++){
-    shopStatus="Payment submitted. Checking Solana confirmation.";renderShop();
-    const data=await request({action:"verify",quoteId:payment.quoteId,signature:payment.signature});
-    if(data?.verified){pendingShopPayments.delete(paymentKey);return data;}
-    await new Promise(resolve=>setTimeout(resolve,2000));
+  let unavailable=0;
+  while(auth.getUser()?.id===buyer){
+    shopStatus="Payment submitted. Checking blockchain confirmation.";renderShop();
+    try{
+      const data=await request({action:"verify",quoteId:payment.quoteId,signature:payment.signature});
+      if(data?.verified===true){pendingShopPayments.delete(paymentKey);return data;}
+      unavailable=0;
+    }catch(error){
+      if(!["SHOP_RECEIPT_RPC_UNAVAILABLE","SOLANA_RPC_UNAVAILABLE","Failed to send a request to the Edge Function","Failed to fetch"].includes(error?.message))throw error;
+      unavailable++;
+    }
+    await new Promise(resolve=>setTimeout(resolve,unavailable?Math.min(10000,1800+unavailable*1000):1800));
   }
-  throw Error("Payment submitted. Select the same item to check confirmation; no second charge.");
+  throw Error("Account changed during purchase.");
 }
 async function buyShopItem(item){
   if(shopBusy||shopLoading)return;
