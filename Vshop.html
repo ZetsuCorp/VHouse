@@ -469,7 +469,8 @@ const shopDisabled=item=>shopBusy||shopLoading||shopCash===null||
     (shopInventory.get(item.name)||0)+(item.name==="Lucky Stone"?shopReservedStones:0)>=5);
 const shopArt=(item,detail=false)=>'<span class="zshop-item-art'+(detail?' zshop-detail-icon':'')+'">'+
   (item.image?'<img src="'+shopSafe(item.image)+'" alt="'+shopSafe(item.name)+'">':shopSafe(item.icon))+'</span>';
-let shopPaymentSignature="",pendingShopPayment=null;
+let shopPaymentSignature="";
+const pendingShopPayments=new Map();
 async function buyShopAwt(item,auth){
   const buyer=auth.getUser()?.id;
   const client=auth.getClient();
@@ -480,8 +481,8 @@ async function buyShopAwt(item,auth){
     if(auth.getUser()?.id!==buyer)throw Error("Account changed during purchase.");
     return data;
   }
-  if(pendingShopPayment&& (pendingShopPayment.buyer!==buyer||pendingShopPayment.thing!==item.name))
-    throw Error("Finish the previous AWT purchase first.");
+  const paymentKey=JSON.stringify([buyer,item.name]);
+  let pendingShopPayment=pendingShopPayments.get(paymentKey);
   if(!pendingShopPayment){
     const phantom=window.phantom?.solana||window.solana;
     if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)throw Error("Connect Phantom to purchase with AWT.");
@@ -490,6 +491,8 @@ async function buyShopAwt(item,auth){
     if(!wallet)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
     const {Connection,PublicKey,Transaction,TransactionInstruction}=
       await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+    const {getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction}=
+      await import("https://esm.sh/@solana/spl-token@0.4.14?bundle&deps=@solana/web3.js@1.99.0");
     const rpcEndpoints=["https://solana-rpc.publicnode.com","https://api.mainnet-beta.solana.com"];
     let latest=null;
     for(const endpoint of rpcEndpoints){
@@ -499,7 +502,7 @@ async function buyShopAwt(item,auth){
       }catch(error){console.warn("Shop blockhash lookup:",endpoint,error);}
     }
     if(!latest)throw Error("Solana RPC unavailable for Shop payment.");
-    const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser",blockhash:latest.blockhash});
+    const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser",blockhash:latest.blockhash,lastValidBlockHeight:latest.lastValidBlockHeight});
     if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
     if(!quote.quoteId||quote.walletAddress!==wallet||quote.usdCents!==item.price*100||
       quote.mint!=="ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump"||
@@ -508,8 +511,6 @@ async function buyShopAwt(item,auth){
       throw Error("SHOP_QUOTE_MISMATCH");
     const owner=new PublicKey(wallet),mint=new PublicKey(quote.mint),treasury=new PublicKey(quote.treasury);
     const program=new PublicKey(quote.tokenProgram);
-    const {getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction}=
-      await import("https://esm.sh/@solana/spl-token@0.4.14?bundle&deps=@solana/web3.js@1.99.0");
     const source=getAssociatedTokenAddressSync(mint,owner,false,program);
     const destination=getAssociatedTokenAddressSync(mint,treasury,false,program);
     const amount=BigInt(quote.amountAtomic),decimals=Number(quote.decimals);
@@ -524,19 +525,22 @@ async function buyShopAwt(item,auth){
       keys:[],data:new TextEncoder().encode("VHOUSE:SHOP:"+quote.quoteId)
     }));
     tx.feePayer=owner;
-    tx.recentBlockhash=quote.blockhash;
+    // Use the fresh browser hash for a new payment, preserving the reserved
+    // hash only for a retry of the same quote (no second payment).
+    tx.recentBlockhash=quote.blockhash===latest.blockhash?latest.blockhash:quote.blockhash;
     shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
     const receipt=await phantom.signAndSendTransaction(tx,{skipPreflight:false,preflightCommitment:"confirmed"});
     const signature=typeof receipt==="string"?receipt:receipt?.signature;
     if(!signature)throw Error("Phantom returned no transaction signature.");
     pendingShopPayment={buyer,thing:item.name,quoteId:quote.quoteId,signature};
+    pendingShopPayments.set(paymentKey,pendingShopPayment);
   }
   const payment=pendingShopPayment;
   shopPaymentSignature=payment.signature;
   for(let i=0;i<30;i++){
     shopStatus="Payment submitted. Checking Solana confirmation.";renderShop();
     const data=await request({action:"verify",quoteId:payment.quoteId,signature:payment.signature});
-    if(data?.verified){pendingShopPayment=null;return data;}
+    if(data?.verified){pendingShopPayments.delete(paymentKey);return data;}
     await new Promise(resolve=>setTimeout(resolve,2000));
   }
   throw Error("Payment submitted. Select the same item to check confirmation; no second charge.");
@@ -564,7 +568,7 @@ async function buyShopItem(item){
   renderShop();
   try{
     const buyerId=shopPlayerId;
-    if(!pendingShopPayment)shopPaymentSignature="";
+    shopPaymentSignature="";
     const {data,error}=item.currency==="AWT"
       ?{data:await buyShopAwt(item,auth),error:null}
       :await auth.getClient().rpc("vhouse_buy_shop_item",{p_thing:item.name});
