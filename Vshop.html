@@ -484,34 +484,59 @@ async function buyShopAwt(item,auth){
     throw Error("Finish the previous AWT purchase first.");
   if(!pendingShopPayment){
     const phantom=window.phantom?.solana||window.solana;
-    if(!phantom?.isPhantom||!phantom.signTransaction)throw Error("Connect Phantom to purchase with AWT.");
-    const connected=await phantom.connect(),wallet=connected.publicKey.toBase58();
-    const quote=await request({action:"quote",walletAddress:wallet});
-    if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
-    if(!quote.quoteId||quote.walletAddress!==wallet||quote.usdCents!==item.price*100||!quote.transaction)throw Error("SHOP_QUOTE_MISMATCH");
-    const {Connection,Transaction,VersionedTransaction}=await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
-    // Preserve the reserved message byte-for-byte for on-chain receipt verification.
-    const tx=Transaction.from(Uint8Array.from(atob(quote.transaction),c=>c.charCodeAt(0)));
-    let rpc=null;
-    for(const endpoint of ["https://api.mainnet-beta.solana.com","https://solana-rpc.publicnode.com"]){
+    if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)throw Error("Connect Phantom to purchase with AWT.");
+    const connection=await phantom.connect();
+    const wallet=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
+    if(!wallet)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
+    const {Connection,PublicKey,Transaction,TransactionInstruction}=
+      await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
+    const rpcEndpoints=["https://solana-rpc.publicnode.com","https://api.mainnet-beta.solana.com"];
+    let latest=null;
+    for(const endpoint of rpcEndpoints){
       try{
-        const candidate=new Connection(endpoint,"confirmed");
-        // The versioned wrapper accepts simulation options for a legacy message.
-        const simulation=await candidate.simulateTransaction(
-          new VersionedTransaction(tx.compileMessage()),
-          {sigVerify:false,commitment:"confirmed",replaceRecentBlockhash:false}
-        );
-        if(simulation.value.err)console.warn("Shop payment simulation:",simulation.value.err,simulation.value.logs);
-        rpc=candidate;
-        break;
-      }catch(error){console.warn("Shop payment simulation RPC:",error);}
+        latest=await new Connection(endpoint,"confirmed").getLatestBlockhash("confirmed");
+        if(latest)break;
+      }catch(error){console.warn("Shop blockhash lookup:",endpoint,error);}
     }
-    if(!rpc)throw Error("Solana RPC unavailable for payment.");
+    if(!latest)throw Error("Solana RPC unavailable for Shop payment.");
+    const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser",blockhash:latest.blockhash});
+    if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
+    if(!quote.quoteId||quote.walletAddress!==wallet||quote.usdCents!==item.price*100||
+      quote.mint!=="ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump"||
+      quote.treasury!=="CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK"||
+      !quote.blockhash||!["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"].includes(quote.tokenProgram))
+      throw Error("SHOP_QUOTE_MISMATCH");
+    const owner=new PublicKey(wallet),mint=new PublicKey(quote.mint),treasury=new PublicKey(quote.treasury);
+    const program=new PublicKey(quote.tokenProgram);
+    const ataProgram=new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    const ata=address=>PublicKey.findProgramAddressSync([address.toBytes(),program.toBytes(),mint.toBytes()],ataProgram)[0];
+    const source=ata(owner),destination=ata(treasury);
+    const meta=(pubkey,isSigner=false,isWritable=false)=>({pubkey,isSigner,isWritable});
+    const amount=BigInt(quote.amountAtomic),decimals=Number(quote.decimals);
+    if(amount<=0n||amount>18446744073709551615n||!Number.isInteger(decimals)||decimals<0||decimals>18)throw Error("SHOP_QUOTE_MISMATCH");
+    const tx=new Transaction();
+    if(quote.createDestination){
+      tx.add(new TransactionInstruction({programId:ataProgram,keys:[
+        meta(owner,true,true),meta(destination,false,true),meta(treasury),meta(mint),
+        meta(new PublicKey("11111111111111111111111111111111")),meta(program)
+      ],data:Uint8Array.of(1)}));
+    }
+    const transferData=new Uint8Array(10);
+    transferData[0]=12;
+    new DataView(transferData.buffer).setBigUint64(1,amount,true);
+    transferData[9]=decimals;
+    tx.add(new TransactionInstruction({programId:program,keys:[
+      meta(source,false,true),meta(mint),meta(destination,false,true),meta(owner,true,false)
+    ],data:transferData}));
+    tx.add(new TransactionInstruction({
+      programId:new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+      keys:[],data:new TextEncoder().encode("VHOUSE:SHOP:"+quote.quoteId)
+    }));
+    tx.feePayer=owner;
+    tx.recentBlockhash=quote.blockhash;
     shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
-    const signed=await phantom.signTransaction(tx);
-    const signature=await rpc.sendRawTransaction(signed.serialize(),{
-      skipPreflight:false,preflightCommitment:"confirmed"
-    });
+    const receipt=await phantom.signAndSendTransaction(tx,{skipPreflight:false,preflightCommitment:"confirmed"});
+    const signature=typeof receipt==="string"?receipt:receipt?.signature;
     if(!signature)throw Error("Phantom returned no transaction signature.");
     pendingShopPayment={buyer,thing:item.name,quoteId:quote.quoteId,signature};
   }
