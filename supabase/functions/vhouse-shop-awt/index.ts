@@ -20,16 +20,23 @@ function unitsForUsdCents(usdCents: bigint, price: number, decimals: number) {
   return (usdCents * den * 10n ** BigInt(decimals) +
     100n * num - 1n) / (100n * num);
 }
-async function priceUsd(auth: ReturnType<typeof createClient>, token: string, awtMint: string) {
-  const {data,error}=await auth.functions.invoke("vhouse-pump-market",{
-    headers:{Authorization:"Bearer "+token},
-    body:{}
-  });
-  if(error||!Array.isArray(data?.coins))throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  const coin=data.coins.find((c:{mint:string;ok:boolean;priceUsd:number|null})=>c.mint===awtMint&&c.ok);
-  const price=Number(coin?.priceUsd);
-  if(!Number.isFinite(price)||price<=0)throw Error("CRYPTO_MARKET_UNAVAILABLE");
-  return price;
+// Load the existing VHouse market module, unchanged, in the Shop edge runtime.
+let sharedMarket: Promise<any> | undefined;
+async function getShopMarket() {
+  if (!sharedMarket) {
+    sharedMarket = (async () => {
+      const host = globalThis as any;
+      if (!host.window) host.window = host;
+      const client = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+      host.window.VHouseAuth = { ready: Promise.resolve(), getClient: () => client };
+      await import("../../../assets/vhouse-market-data.js");
+      const api = host.window.VHouseMarketData;
+      return { market: api.create(), asset: api.assets.find((a: {mint:string}) => a.mint === MINT.toBase58()) };
+    })();
+  }
+  return sharedMarket;
 }
 
 // Follow the established VHouse RPC fallback order; exclude PublicNode from
@@ -122,7 +129,10 @@ Deno.serve(async(req)=>{
   if(!program||(!program.equals(TOKEN_PROGRAM_ID)&&!program.equals(TOKEN_2022_PROGRAM_ID)))throw Error("AWT_MINT_UNAVAILABLE");
   const decimals=unpackMint(MINT,mintInfo,program).decimals;
   if(!Number.isInteger(decimals)||decimals<0||decimals>18)throw Error("AWT_DECIMALS_UNAVAILABLE");
-  const amount=unitsForUsdCents(BigInt(PRICES[thing]),await priceUsd(auth,token,MINT.toBase58()),decimals);
+  const {market,asset}=await getShopMarket();
+  await market.refresh();
+  const price=market.displayPrice(asset);
+  const amount=unitsForUsdCents(BigInt(PRICES[thing]),price,decimals);
   if(amount<=0n||amount>18446744073709551615n)throw Error("SHOP_AMOUNT_INVALID");
   const id=crypto.randomUUID();
   const {data:q,error}=await db.rpc("vhouse_shop_awt_reserve",{p_id:id,p_player:player,p_thing:thing,p_wallet:owner.toBase58(),p_cents:PRICES[thing],p_amount:amount.toString(),p_decimals:decimals,p_tx:null,p_height:null});
