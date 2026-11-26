@@ -485,27 +485,29 @@ async function buyShopAwt(item,auth){
   let payment=pendingShopPayments.get(paymentKey);
   if(!payment){
     const phantom=window.phantom?.solana||window.solana;
-    if(!phantom?.isPhantom||!phantom?.signAndSendTransaction)throw Error("Connect Phantom to purchase with AWT.");
+    if(!phantom?.isPhantom||!phantom?.signTransaction)throw Error("Connect Phantom to purchase with AWT.");
     const connection=await phantom.connect();
     const wallet=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
     if(!wallet)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
 
-    const {Connection,PublicKey,Transaction,TransactionInstruction}=
+    const {Connection,PublicKey,TransactionMessage,VersionedTransaction,TransactionInstruction}=
       await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
     const {getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction}=
       await import("https://esm.sh/@solana/spl-token@0.4.14?bundle&deps=@solana/web3.js@1.99.0");
+
+    const {default:bs58}=await import("https://esm.sh/bs58@6.0.0?bundle");
 
     const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser"});
     if(quote.verified){shopPaymentSignature=quote.signature;return quote;}
     if(!quote.quoteId)throw Error("SHOP_QUOTE_FAILED");
 
     const rpcEndpoints=["https://solana-rpc.publicnode.com","https://api.mainnet-beta.solana.com"];
-    let latest=null;
+    let latest=null,rpc=null;
     for(const endpoint of rpcEndpoints){
       try{
-        const rpc=new Connection(endpoint,"confirmed");
-        latest=await rpc.getLatestBlockhash("confirmed");
-        if(latest)break;
+        const candidate=new Connection(endpoint,"confirmed");
+        latest=await candidate.getLatestBlockhash("confirmed");
+        if(latest){rpc=candidate;break;}
       }catch(error){console.warn("Shop blockhash lookup:",endpoint,error);}
     }
     if(!latest)throw Error("Solana RPC unavailable for Shop payment.");
@@ -516,25 +518,46 @@ async function buyShopAwt(item,auth){
     const program=new PublicKey(quote.tokenProgram);
     const source=getAssociatedTokenAddressSync(mint,owner,false,program);
     const destination=getAssociatedTokenAddressSync(mint,treasury,false,program);
-    const tx=new Transaction();
+    const instructions=[];
     if(quote.createDestination){
-      tx.add(createAssociatedTokenAccountIdempotentInstruction(owner,destination,treasury,mint,program));
+      instructions.push(createAssociatedTokenAccountIdempotentInstruction(owner,destination,treasury,mint,program));
     }
-    tx.add(createTransferCheckedInstruction(source,mint,destination,owner,BigInt(quote.amountAtomic),Number(quote.decimals),[],program));
-    tx.add(new TransactionInstruction({
+    instructions.push(createTransferCheckedInstruction(source,mint,destination,owner,BigInt(quote.amountAtomic),Number(quote.decimals),[],program));
+    instructions.push(new TransactionInstruction({
       programId:new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
       keys:[],data:new TextEncoder().encode("VHOUSE:SHOP:"+quote.quoteId)
     }));
-    tx.feePayer=owner;
-    tx.recentBlockhash=latest.blockhash;
-    shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
-    const receipt=await phantom.signAndSendTransaction(tx,{
-      skipPreflight:false,preflightCommitment:"confirmed"
+    const transaction=new VersionedTransaction(new TransactionMessage({
+      payerKey:owner,recentBlockhash:latest.blockhash,instructions
+    }).compileToV0Message());
+    const {value:simulation}=await rpc.simulateTransaction(transaction,{
+      commitment:"confirmed",sigVerify:false
     });
-    const signature=typeof receipt==="string"?receipt:receipt?.signature;
-    if(!signature)throw Error("Phantom did not return the payment transaction.");
+    if(simulation.err)throw Error("Simulation failed: "+JSON.stringify(simulation.err));
+    shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
+    const signed=await phantom.signTransaction(transaction);
+    const signature=bs58.encode(signed.signatures[0]);
     payment={quoteId:quote.quoteId,signature};
     pendingShopPayments.set(paymentKey,payment);
+    shopPaymentSignature=signature;
+    try{
+      await rpc.sendRawTransaction(signed.serialize(),{
+        preflightCommitment:"confirmed",skipPreflight:false
+      });
+    }catch(cause){
+      try{
+        const result=await rpc.confirmTransaction({
+          signature,blockhash:latest.blockhash,lastValidBlockHeight:latest.lastValidBlockHeight
+        },"confirmed");
+        if(result.value.err){
+          pendingShopPayments.delete(paymentKey);
+          throw Error("Transaction failed: "+JSON.stringify(result.value.err));
+        }
+      }catch(error){
+        if(error?.name==="TransactionExpiredBlockheightExceededError")pendingShopPayments.delete(paymentKey);
+        throw Error(pendingShopPayments.has(paymentKey)?"Check "+signature+" before retrying.":String(cause?.message||error?.message||"Transaction failed."));
+      }
+    }
   }
   shopPaymentSignature=payment.signature;
   let unavailable=0;
