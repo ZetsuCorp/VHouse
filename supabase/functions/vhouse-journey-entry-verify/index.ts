@@ -3,7 +3,17 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { Connection } from "npm:@solana/web3.js@1.98.4";
 
 const TREASURY = "CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK";
-const LAMPORTS = 1_000_000;
+const LAMPORTS = 1_000_000; // Legacy in-flight payments only.
+const JOURNEY_STAGE_CENTS = [15,15,25,45,55,65,75,75,95,100];
+const LEGACY_PAYMENT_CUTOFF = 1795680854032;
+async function journeyQuoteToken(payload: string, secret: string) {
+  const key = await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const digest = await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function journeyQuotePayload(player: string, wallet: string, mission: string, stage: number, amount: number, expires: number) {
+  return JSON.stringify([player,wallet,mission,stage,amount,expires]);
+}
 const RAID_TREASURY = TREASURY;
 const RAID_USD_CENTS = 75;
 const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
@@ -211,7 +221,7 @@ Deno.serve(async (req: Request) => {
     const missionId = typeof body?.missionId === "string" ? body.missionId.trim() : "";
     const signature = typeof body?.signature === "string" ? body.signature.trim() : "";
     if (!/^JR-[A-Z0-9-]{5,90}$/.test(missionId) ||
-        !/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)) {
+        (body?.action !== "quote" && !/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature))) {
       return reply({ error: "INVALID_PAYMENT_RECEIPT" }, 400);
     }
     const db = createClient(url, service, {
@@ -224,12 +234,37 @@ Deno.serve(async (req: Request) => {
     const owner = account?.wallet_address;
     if (!owner) return reply({ error: "PLAYER_WALLET_NOT_LINKED" }, 409);
 
+    const stage = Number(body?.stageId);
+    const quoted = body?.action === "quote" || body?.action === "verify";
+    if (quoted && (!Number.isInteger(stage) || stage < 1 || stage > 10))
+      return reply({error:"INVALID_STAGE"},400);
+    if (body?.action === "quote") {
+      const price = await raidSolPrice();
+      const usdCents = JOURNEY_STAGE_CENTS[stage-1];
+      const lamports = Math.ceil(usdCents * 1e7 / price);
+      if (!Number.isSafeInteger(lamports) || lamports <= 0) throw Error("JOURNEY_ENTRY_PRICE_UNAVAILABLE");
+      const expiresAt = Date.now()+15*60_000;
+      const quoteToken = await journeyQuoteToken(journeyQuotePayload(auth.user.id,owner,missionId,stage,lamports,expiresAt),service);
+      return reply({usdCents,lamports,expiresAt,quoteToken,walletAddress:owner,treasury:TREASURY});
+    }
+    let amount = LAMPORTS;
+    let expiresAt = 0;
+    let quoteToken = "";
+    if (quoted) {
+      amount = Number(body?.lamports);
+      expiresAt = Number(body?.expiresAt);
+      quoteToken = String(body?.quoteToken||"");
+      if (!Number.isSafeInteger(amount)||amount<=0||!Number.isSafeInteger(expiresAt)||
+          !/^[a-f0-9]{64}$/.test(quoteToken) ||
+          quoteToken !== await journeyQuoteToken(journeyQuotePayload(auth.user.id,owner,missionId,stage,amount,expiresAt),service))
+        return reply({error:"JOURNEY_ENTRY_QUOTE_MISMATCH"},409);
+    }
     const { data: saved, error: savedError } = await db
-      .from("vhouse_journey_entry_payments").select("player_id,mission_id,consumed_at")
+      .from("vhouse_journey_entry_payments").select("player_id,mission_id,stage_id,consumed_at")
       .eq("signature", signature).maybeSingle();
     if (savedError) throw Error("PAYMENT_LOOKUP_FAILED");
     if (saved) {
-      if (saved.player_id !== auth.user.id || saved.mission_id !== missionId) {
+      if (saved.player_id !== auth.user.id || saved.mission_id !== missionId || (quoted && saved.stage_id !== stage)) {
         return reply({ error: "PAYMENT_ALREADY_ASSIGNED" }, 409);
       }
       return reply({ verified: true, signature, consumed: !!saved.consumed_at });
@@ -246,17 +281,19 @@ Deno.serve(async (req: Request) => {
       ix.parsed?.type === "transfer" &&
       ix.parsed?.info?.source === owner &&
       ix.parsed?.info?.destination === TREASURY &&
-      Number(ix.parsed?.info?.lamports) === LAMPORTS
+      Number(ix.parsed?.info?.lamports) === amount
     );
+    const expectedMemo = "VHOUSE:JOURNEY:" + missionId + (quoted ? ":" + stage + ":" + quoteToken : "");
     const memo = instructions.some(ix =>
       ix.programId.toBase58() === MEMO_PROGRAM &&
       "parsed" in ix &&
-      (ix.parsed === "VHOUSE:JOURNEY:" + missionId ||
-       ix.parsed?.info?.memo === "VHOUSE:JOURNEY:" + missionId)
+      (ix.parsed === expectedMemo || ix.parsed?.info?.memo === expectedMemo)
     );
     const now = Math.floor(Date.now() / 1000);
     const timeValid = typeof tx.blockTime === "number" &&
-      tx.blockTime >= now - 1800 && tx.blockTime <= now + 60;
+      tx.blockTime <= now + 60 && (quoted
+        ? tx.blockTime*1000 >= expiresAt-16*60_000 && tx.blockTime*1000 <= expiresAt
+        : tx.blockTime >= now-1800 && tx.blockTime*1000 < LEGACY_PAYMENT_CUTOFF);
     if (!ownerSigned || !payment || !memo || !timeValid) {
       return reply({ error: "PAYMENT_RECEIPT_MISMATCH" }, 409);
     }
@@ -265,7 +302,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         signature, player_id: auth.user.id, mission_id: missionId,
         source_wallet: owner, destination_wallet: TREASURY,
-        amount_lamports: LAMPORTS,
+        amount_lamports: amount, stage_id: quoted ? stage : null,
       });
     if (insertError) {
       if (insertError.code === "23505") return reply({ error: "PAYMENT_ALREADY_ASSIGNED" }, 409);
@@ -279,7 +316,7 @@ Deno.serve(async (req: Request) => {
       "SOLANA_RPC_UNAVAILABLE", "PAYMENT_LOOKUP_FAILED", "PAYMENT_RECORD_FAILED",
       "PLAYER_WALLET_LOOKUP_FAILED", "SUPABASE_NOT_CONFIGURED",
       "RAID_ENTRY_LOOKUP_FAILED", "RAID_ENTRY_QUOTE_FAILED",
-      "RAID_ENTRY_PRICE_UNAVAILABLE",
+      "RAID_ENTRY_PRICE_UNAVAILABLE", "JOURNEY_ENTRY_PRICE_UNAVAILABLE",
     ]);
     return reply({ error: allowed.has(code) ? code : "PAYMENT_VERIFICATION_UNAVAILABLE" }, 503);
   }
