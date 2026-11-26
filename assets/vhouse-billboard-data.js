@@ -243,39 +243,6 @@
     }
     window.VHouseVCard.render(preview, card);
   }
-  async function loadMintedVCardImage(root, card, client, isCurrent, result) {
-    // Same full minted PNG source as the Closet VCard Record.
-    if (!client || card.external || !card.id) return;
-    try {
-      const {data,error}=await client.from("vcard_list")
-        .select("mint_receipt").eq("card_id",String(card.id)).maybeSingle();
-      if(error)throw error;
-      if(!isCurrent())return;
-      const jsonLevel=dataNumber(traitValue(result?.image?.attributes,"Level"));
-      const displayedLevel=billboardLevel(card,null,result);
-      // Do not replace a current-level preview with a PNG from an older mint receipt.
-      const uri=result?.chain?.loaded?.metadataUri
-        ? (jsonLevel===displayedLevel ? result?.image?.imageUri : null)
-        : data?.mint_receipt?.image_uri;
-      if(typeof uri!=="string")return;
-      const url=uri.startsWith("ipfs://")
-        ?"https://gateway.pinata.cloud/ipfs/"+uri.slice(7).replace(/^ipfs\//,""):uri;
-      if(!/^https?:\/\//i.test(url))return;
-      const nftImage=new Image();
-      nftImage.alt=(card.name||"VCard")+" full NFT";
-      nftImage.referrerPolicy="no-referrer";
-      nftImage.className="minted-vcard-image";
-      nftImage.onload=()=>{
-        if(!isCurrent())return;
-        const host=root.querySelector("#vcardImage");
-        if(host?.dataset.cardId===String(card.id))host.replaceChildren(nftImage);
-      };
-      nftImage.onerror=()=>console.warn("Minted VCard PNG unavailable; showing VCard preview.");
-      nftImage.src=url;
-    }catch(error){
-      console.warn("Could not load minted VCard PNG; showing VCard preview.",error);
-    }
-  }
   const safeUri=value=>typeof value==="string"&&/^(https?:\/\/|ipfs:\/\/)/i.test(value)?value:null;
   function showStat(root,id,value,bonus){
     field(root,id,value);
@@ -537,7 +504,7 @@
           await Promise.all([rowRead,marketRead]);
           if(!isCurrent())return;
           renderActiveVCard(root,{...card,level:billboardLevel(card,view.row,view.chain)});
-          void loadMintedVCardImage(root,card,client,isCurrent,view.chain);
+
         }catch(error){console.error("[VHouse Billboard] VCard image",error);}
         await Promise.all([rowRead,marketRead]);
       }catch(error){
