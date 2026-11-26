@@ -130,3 +130,19 @@
   font-weight: 900;
   text-shadow: 0 .3cqw .6cqw #0008;
 }
+
+/* Existing Creator NFT effects on shared card objects. */
+.vhouse-vcard-host .vcard[data-effect="glow"]{box-shadow:inset 0 0 5cqw #00eaff,0 0 5cqw #00eaff,0 0 13cqw #00eaff88}
+.vhouse-vcard-host .vcard[data-effect="glow"] .vcard-inner{box-shadow:inset 0 0 5cqw #00eaffbb}
+.vhouse-vcard-host .vcard[data-effect="holo"] .card-art{position:relative}
+.vhouse-vcard-host .vcard[data-effect="holo"] .card-art:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(125deg,transparent 18%,#ff5bd02e 37%,#5df2ff45 51%,transparent 68%);mix-blend-mode:screen}
+.vhouse-vcard-host .vcard[data-effect="ember"] .card-art{box-shadow:inset 0 0 5cqw #ff7a21,0 0 4cqw #ff7a21}
+.vhouse-vcard-host .vcard[data-effect="ember"] .vcard-inner{background:radial-gradient(circle at 50% 5%,#602c17,#090d13 60%)}
+/* Static artwork overlays are part of the rendered VCard, including its PNG. */
+.vhouse-vcard-host .vcard .card-art{position:relative}
+.vhouse-vcard-host .vcard .card-art .card-effect-overlay{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.vhouse-vcard-host .vcard[data-effect="sparkle"] .card-effect-overlay{background:radial-gradient(circle at 18% 22%,#ffffffbb 0,transparent 9%),radial-gradient(circle at 84% 33%,#e8d0ff99 0,transparent 10%),radial-gradient(circle at 72% 80%,#fff1ae88 0,transparent 9%)}
+.vhouse-vcard-host .card-effect-overlay .effect-star{position:absolute;color:#fff5dd;line-height:1;text-shadow:0 0 1.5cqw #fff,0 0 3cqw #e8b8ff;transform:translate(-50%,-50%)}
+.vhouse-vcard-host .vcard[data-effect="gleam"] .card-effect-overlay{background:linear-gradient(122deg,transparent 15%,#ffefba16 30%,#fff4cc88 43%,#fffbe6bb 47%,#ffffff28 51%,transparent 65%),linear-gradient(0deg,#0000 76%,#fff6be44)}
+.vhouse-vcard-host .vcard[data-effect="frost"] .card-effect-overlay{background:radial-gradient(ellipse at center,transparent 48%,#c5f4ff44 73%,#e8faffbb 100%),linear-gradient(145deg,#d4f6ff99,transparent 25%,transparent 75%,#a3e5ff99)}
+.vhouse-vcard-host .vcard[data-effect="prism"] .card-effect-overlay{background:linear-gradient(135deg,#ff4e9b55 0%,#a05cff33 23%,#50eaff55 44%,#6bffb933 62%,#ffd96b55 82%,#ff799544 100%)}
