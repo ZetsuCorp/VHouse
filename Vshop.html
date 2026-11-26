@@ -490,9 +490,9 @@ async function buyShopAwt(item,auth){
     const wallet=connection?.publicKey?.toBase58?.()||phantom.publicKey?.toBase58?.();
     if(!wallet)throw Error("PHANTOM_WALLET_NOT_CONNECTED");
 
-    const {Connection,PublicKey,Transaction,TransactionInstruction}=
+    const {Connection,PublicKey,Transaction}=
       await import("https://esm.sh/@solana/web3.js@1.99.0?bundle");
-    const {getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction}=
+    const {getAssociatedTokenAddressSync,createTransferInstruction}=
       await import("https://esm.sh/@solana/spl-token@0.4.14?bundle&deps=@solana/web3.js@1.99.0");
 
     const quote=await request({action:"quote",walletAddress:wallet,paymentFlow:"browser"});
@@ -514,17 +514,18 @@ async function buyShopAwt(item,auth){
     const mint=new PublicKey(quote.mint);
     const treasury=new PublicKey(quote.treasury);
     const program=new PublicKey(quote.tokenProgram);
-    const source=getAssociatedTokenAddressSync(mint,owner,false,program);
-    const destination=getAssociatedTokenAddressSync(mint,treasury,false,program);
+    const senderTokenAccount=getAssociatedTokenAddressSync(mint,owner,false,program);
+    const recipientTokenAccount=getAssociatedTokenAddressSync(mint,treasury,false,program);
+    const amount=BigInt(quote.amountAtomic);
     const tx=new Transaction();
-    if(quote.createDestination){
-      tx.add(createAssociatedTokenAccountIdempotentInstruction(owner,destination,treasury,mint,program));
-    }
-    tx.add(createTransferCheckedInstruction(source,mint,destination,owner,BigInt(quote.amountAtomic),Number(quote.decimals),[],program));
-    tx.add(new TransactionInstruction({
-      programId:new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      keys:[],data:new TextEncoder().encode("VHOUSE:SHOP:"+quote.quoteId)
-    }));
+    tx.add(createTransferInstruction(
+      senderTokenAccount,
+      recipientTokenAccount,
+      owner,
+      amount,
+      [],
+      program
+    ));
     tx.feePayer=owner;
     tx.recentBlockhash=latest.blockhash;
     shopStatus="Approve "+shopPrice(item)+" in Phantom.";renderShop();
