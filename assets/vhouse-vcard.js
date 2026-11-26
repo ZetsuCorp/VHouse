@@ -16,13 +16,7 @@
     '<div class="meta-bottom"><div class="meta-footer-text"></div><div class="rarity"></div></div>',
     '</div></div>'
   ].join("");
-  function render(host, card) {
-    if (typeof host === "string") host = document.getElementById(host);
-    if (!host) return;
-    host.classList.add("vhouse-vcard-host");
-    if (!card) { host.replaceChildren(); return; }
-    if (!host.querySelector(":scope > .vcard")) host.innerHTML = template;
-    const root = host.querySelector(".vcard");
+  function paintNFT(root,card) {
     const team = colors[card.team] ? card.team : "R";
     root.style.setProperty("--accent", colors[team]);
     root.style.setProperty("--accent-glow", colors[team] + "55");
@@ -35,6 +29,35 @@
     } else image.removeAttribute("src");
     root.querySelector(".card-info").textContent = "LEVEL " + (card.level ?? 1);
     root.querySelector(".card-description").textContent = String(card.description ?? "").slice(0, 100);
+
+    const nextEffect=String(card.effect||"none").toLowerCase();
+    if(root.dataset.effect!==nextEffect){
+      root.dataset.effect=nextEffect;
+      const art=root.querySelector(".card-art");
+      art.querySelector(".card-effect-overlay")?.remove();
+      if(["sparkle","gleam","frost","prism"].includes(nextEffect)){
+        const overlay=document.createElement("div");
+        overlay.className="card-effect-overlay";overlay.setAttribute("aria-hidden","true");
+        if(nextEffect==="sparkle"){
+          for(const [x,y,size] of [[18,22,11],[84,33,9],[72,80,10],[31,68,5],[58,14,5],[90,65,4],[8,49,4],[49,88,4]]){
+            const star=document.createElement("span");star.className="effect-star";star.textContent="✦";
+            star.style.left=x+"%";star.style.top=y+"%";star.style.fontSize=size+"cqw";overlay.append(star);
+          }
+        }
+        art.append(overlay);
+      }
+    }
+    root.querySelector(".rarity").textContent=team;
+  }
+  function render(host, card) {
+    if (typeof host === "string") host = document.getElementById(host);
+    if (!host) return;
+    host.classList.add("vhouse-vcard-host");
+    if (!card) { window.VHouseNFTVisuals?.bind(host,null,()=>{});host.replaceChildren(); return; }
+    if (!host.querySelector(":scope > .vcard")) host.innerHTML = template;
+    const root = host.querySelector(".vcard");
+    if(window.VHouseNFTVisuals)window.VHouseNFTVisuals.bind(host,card,visual=>{if(host.querySelector(".vcard")===root)paintNFT(root,visual);});
+    else paintNFT(root,card);
     // Fit the entire number inside each ATK/DEF half, even for large
     // Scrap balances. cqw keeps the size proportional when the card scales.
     for (const field of ["atk", "def"]) {
@@ -60,7 +83,6 @@
       value.parentElement.style.minWidth = "0";
     }
     root.querySelector(".meta-footer-text").textContent = String(card.footer ?? defaultFooter);
-    root.querySelector(".rarity").textContent = team;
     return root;
   }
   window.VHouseVCard = {render, defaultFooter};
