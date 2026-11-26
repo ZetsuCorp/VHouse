@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { Connection, PublicKey, Transaction, TransactionInstruction } from "npm:@solana/web3.js@1.98.4";
-import { TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction } from "npm:@solana/spl-token@0.4.14";
+import { TOKEN_PROGRAM_ID,TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync,createAssociatedTokenAccountIdempotentInstruction,createTransferCheckedInstruction,unpackMint,unpackAccount } from "npm:@solana/spl-token@0.4.14";
 const MINT=new PublicKey("ETvGFek4eDeHP7iC7yceGpduTRypHpsUT6tybwMXpump");
 const TREASURY=new PublicKey("CT1fjjJMaNb2jgwH7rnuyiLcASmtmdRzSw7tQv8VXaRK");
 const MEMO=new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -49,12 +49,36 @@ async function priceUsd(symbol: string, awtMint?: string) {
 
 const encode=(b:Uint8Array)=>btoa(String.fromCharCode(...b));
 const decode=(s:string)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-const rpc=()=>new Connection(Deno.env.get("SOLANA_RPC_URL")||"https://solana-rpc.publicnode.com","confirmed");
-async function settle(db:any,chain:Connection,q:any,signature:string){
+// Follow the established VHouse RPC fallback order; exclude PublicNode from
+// indexed receipt/recovery requests, even if it is the configured endpoint.
+const rpcUrls=[...new Set([Deno.env.get("SOLANA_RPC_URL"),"https://api.mainnet-beta.solana.com","https://api.mainnet.solana.com","https://solana-rpc.publicnode.com"].filter(Boolean))] as string[];
+async function rpcRead<T>(read:(chain:Connection)=>Promise<T>,indexed=false):Promise<T>{
+ let failure:unknown;
+ for(const url of rpcUrls){
+  if(indexed&&url.toLowerCase().includes("publicnode"))continue;
+  try{return await read(new Connection(url,"confirmed"));}
+  catch(error){failure=error;console.warn("[shop-awt] RPC read failed:",error instanceof Error?error.name:"RPC error");}
+ }
+ throw Error(indexed?"SHOP_RECEIPT_RPC_UNAVAILABLE":"SOLANA_RPC_UNAVAILABLE");
+}
+async function readReceipt(signature:string){
+ let reachable=false;
+ for(const url of rpcUrls){
+  if(url.toLowerCase().includes("publicnode"))continue;
+  try{
+   const tx=await new Connection(url,"confirmed").getTransaction(signature,{commitment:"finalized",maxSupportedTransactionVersion:0});
+   reachable=true;
+   if(tx)return tx;
+  }catch(error){console.warn("[shop-awt] receipt lookup unavailable");}
+ }
+ if(!reachable)throw Error("SHOP_RECEIPT_RPC_UNAVAILABLE");
+ return null;
+}
+async function settle(db:any,q:any,signature:string){
  if(q.status==="PAID"){
   if(q.signature!==signature)throw Error("SHOP_PAYMENT_ALREADY_ASSIGNED");
  }else{
-  const tx=await chain.getTransaction(signature,{commitment:"finalized",maxSupportedTransactionVersion:0});
+  const tx=await readReceipt(signature);
   if(!tx)return null;
   if(!tx.meta||tx.meta.err!==null)throw Error("SHOP_PAYMENT_FAILED_ONCHAIN");
   const expected=Transaction.from(decode(q.transaction_base64)).serializeMessage();
@@ -65,17 +89,25 @@ async function settle(db:any,chain:Connection,q:any,signature:string){
  if(error)throw Error(error.message);
  return {...data,verified:true};
 }
-async function recover(db:any,chain:Connection,q:any){
+// Recovery is only necessary for an expired unsigned quote whose payment
+// signature was lost. Normal purchases always verify the Phantom signature.
+async function recover(db:any,q:any){
  const wallet=new PublicKey(q.wallet_address);
- const history=await chain.getSignaturesForAddress(wallet,{limit:100},"finalized");
- for(const row of history){
-  if(row.err)continue;
-  if(row.blockTime && row.blockTime*1000 < Date.parse(q.created_at)-120000)break;
-  if(!row.memo?.includes("VHOUSE:SHOP:"+q.id))continue;
-  const result=await settle(db,chain,q,row.signature);
-  if(result)return result;
+ const since=Date.parse(q.created_at)-120000;
+ let before:string|undefined;
+ for(let page=0;page<10;page++){
+  const history=await rpcRead(c=>c.getSignaturesForAddress(wallet,{limit:100,before},"finalized"),true);
+  for(const row of history){
+   if(row.blockTime && row.blockTime*1000<since)return null;
+   if(row.err||!row.memo?.includes("VHOUSE:SHOP:"+q.id))continue;
+   const result=await settle(db,q,row.signature);
+   if(result)return result;
+   throw Error("SHOP_RECEIPT_RPC_UNAVAILABLE");
+  }
+  if(history.length<100)return null;
+  before=history[history.length-1].signature;
  }
- return null;
+ throw Error("SHOP_RECEIPT_RPC_UNAVAILABLE");
 }
 function quoteResponse(q:any){
  return {quoteId:q.id,thing:q.thing,usdCents:q.usd_cents,amountAtomic:q.amount_atomic,decimals:q.token_decimals,transaction:q.transaction_base64,lastValidBlockHeight:q.last_valid_block_height,walletAddress:q.wallet_address};
@@ -93,13 +125,12 @@ Deno.serve(async(req)=>{
   const body=await req.json();
   const thing=String(body?.thing||"");
   if(!Object.hasOwn(PRICES,thing))return reply({error:"ITEM_NOT_FOR_SALE"},400);
-  const chain=rpc();
   if(body.action==="verify"){
    const sig=String(body.signature||"");
    if(!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(sig))return reply({error:"SHOP_INVALID_SIGNATURE"},400);
    const {data:q,error}=await db.from("vhouse_shop_awt_payments").select("*").eq("id",body.quoteId).eq("player_id",player).eq("thing",thing).maybeSingle();
    if(error||!q)return reply({error:"SHOP_QUOTE_NOT_FOUND"},404);
-   const result=await settle(db,chain,q,sig);
+   const result=await settle(db,q,sig);
    return reply(result||{verified:false,status:"PENDING"});
   }
   if(body.action!=="quote")return reply({error:"INVALID_ACTION"},400);
@@ -109,28 +140,29 @@ Deno.serve(async(req)=>{
   const {data:existing,error:ee}=await db.from("vhouse_shop_awt_payments").select("*").eq("player_id",player).eq("thing",thing).eq("status","QUOTED").maybeSingle();
   if(ee)throw Error("SHOP_QUOTE_LOOKUP_FAILED");
   if(existing){
-   const recovered=await recover(db,chain,existing);
+   if(await rpcRead(c=>c.getBlockHeight("finalized"))<=Number(existing.last_valid_block_height))return reply(quoteResponse(existing));
+   const recovered=await recover(db,existing);
    if(recovered)return reply(recovered);
-   if(await chain.getBlockHeight("finalized")<=Number(existing.last_valid_block_height))return reply(quoteResponse(existing));
    const {error:expired}=await db.from("vhouse_shop_awt_payments").update({status:"EXPIRED"}).eq("id",existing.id).eq("status","QUOTED");
    if(expired)throw Error("SHOP_QUOTE_EXPIRY_FAILED");
   }
   const owner=new PublicKey(account.wallet_address);
-  const mintInfo=await chain.getParsedAccountInfo(MINT,"confirmed");
-  const program=mintInfo.value?.owner;
-  const parsed=(mintInfo.value?.data as any)?.parsed?.info;
+  const mintInfo=await rpcRead(c=>c.getAccountInfo(MINT,"confirmed"));
+  const program=mintInfo?.owner;
   if(!program||(!program.equals(TOKEN_PROGRAM_ID)&&!program.equals(TOKEN_2022_PROGRAM_ID)))throw Error("AWT_MINT_UNAVAILABLE");
-  const decimals=parsed?.decimals;
+  const decimals=unpackMint(MINT,mintInfo,program).decimals;
   if(!Number.isInteger(decimals)||decimals<0||decimals>18)throw Error("AWT_DECIMALS_UNAVAILABLE");
   const amount=unitsForUsdCents(BigInt(PRICES[thing]),await priceUsd("AWT",MINT.toBase58()),decimals);
   if(amount<=0n||amount>18446744073709551615n)throw Error("SHOP_AMOUNT_INVALID");
   const source=getAssociatedTokenAddressSync(MINT,owner,false,program);
   const destination=getAssociatedTokenAddressSync(MINT,TREASURY,false,program);
-  const balance=await chain.getTokenAccountBalance(source,"confirmed");
-  if(BigInt(balance.value.amount)<amount)throw Error("INSUFFICIENT_AWT");
-  const latest=await chain.getLatestBlockhash("finalized"),id=crypto.randomUUID();
+  const sourceInfo=await rpcRead(c=>c.getAccountInfo(source,"confirmed"));
+  if(!sourceInfo)throw Error("INSUFFICIENT_AWT");
+  const balance=unpackAccount(source,sourceInfo,program);
+  if(!balance.owner.equals(owner)||!balance.mint.equals(MINT)||balance.amount<amount)throw Error("INSUFFICIENT_AWT");
+  const latest=await rpcRead(c=>c.getLatestBlockhash("finalized")),id=crypto.randomUUID();
   const tx=new Transaction({feePayer:owner,recentBlockhash:latest.blockhash});
-  if(!await chain.getAccountInfo(destination,"confirmed"))tx.add(createAssociatedTokenAccountIdempotentInstruction(owner,destination,TREASURY,MINT,program));
+  if(!await rpcRead(c=>c.getAccountInfo(destination,"confirmed")))tx.add(createAssociatedTokenAccountIdempotentInstruction(owner,destination,TREASURY,MINT,program));
   tx.add(createTransferCheckedInstruction(source,MINT,destination,owner,amount,decimals,[],program));
   tx.add(new TransactionInstruction({programId:MEMO,keys:[],data:new TextEncoder().encode("VHOUSE:SHOP:"+id)}));
   const {data:q,error}=await db.rpc("vhouse_shop_awt_reserve",{p_id:id,p_player:player,p_thing:thing,p_wallet:owner.toBase58(),p_cents:PRICES[thing],p_amount:amount.toString(),p_decimals:decimals,p_tx:encode(tx.serialize({requireAllSignatures:false,verifySignatures:false})),p_height:latest.lastValidBlockHeight});
