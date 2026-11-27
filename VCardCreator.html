@@ -1589,10 +1589,18 @@ function cardData() {
 }
 
 function renderUpgradeStats(root) {
-  if (!upgrading || !job || !root) return;
-  const card = window.VHouseCardStore.getActive();
-  const mint = job.mint?.publicKey?.toBase58();
-  const current = card && mint && card.mint_address === mint ? card : null;
+  if (!root) return;
+  let current;
+  if (loadedSource && !minted && !upgrading) {
+    // LOAD previews use the player's existing game stat snapshots, not NFT metadata.
+    const scrap = window.VHouseScrapStats?.apply({atk:"—",def:"—"}) || {atk:"—",def:"—"};
+    current = window.VHouseAmalieStats?.apply(scrap) || scrap;
+  } else {
+    if (!upgrading || !job) return;
+    const card = window.VHouseCardStore.getActive();
+    const mint = job.mint?.publicKey?.toBase58();
+    current = card && mint && card.mint_address === mint ? card : null;
+  }
   for (const field of ["atk","def"]) {
     const node = root.querySelector('[data-stat="'+field+'"]');
     const bonusNode = root.querySelector('[data-bonus="'+field+'"]');
@@ -1704,9 +1712,9 @@ function refresh() {
   if (!busy && (!job || minted)) renderCard($("vcardHost"),cardData());
 }
 
-// Keep the Upgrade preview in sync with the same VHouse stats as the other cards.
+// Keep LOAD and UPGRADE previews in sync with the existing VHouse stat services.
 window.VHouseCardStore.subscribe(()=>{
-  if(upgrading && !busy)renderUpgradeStats($("vcardHost").querySelector(".vcard"));
+  if((upgrading || (loadedSource && !minted)) && !busy)renderUpgradeStats($("vcardHost").querySelector(".vcard"));
 });
 
 /* Position/crop image: drag by mouse or touch and crop only on CONFIRM. */
@@ -3870,6 +3878,10 @@ $("loadMintButton").onclick = async () => {
     );
     // Only TEAM is editable during LOAD. The original MINT and Closet registration
     // take over once the player submits this converted VCard.
+    await Promise.allSettled([
+      window.VHouseScrapStats.refresh(),
+      window.VHouseAmalieStats.refresh()
+    ]);
     renderCard($("vcardHost"),cardData());
     showScreen("workspace");
     message("NFT ownership verified. Choose a TEAM, then MINT the VCard to register it in your Closet.");
