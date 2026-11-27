@@ -604,6 +604,10 @@ button:disabled{opacity:.5;cursor:default}
   #creationUnit .creator-purchase-control > :is(#applyButton,#burnSubmitButton){animation:none!important;transition:none!important;transform:none!important}
 }
 
+
+/* Gold purchase controls: black monetary text; white during the dark energized state. */
+#creationUnit :is(#chooseMintButton,#mintIntroContinueButton,#mintButton,#applyButton,#burnSubmitButton) :is(.tag-fee,.money-fee){color:#000!important}
+#creationUnit .creator-mint-energized :is(#chooseMintButton,#mintIntroContinueButton,#mintButton,#applyButton,#burnSubmitButton) :is(.tag-fee,.money-fee){color:#fff!important}
 </style>
 
 <script type="importmap">
