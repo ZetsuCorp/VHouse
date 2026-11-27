@@ -351,6 +351,95 @@ button:disabled{opacity:.5;cursor:default}
 }
 .map-container #workspaceBackButton[hidden]{display:none}
 
+
+/* Approved compact creation editor. The shared stage and preview are unchanged. */
+.creator-forge-back,.creator-forge-arrow,.creator-forge-dots,.creator-mint-energy{display:none}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])){position:relative;isolation:isolate;container-type:inline-size;aspect-ratio:819/767;display:grid;grid-template-rows:minmax(0,6fr) minmax(0,14fr) minmax(0,11fr) minmax(0,39fr) minmax(0,20fr) minmax(0,10fr);gap:8px;padding:14px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#20364b,#0c1623 75%);border-color:#526474;--forge-energy:#d7dbff}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])):has(.team-button[data-team="P"].active){--forge-energy:#45dfff}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])):has(.team-button[data-team="S"].active){--forge-energy:#ffbf55}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-back{display:block;position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:-1}
+.creator-forge-seal{position:absolute;width:79%;aspect-ratio:1;left:10.5%;top:6%;border:1px solid var(--forge-energy);border-radius:50%;opacity:.15;box-shadow:0 0 40px var(--forge-energy);animation:creatorForgeSpin 30s linear infinite}
+.creator-forge-seal:before{content:"";position:absolute;inset:5%;border:2px dashed var(--forge-energy);border-radius:50%}
+.creator-forge-seal:after,.creator-forge-seal i{content:"";position:absolute;inset:16%;border:1px solid var(--forge-energy);transform:rotate(45deg)}
+.creator-forge-seal i{transform:rotate(15deg)}
+.creator-forge-spark{position:absolute;background:var(--forge-energy);width:5px;height:8px;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);animation:creatorForgeSpark 3s ease-in-out infinite}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .editor-head{align-items:center;padding:0 14px;border-bottom:1px solid #887450;color:#eac58d;font:bold 19px Georgia,serif;letter-spacing:2px}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .editor-head small{font:bold 12px Arial;color:#9fc9da;letter-spacing:1px}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .group{min-height:0;display:flex;flex-direction:column;gap:6px;padding:4px 14px;border:0}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .group-label{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin:0;font-size:12px;font-weight:900;letter-spacing:1.2px;color:#d4e4ed}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .group-label b{color:var(--forge-energy);font-size:14px;margin:0 8px 0 0}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .group-label:after{content:"";height:1px;background:linear-gradient(90deg,#88745088,transparent);flex:1}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-grid{flex:1;min-height:0;gap:11px}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button{position:relative;isolation:isolate;overflow:visible;display:flex;align-items:center;justify-content:center;gap:12px;min-height:0;padding:0 4px;background:linear-gradient(145deg,#23384b,#111b29);border:1px solid #526474;border-radius:5px;color:#c7dce7;font-size:13px;transition:transform .15s,box-shadow .15s}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button[data-team="R"]{--element:#d7dbff;--element-glow:#a6a8ff33}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button[data-team="P"]{--element:#45dfff;--element-glow:#45dfff33}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button[data-team="S"]{--element:#ffbf55;--element-glow:#ffbf5533}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button .symbol{font-size:29px;line-height:1;margin:0;filter:drop-shadow(0 0 6px var(--element))}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button.active{border-color:var(--element);background:radial-gradient(ellipse at 40% 50%,var(--element-glow),#101b29 80%);color:white;box-shadow:0 0 14px var(--element-glow),inset 0 0 20px var(--element-glow)}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button.active:after{content:"";position:absolute;bottom:0;left:20%;width:60%;height:2px;background:var(--element);box-shadow:0 0 10px var(--element)}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .team-button.creator-element-fire{animation:creatorElementPress .45s ease-out}
+.creator-element-fx{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:visible}
+.creator-element-wave{position:absolute;left:50%;top:50%;width:80%;height:80%;border-radius:50%;border:2px solid var(--element);box-shadow:0 0 10px var(--element),inset 0 0 8px var(--element);animation:creatorElementWave .75s ease-out both}
+.creator-element-wave:nth-child(2){animation-delay:.12s}
+.creator-element-wind{position:absolute;left:50%;top:50%;width:100%;height:45%;border-radius:50%;border-top:3px solid #e5ffff;border-right:2px solid #45dfff80;filter:drop-shadow(0 0 5px #45dfff);animation:creatorElementWind .7s ease-out both}
+.creator-element-wind:nth-child(2){animation-delay:.09s}
+.creator-element-wind:nth-child(3){animation-delay:.18s}
+.creator-element-particle{position:absolute;left:50%;top:50%;width:var(--size);height:var(--size);background:var(--element);box-shadow:0 0 8px var(--element);animation:creatorElementParticle .8s ease-out both}
+.creator-element-crystal{clip-path:polygon(50% 0,95% 35%,75% 90%,20% 100%,0 40%)}
+.creator-element-light{border-radius:50%;background:white}
+.creator-element-slash{position:absolute;left:8%;top:18%;width:84%;height:65%;border-top:4px solid #fff8d8;border-radius:50%;box-shadow:0 -4px 10px #ffbd4d;transform:rotate(-18deg);animation:creatorElementSlash .55s ease-out both}
+.creator-element-slash:nth-child(2){transform:rotate(18deg);animation-delay:.1s}
+.creator-element-flash{position:absolute;inset:0;border-radius:6px;background:radial-gradient(ellipse,#ffffffaa,var(--element-glow),transparent 75%);animation:creatorElementFlash .45s ease-out both}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .name-input{flex:1;min-height:0;background:#09131ed9;border:1px solid #526474;border-left:3px solid var(--forge-energy);padding:0 12px;font:bold 17px Georgia,serif}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .gallery{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:45px minmax(0,1fr) 45px;gap:8px;align-items:stretch}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .gallery .art-button{display:none;position:relative;grid-column:2;grid-row:1;min-height:0;min-width:0;overflow:hidden;padding:0;border:1px solid #887450;border-radius:6px;background:#09131e;font-size:12px}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .gallery .art-button.creator-forge-viewing{display:block}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .gallery .art-button.selected{border-color:#eac58d;box-shadow:0 0 9px #eac58d44}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .art-button img{width:100%;height:100%;aspect-ratio:auto;object-fit:contain;margin:0;border-radius:0}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .art-button .creator-art-name{position:absolute;bottom:8px;left:8px;padding:5px 12px;background:#09131eea;border:1px solid #887450;color:#eac58d;letter-spacing:1.5px;font-weight:900}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-arrow{display:block;grid-row:1;align-self:center;height:49px;min-width:0;padding:0;background:linear-gradient(145deg,#23384b,#111b29);border:1px solid #887450;border-radius:5px;color:#eac58d;font-size:31px;font-weight:900}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-prev{grid-column:1}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-next{grid-column:3}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-arrow:hover:not(:disabled){border-color:var(--forge-energy);box-shadow:0 0 10px var(--forge-energy)}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-dots{display:flex;position:absolute;bottom:12px;right:65px;gap:7px;z-index:2}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-dot{width:9px;height:9px;padding:0;border-radius:50%;border:1px solid #887450;background:#23384b}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-forge-dot.active{background:var(--forge-energy);box-shadow:0 0 7px var(--forge-energy)}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .image-tools{flex:0 0 auto;gap:8px;margin:0}
+#creationUnit #workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .image-tools .upload,#creationUnit #workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .image-tools .crop-launch{height:38px;padding:0 4px;font-size:12px;background:linear-gradient(145deg,#23384b,#111b29);border-width:1px;border-color:#526474;border-radius:5px}
+#creationUnit #workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .image-tools .crop-launch{border-color:#887450;color:#eac58d}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .mode-row{flex:0 0 auto;gap:8px;margin:0}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .mode-button{height:38px;padding:0 4px;font-size:12px;background:linear-gradient(145deg,#23384b,#111b29);border:1px solid #526474;border-radius:5px}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .mode-button.active{border-color:var(--forge-energy);background:#193649;color:white}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .default-preview,#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .description-input{flex:1;min-height:0;height:auto;background:#09131edc;border:1px solid #355066;border-left:3px solid var(--forge-energy);border-radius:5px;padding:8px 12px;color:#c7dce7;font:13px/1.3 Georgia,serif}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .default-preview{display:flex;align-items:center}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .description-input{resize:none;font-family:Arial,sans-serif}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) #editorActions{position:relative;isolation:isolate;padding:0;margin:2px 14px 9px;min-height:0}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) #mintButton{position:relative;z-index:1;width:100%;height:100%;min-height:0;padding:0 5px;font-size:18px;letter-spacing:1px;color:#281e28;border:1px solid #ffe6b5;border-radius:6px;background:linear-gradient(#ffe9b2 0%,#e6bf80 48%,#c89b5b 49%,#b6894e 100%);box-shadow:0 3px 0 #80633f,0 4px 0 #f5d49b,0 6px 9px #0008,inset 0 2px 1px #fff9;transition:transform .12s,box-shadow .12s}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) #mintButton:before{content:"";position:absolute;inset:4px;border:1px solid #8b673c;border-radius:3px;pointer-events:none}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) #mintButton:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 0 #80633f,0 6px 0 #f5d49b,0 0 16px #eac58d88}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) #mintButton:active:not(:disabled){transform:translateY(2px)}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) #editorActions.creator-mint-energized #mintButton{opacity:1;color:white;background:linear-gradient(135deg,#60447d,#211b30 55%,#49384f);border-color:white;box-shadow:0 2px 0 #887450,0 0 10px white,0 0 18px #b46aff88,inset 0 0 12px #45dfff55;text-shadow:0 0 5px white;animation:creatorMintKick .35s ease-out}
+#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-mint-energy{display:block;position:absolute;inset:0;z-index:2;pointer-events:none;overflow:visible;border-radius:7px}
+.creator-mint-edge{position:absolute;inset:-2px;border-radius:8px;padding:2px;overflow:hidden;opacity:0;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude}
+.creator-mint-edge:before{content:"";position:absolute;inset:-500%;background:conic-gradient(#45dfff,#39ff88,#fff,#ffb52e,#ff446f,#ff54d5,#b46aff,#45dfff)}
+.creator-mint-energized .creator-mint-edge{opacity:1}
+.creator-mint-energized .creator-mint-edge:before{animation:creatorForgeSpin 1s linear infinite}
+.creator-mint-zaps{position:absolute;inset:-22px -6px;width:calc(100% + 12px);height:calc(100% + 44px);overflow:visible;opacity:0}
+.creator-mint-zaps path{fill:none;stroke-width:.65;vector-effect:non-scaling-stroke;stroke-dasharray:180;filter:drop-shadow(0 0 3px currentColor)}
+.creator-mint-energized .creator-mint-zaps{opacity:1}
+.creator-mint-energized .creator-mint-zaps path{animation:creatorMintZap .7s ease-out both}
+@keyframes creatorForgeSpin{to{transform:rotate(360deg)}}
+@keyframes creatorForgeSpark{0%,100%{opacity:.08;transform:translateY(-6px) scale(.5)}50%{opacity:.8;transform:translateY(6px) scale(1)}}
+@keyframes creatorElementWave{from{transform:translate(-50%,-50%) scale(.35);opacity:.9}to{transform:translate(-50%,-50%) scale(1.65);opacity:0}}
+@keyframes creatorElementWind{0%{transform:translate(-85%,-50%) rotate(-12deg) scale(.5);opacity:0}20%{opacity:1}100%{transform:translate(-15%,-50%) rotate(12deg) scale(1.35);opacity:0}}
+@keyframes creatorElementParticle{0%{transform:translate(-50%,-50%) scale(.5);opacity:1}35%{opacity:1}100%{transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(.1);opacity:0}}
+@keyframes creatorElementSlash{0%{clip-path:inset(0 100% 0 0);opacity:0}30%{clip-path:inset(0 0 0 0);opacity:1}100%{clip-path:inset(0 0 0 100%);opacity:0}}
+@keyframes creatorElementFlash{from{opacity:1}to{opacity:0}}
+@keyframes creatorElementPress{0%{transform:scale(.96)}35%{transform:scale(1.035)}100%{transform:scale(1)}}
+@keyframes creatorMintKick{35%{transform:translateY(-4px);box-shadow:0 0 16px white,0 0 25px #45dfff}100%{transform:translateY(2px)}}
+@keyframes creatorMintZap{0%{stroke-dashoffset:180;opacity:1}20%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@media(prefers-reduced-motion:reduce){#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) *{animation:none!important;transition:none!important}#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-element-fx,#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden])) .creator-mint-energy{display:none}}
+
 </style>
 
 <script type="importmap">
@@ -514,6 +603,7 @@ button:disabled{opacity:.5;cursor:default}
 
   <div class="workspace" id="workspace" hidden>
     <section class="editor" id="editor">
+      <div class="creator-forge-back" aria-hidden="true"><div class="creator-forge-seal"><i></i></div></div>
       <div class="editor-head">
         <span id="editorTitle">VCARD CREATION</span>
         <small id="editorLevel">LEVEL 01</small>
@@ -525,7 +615,7 @@ button:disabled{opacity:.5;cursor:default}
         </div>
         <div class="team-grid">
           <button class="team-button active" data-team="R">
-            <span class="symbol">🪨</span>STONE
+            <span class="symbol">☄️</span>STONE
           </button>
           <button class="team-button" data-team="P">
             <span class="symbol">🌬️</span>WIND
@@ -549,15 +639,18 @@ button:disabled{opacity:.5;cursor:default}
           <span class="image-choice-label"><b>03</b> CHOOSE YOUR IMAGE</span><span class="customize-image-label">POSITION YOUR IMAGE</span>
         </div>
         <div class="gallery">
-          <button class="art-button selected" data-art="0">
-            <img id="thumb0" alt="Traveler">TRAVELER
+          <button type="button" class="creator-forge-arrow creator-forge-prev" aria-label="Previous starter image">‹</button>
+          <button class="art-button selected creator-forge-viewing" data-art="0">
+            <img id="thumb0" alt="Traveler"><span class="creator-art-name">TRAVELER</span>
           </button>
           <button class="art-button" data-art="1">
-            <img id="thumb1" alt="Guardian">GUARDIAN
+            <img id="thumb1" alt="Guardian"><span class="creator-art-name">GUARDIAN</span>
           </button>
           <button class="art-button" data-art="2">
-            <img id="thumb2" alt="Rebel">REBEL
+            <img id="thumb2" alt="Rebel"><span class="creator-art-name">REBEL</span>
           </button>
+          <button type="button" class="creator-forge-arrow creator-forge-next" aria-label="Next starter image">›</button>
+          <div class="creator-forge-dots" aria-label="Browse starter images"></div>
         </div>
         <div class="image-tools">
           <label class="upload">
@@ -594,6 +687,10 @@ button:disabled{opacity:.5;cursor:default}
         <button class="action" id="mintButton">
           MINT · <span class="tag-fee">0.001 SOL</span>
         </button>
+        <div class="creator-mint-energy" aria-hidden="true">
+          <div class="creator-mint-edge"></div>
+          <svg class="creator-mint-zaps" viewBox="0 0 300 180" preserveAspectRatio="none"><path d="M260.0 90.0 L276.0 85.0 L281.0 93.0 L300.0 90.0" stroke="#45dfff" style="color:#45dfff"/><path d="M255.5 99.6 L271.1 98.0 L275.6 109.3 L293.9 110.8" stroke="#ff54d5" style="color:#ff54d5"/><path d="M242.5 108.4 L256.6 109.9 L259.7 124.4 L276.2 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M222.0 115.7 L233.9 119.8 L234.8 136.8 L248.2 145.9" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 120.9 L204.7 126.8 L202.7 145.8 L212.3 157.3" stroke="#b46aff" style="color:#b46aff"/><path d="M165.7 123.7 L171.4 130.5 L166.1 150.4 L171.3 163.2" stroke="#ff446f" style="color:#ff446f"/><path d="M134.3 123.7 L136.6 130.5 L127.9 150.4 L128.7 163.2" stroke="#ffffff" style="color:#ffffff"/><path d="M104.3 120.9 L103.3 126.8 L91.3 145.8 L87.7 157.3" stroke="#45dfff" style="color:#45dfff"/><path d="M78.0 115.7 L74.1 119.8 L59.2 136.8 L51.8 145.9" stroke="#ff54d5" style="color:#ff54d5"/><path d="M57.5 108.4 L51.4 109.9 L34.3 124.4 L23.8 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M44.5 99.6 L36.9 98.0 L18.4 109.3 L6.1 110.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M40.0 90.0 L32.0 85.0 L13.0 93.0 L0.0 90.0" stroke="#b46aff" style="color:#b46aff"/><path d="M44.5 80.4 L36.9 72.0 L18.4 76.7 L6.1 69.2" stroke="#ff446f" style="color:#ff446f"/><path d="M57.5 71.6 L51.4 60.1 L34.3 61.6 L23.8 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M78.0 64.3 L74.1 50.2 L59.2 49.2 L51.8 34.1" stroke="#45dfff" style="color:#45dfff"/><path d="M104.3 59.1 L103.3 43.2 L91.3 40.2 L87.7 22.7" stroke="#ff54d5" style="color:#ff54d5"/><path d="M134.3 56.3 L136.6 39.5 L127.9 35.6 L128.7 16.8" stroke="#39ff88" style="color:#39ff88"/><path d="M165.7 56.3 L171.4 39.5 L166.1 35.6 L171.3 16.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 59.1 L204.7 43.2 L202.7 40.2 L212.3 22.7" stroke="#b46aff" style="color:#b46aff"/><path d="M222.0 64.3 L233.9 50.2 L234.8 49.2 L248.2 34.1" stroke="#ff446f" style="color:#ff446f"/><path d="M242.5 71.6 L256.6 60.1 L259.7 61.6 L276.2 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M255.5 80.4 L271.1 72.0 L275.6 76.7 L293.9 69.2" stroke="#45dfff" style="color:#45dfff"/></svg>
+        </div>
       </div>
 
     </section>
@@ -1181,79 +1278,61 @@ cardFlip.addEventListener("keydown",event => {
 /* Artwork */
 
 function portrait(p,index) {
-  const helmets = [
-    '<path d="M210 245 Q175 85 320 91 Q465 85 430 245 L405 190 Q320 120 235 190Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/>',
-    '<path d="M205 250 L205 130 L265 73 L375 73 L435 130 L435 250 L400 205 L390 135 L250 135 L240 205 L430 245 L405 190 Q320 120 235 190Z" fill="#101e2a" stroke="ARMOR" stroke-width="10"/>',
-    '<path d="M205 245 L185 170 L240 175 L230 108 L285 145 L330 88 L350 142 L425 115 L405 196 L445 235Z" fill="#211c29" stroke="LIGHT" stroke-width="7"/>'
+  const color=["#45dfff","#b49aff","#ff9068"][index],dark=["#163b57","#392453","#632b37"][index];
+  const backgrounds=[
+    '<path d="M0 140L45 61L91 138L126 91L176 139L228 59L300 145V225H0Z" fill="#123048"/><path d="M0 170L60 110L97 164L190 132L240 160L300 115V225H0Z" fill="#0a1a2b"/><path d="M38 78L45 61L58 86L45 78Z M215 80L228 59L244 86L228 76Z" fill="#b7d9e5" opacity=".65"/>',
+    '<path d="M12 225V25L30 15L48 25V225 M252 225V25L270 15L288 25V225" fill="#251c42" stroke="#8c7cba"/><path d="M62 146V76Q150 -28 238 76V146" fill="none" stroke="#8c7cba" stroke-width="3"/>',
+    '<path d="M0 210V89L34 65V122L55 104V160L81 133V225 M300 225V78L260 43V126L233 99V165L210 137V225" fill="#341d31" stroke="#a54e50"/><path d="M0 190Q66 160 39 100Q95 164 113 210 M300 190Q230 160 263 100Q205 164 187 210" fill="#ff6633" opacity=".28"/>'
   ];
-
-  let svg = `
-  <svg xmlns="http://www.w3.org/2000/svg"
-       width="640" height="480" viewBox="0 0 640 480">
-    <defs>
-      <radialGradient id="sky">
-        <stop stop-color="LIGHT" stop-opacity=".5"/>
-        <stop offset="1" stop-color="BG"/>
-      </radialGradient>
-    </defs>
-
-    <rect width="640" height="480" fill="url(#sky)"/>
-    <circle cx="320" cy="205" r="158"
-            fill="none" stroke="LIGHT"
-            stroke-width="5" opacity=".5"/>
-
-    <path d="M0 345 L110 250 L180 305
-             L260 230 L350 315 L440 255
-             L530 315 L640 260 V480 H0Z"
-          fill="#0b1524"/>
-
-    <path d="M115 480 L145 380 Q165 320
-             260 305 H380 Q475 320 495 380
-             L525 480Z"
-          fill="ARMOR" stroke="#0a111b"
-          stroke-width="12"/>
-
-    <path d="M285 280 H355 L360 353
-             L320 389 L280 353Z"
-          fill="FACE"/>
-
-    <ellipse cx="320" cy="225"
-             rx="89" ry="120"
-             fill="FACE"
-             stroke="#16202b"
-             stroke-width="9"/>
-
-    ${helmets[index]}
-
-    <path d="M258 232 H300 M340 232 H382"
-          stroke="#17202a"
-          stroke-width="15"
-          stroke-linecap="round"/>
-
-    <path d="M265 232 H295 M345 232 H375"
-          stroke="LIGHT" stroke-width="5"/>
-
-    <path d="M290 295 Q320 313 350 295"
-          fill="none" stroke="#50343b"
-          stroke-width="6"/>
-
-    <path d="M320 400 L340 430
-             L320 462 L300 430Z"
-          fill="LIGHT"/>
-  </svg>`;
-
-  svg = svg.replace(
-    /\b(BG|LIGHT|ARMOR|FACE)\b/g,
-    key => ({
-      BG:p.bg,
-      LIGHT:p.light,
-      ARMOR:p.armor,
-      FACE:p.face
-    })[key]
-  );
-
-  return "data:image/svg+xml;charset=utf-8," +
-    encodeURIComponent(svg);
+  const bodies=[
+    `<path d="M98 112Q55 130 36 225H264Q240 130 202 112Z" fill="#122131"/>
+    <path d="M102 112L75 133L61 180L109 225H191L239 180L225 133L198 112" fill="url(#armor)" stroke="#6ca6c6" stroke-width="1.5"/>
+    <path d="M97 124L150 151L203 124L190 167L150 184L110 167Z" fill="#d0be8f" stroke="#594e3f" stroke-width="2"/>
+    <path d="M86 153L115 174L101 225H63Z M214 153L185 174L199 225H237Z" fill="#193951" stroke="#77abc0"/>
+    <path d="M97 126Q48 149 30 186L66 174L80 199L119 146Z M203 126L251 151L280 169L240 177L227 203L185 146Z" fill="#285e7b" stroke="#69b4d3"/>
+    <path d="M117 115L122 96H178L183 115L150 141Z" fill="#b78160"/>
+    <path d="M108 116Q78 71 105 30Q150 -3 195 30Q222 71 192 116L176 96L189 57L150 30L111 57L124 96Z" fill="#0a1b2c" stroke="#4a7998" stroke-width="3"/>
+    <path d="M117 48Q150 30 183 48L185 82Q177 108 150 118Q123 108 115 82Z" fill="url(#skin)" stroke="#684938"/>
+    <path d="M112 63L105 36L136 25L150 16L173 26L193 38L185 65L170 43L147 51L130 41Z" fill="#183347" stroke="#52809b" stroke-width="2"/>
+    <path d="M124 75L140 72 M160 72L176 75" stroke="#342f34" stroke-width="3"/><path d="M126 79H139 M161 79H174" stroke="#9df9ff" stroke-width="2"/>
+    <path d="M150 78L146 92L153 94 M140 102Q150 106 160 101" stroke="#8c5644" fill="none" stroke-width="1.4"/>
+    <path d="M114 110L150 130L186 110L195 128L150 151L105 128Z" fill="#39758f" stroke="#78b4ce"/>
+    <path d="M150 157L161 170L150 183L139 170Z" fill="#a2f5ff" stroke="#45dfff" stroke-width="2"/>`,
+    `<path d="M95 105L49 130L14 225H286L251 130L205 105Z" fill="#18172d" stroke="#7264a3"/>
+    <path d="M96 120L48 113L25 145L76 173L107 147Z M204 120L252 113L275 145L224 173L193 147Z" fill="url(#armor)" stroke="#d8c6ff" stroke-width="2"/>
+    <path d="M48 113L66 92L104 120L76 151L25 145Z M252 113L234 92L196 120L224 151L275 145Z" fill="#8580a6" stroke="#d8c6ff"/>
+    <path d="M104 128L150 145L196 128L221 225H79Z" fill="url(#armor)" stroke="#a59cc6" stroke-width="2"/>
+    <path d="M98 167L150 199L202 167L191 225H109Z" fill="#25213e" stroke="#b49aff"/>
+    <path d="M115 110L105 53L123 18L150 8L177 18L195 53L185 110L150 137Z" fill="url(#armor)" stroke="#dad1ef" stroke-width="2.5"/>
+    <path d="M150 10L160 52L150 65L140 52Z" fill="#e3d4f8"/>
+    <path d="M110 56L127 45L150 64L173 45L190 56L184 83L150 98L116 83Z" fill="#17162c" stroke="#8171ae" stroke-width="2"/>
+    <path d="M119 68L141 74 M159 74L181 68" stroke="#c9a6ff" stroke-width="3" filter="url(#glow)"/>
+    <path d="M118 88L150 102L182 88L178 117L150 137L122 117Z" fill="#aaa0c3" stroke="#ded1f7"/>
+    <path d="M135 106V121 M145 109V127 M155 109V127 M165 106V121" stroke="#4b436b" stroke-width="2"/>
+    <path d="M150 150L170 172L150 193L130 172Z" fill="#34224f" stroke="#e1c5ff" stroke-width="2"/>
+    <path d="M150 156L163 172L150 187L137 172Z" fill="#bd89ff" filter="url(#glow)"/>
+    <path d="M30 145L65 157M235 157L270 145M107 147L150 163L193 147" stroke="#f1e8ff" opacity=".7"/>`,
+    `<path d="M100 116Q65 120 26 225H274Q235 120 200 116Z" fill="#221b2a" stroke="#b55a50"/>
+    <path d="M105 125L65 137L48 184L78 225H222L252 184L235 137L195 125L150 161Z" fill="url(#armor)" stroke="#f69c79" stroke-width="1.5"/>
+    <path d="M99 115L65 137L95 179L113 160L129 225L89 225L73 172Z M201 115L235 137L205 179L187 160L171 225L211 225L227 172Z" fill="#402734" stroke="#b96755"/>
+    <path d="M120 117L125 95H175L180 117L150 145Z" fill="#a66a4f"/>
+    <path d="M113 48Q150 27 187 48L185 88Q174 116 150 121Q126 116 115 88Z" fill="url(#skin)" stroke="#8b5246"/>
+    <path d="M111 77L92 42L112 45L102 17L132 33L146 5L162 29L190 8L181 33L212 30L192 53L201 76L183 61L174 43L152 57L137 38L122 58Z" fill="#321e2d" stroke="#f19a79" stroke-width="1.7"/>
+    <path d="M117 40L146 5L137 38L152 57L162 29L174 43" fill="none" stroke="#cc796a" stroke-width="2"/>
+    <path d="M123 72H140 M160 72H177" stroke="#49232e" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M124 79H139 M161 79H176" stroke="#ffd298" stroke-width="2.7" stroke-linecap="round" filter="url(#glow)"/>
+    <path d="M150 77L146 93L153 95" stroke="#8f4b40" fill="none" stroke-width="1.5"/>
+    <path d="M139 103H161" stroke="#633d39" fill="none" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M175 84L165 101" stroke="#d4a083" stroke-width="2"/>
+    <path d="M100 116L118 103L150 119L182 103L200 116L181 142L150 156L119 142Z" fill="#bd524f" stroke="#ff9679" stroke-width="1.5"/>
+    <path d="M183 117L260 103L290 117L248 138L202 132Z" fill="#af413e" stroke="#ff9679"/>
+    <path d="M102 171L118 165L194 225H169Z" fill="#a38362" stroke="#e1b78c"/>
+    <path d="M150 160L160 170L150 181L140 170Z" fill="#ffb37e" stroke="#ff6c45" filter="url(#glow)"/>`
+  ];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 300 225">
+  <defs><radialGradient id="bg"><stop stop-color="${dark}"/><stop offset="1" stop-color="#09131e"/></radialGradient><linearGradient id="armor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${color}"/><stop offset=".35" stop-color="${dark}"/><stop offset=".7" stop-color="#182133"/><stop offset="1" stop-color="${color}" stop-opacity=".55"/></linearGradient><linearGradient id="skin"><stop stop-color="#f1c49b"/><stop offset=".55" stop-color="#c38b69"/><stop offset="1" stop-color="#8e5948"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="300" height="225" fill="url(#bg)"/><circle cx="150" cy="86" r="75" fill="none" stroke="${color}" opacity=".45"/><circle cx="150" cy="86" r="67" fill="none" stroke="${color}" stroke-dasharray="3 6" opacity=".65"/><path d="M150 5L230 86L150 167L70 86Z" fill="none" stroke="${color}" opacity=".32"/>${backgrounds[index]}${bodies[index]}</svg>`;
+  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
 }
 
 const arts = [
@@ -1577,6 +1656,78 @@ document.querySelectorAll(".team-button").forEach(btn => {
     refresh();
   };
 });
+
+
+/* Creation-only presentation; existing team, crop, preview, and mint handlers own all actions. */
+{
+  const editor=$("editor"),back=editor.querySelector(".creator-forge-back");
+  const isForge=()=>editor.matches("#workspace:not(.load-setup):not(.upgrade-workspace):not(.customize-workspace) #editor:has(> #editorActions:not([hidden]))");
+  for(let i=0;i<40;i++){
+    const s=document.createElement("i");
+    s.className="creator-forge-spark";
+    s.style.left=(i*37%98)+"%";
+    s.style.top=(i*23%98)+"%";
+    s.style.animationDelay=-(i*.37)+"s";
+    back.append(s);
+  }
+  const artButtons=[...editor.querySelectorAll(".art-button")],dots=editor.querySelector(".creator-forge-dots");
+  const arrows=[...editor.querySelectorAll(".creator-forge-arrow")];
+  let viewing=0;
+  const dotButtons=artButtons.map((btn,i)=>{
+    const d=document.createElement("button");
+    d.type="button";d.className="creator-forge-dot";
+    d.setAttribute("aria-label","Browse "+btn.querySelector("img").alt);
+    d.addEventListener("click",()=>browse(i));
+    dots.append(d);return d;
+  });
+  function browse(i){
+    viewing=(i+artButtons.length)%artButtons.length;
+    artButtons.forEach((b,n)=>b.classList.toggle("creator-forge-viewing",n===viewing));
+    dotButtons.forEach((b,n)=>{b.classList.toggle("active",n===viewing);b.setAttribute("aria-current",String(n===viewing));});
+  }
+  arrows[0].addEventListener("click",()=>browse(viewing-1));
+  arrows[1].addEventListener("click",()=>browse(viewing+1));
+  function syncBrowse(){
+    const disabled=artButtons.every(b=>b.disabled);
+    [...arrows,...dotButtons].forEach(b=>b.disabled=disabled);
+  }
+  const observer=new MutationObserver(records=>{
+    const selected=artButtons.findIndex(b=>b.classList.contains("selected"));
+    if(selected>=0 && records.some(rec=>rec.attributeName==="class" && rec.target===artButtons[selected] && !(rec.oldValue||"").split(/\s+/).includes("selected")))browse(selected);
+    syncBrowse();
+  });
+  artButtons.forEach(b=>observer.observe(b,{attributes:true,attributeOldValue:true,attributeFilter:["class","disabled"]}));
+  browse(0);syncBrowse();
+  editor.querySelectorAll(".team-button").forEach(b=>b.addEventListener("click",()=>{
+    if(!isForge())return;
+    editor.querySelectorAll(".team-button").forEach(t=>{t.classList.remove("creator-element-fire");t.querySelector(".creator-element-fx")?.remove()});
+    void b.offsetWidth;b.classList.add("creator-element-fire");
+    const fx=document.createElement("div");fx.className="creator-element-fx";fx.setAttribute("aria-hidden","true");b.append(fx);
+    const type=b.dataset.team;
+    fx.innerHTML=type==="R"?'<div class="creator-element-wave"></div><div class="creator-element-wave"></div>':type==="P"?'<div class="creator-element-wind"></div><div class="creator-element-wind"></div><div class="creator-element-wind"></div>':'<div class="creator-element-slash"></div><div class="creator-element-slash"></div>';
+    fx.insertAdjacentHTML("beforeend",'<div class="creator-element-flash"></div>');
+    for(let i=0;i<24;i++){
+      const p=document.createElement("i"),angle=i*Math.PI/12,dist=.3+Math.random()*.5;
+      p.className="creator-element-particle "+(type==="R"?"creator-element-crystal":"creator-element-light");
+      p.style.setProperty("--size",(2+Math.random()*5)+"px");
+      p.style.setProperty("--x",Math.cos(angle)*b.clientWidth*dist+"px");
+      p.style.setProperty("--y",Math.sin(angle)*b.clientHeight*dist*1.5+"px");
+      p.style.setProperty("--r",i*47+"deg");
+      p.style.animationDelay=Math.random()*.12+"s";fx.append(p);
+    }
+    setTimeout(()=>{fx.remove();if(!b.querySelector(".creator-element-fx"))b.classList.remove("creator-element-fire")},1000);
+  }));
+  const mint=$("mintButton"),wrap=$("editorActions");
+  let timer;
+  mint.addEventListener("click",()=>{
+    if(!isForge())return;
+    clearTimeout(timer);wrap.classList.remove("creator-mint-energized");void wrap.offsetWidth;
+    wrap.classList.add("creator-mint-energized");
+    timer=setTimeout(()=>wrap.classList.remove("creator-mint-energized"),850);
+  },{capture:true});
+  // Restore the first visible preset when the existing creation reset selects it.
+  $("chooseMintButton").addEventListener("click",()=>{if(artButtons[0].classList.contains("selected"))browse(0)});
+}
 
 $("nameInput").oninput = refresh;
 
