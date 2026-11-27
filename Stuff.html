@@ -21,10 +21,11 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 #vhs-demo3 .area{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:10px;padding:12px}
 #vhs-demo3 .panel{min-width:0;border:1px solid #857052;border-radius:7px;background:linear-gradient(145deg,#2e283c,#171725);overflow:hidden}
 #vhs-demo3 .panelhead{padding:10px;background:#191728;border-bottom:1px solid #776042;font:700 clamp(13px,2.3vw,19px) Georgia,serif;color:#ffe0a6}
-#vhs-demo3 .stats{padding:11px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overscroll-behavior:contain}
-#vhs-demo3 .vcard-name{border:1px solid #9b784b;border-radius:6px;padding:10px;background:#211c2f;text-align:center}
-#vhs-demo3 .vcard-name small{display:block;color:#c7bad1;font-size:10px;margin-bottom:5px}
-#vhs-demo3 .vcard-name strong{display:block;font-size:15px;color:#ffe0a6;overflow-wrap:anywhere}
+#vhs-demo3 .stats{padding:11px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none;touch-action:pan-y}
+#vhs-demo3 .stats::-webkit-scrollbar{display:none;width:0;height:0}
+#vhs-demo3 .vcard-name{position:relative;flex:none;border:1px solid #ffe6b5;border-radius:6px;padding:10px;background:linear-gradient(#ffe9b2 0%,#e6bf80 48%,#c89b5b 49%,#b6894e 100%);box-shadow:0 2px 0 #80633f,0 3px 0 #f5d49b,0 4px 6px #0006,inset 0 1px 1px #fff9;text-align:center;color:#000}
+#vhs-demo3 .vcard-name small{display:block;color:#000;font-size:10px;margin-bottom:5px}
+#vhs-demo3 .vcard-name strong{display:block;font-size:15px;color:#000;overflow-wrap:anywhere}
 #vhs-demo3 .statrow{display:flex;justify-content:space-between;gap:8px;padding:9px 2px;border-bottom:1px solid #6c5a684f;font-size:12px}
 #vhs-demo3 .statrow span{color:#d6cad6}
 #vhs-demo3 .statrow strong{color:#ffdb9b;text-align:right}
@@ -103,7 +104,7 @@ html,body{margin:0;min-height:100%;background:#0d101e}
 <div class="area">
 <section class="panel" aria-label="VCards">
 <div class="panelhead">VCARDS</div>
-<div class="stats" data-vcard-list></div>
+<div class="stats" data-vcard-list tabindex="0" aria-label="Scrollable VCard list"></div>
 </section>
 <section class="panel" aria-label="Personal Inventory">
 <div class="panelhead">PERSONAL INVENTORY</div>
