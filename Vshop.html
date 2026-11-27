@@ -364,6 +364,9 @@ html, body {
 .zmb-buy{flex-shrink:0;width:100%;min-height:3.4cqw;background:linear-gradient(#ffe9b2,#c89b5b);color:#281e28;border:1px solid #ffe6b5;border-radius:.35cqw;font:900 1.75cqw/1.15 Arial,sans-serif;padding:.35cqw;cursor:pointer}
 .zmb-buy:hover:not(:disabled){box-shadow:0 0 1.6cqw #f5d49b}
 .zmb-buy:disabled{opacity:.4;cursor:default}
+.zshop-pay-price,.zshop-pay-method{display:block;color:#000;text-align:center;line-height:1.05;font-weight:900}
+.zshop-pay-price{font-size:1.25cqw}
+.zshop-pay-method{font-size:1.45cqw;letter-spacing:.025em;margin-top:.12cqw}
 @keyframes zmb-float{50%{transform:translateY(-.7cqw)}}
 @keyframes zmb-breath{to{transform:scale(1.1);opacity:1}}
 @keyframes zmb-ring{50%{transform:scaleX(.86);opacity:.55}}
@@ -703,6 +706,7 @@ async function loadShopPlayer(){
   }
 }
 const shopPrice=item=>item.currency==="AWT"?"$"+item.price.toFixed(2)+" IN AWT":item.price.toLocaleString()+" VCASH";
+const shopPurchaseLabel=item=>item.currency==="AWT"?'<span class="zshop-pay-price">$'+item.price.toFixed(2)+'</span><span class="zshop-pay-method">PAY IN AWT</span>':"BUY · "+shopPrice(item);
 const shopDisabled=item=>shopBusy||shopLoading||shopCash===null||
   (item.currency==="VCASH"&&shopCash<item.price)||
   ((item.name==="Lucky Charm"||item.name==="Lucky Stone")&&
@@ -958,7 +962,7 @@ function renderRecallService(){
     '<select class="zrc-select" id="shopRecallCard" aria-label="Choose VCard to recall"'+(recallVisualBusy()?' disabled':'')+'>'+
     (shopActiveJourneys.length?shopActiveJourneys.map(card=>'<option value="'+shopSafe(card.id)+'">'+shopSafe(card.name)+'</option>').join(""):'<option value="">No active Journeys</option>')+'</select>'+
     '<div class="zrc-controls">'+renderRecallControl(false,unavailable)+renderRecallControl(true,unavailable)+'</div></div>';
-  const detail='<div class="zshop-details">'+shopArt(item,true)+'<strong class="zshop-detail-name">'+shopSafe(item.name)+'</strong><span class="zshop-item-owned">OWNED: '+owned+'</span><p class="zshop-detail-description">'+shopSafe(item.desc)+'</p><button class="zshop-action" type="button" data-shop-action="use-service"'+(shopDisabled(item)?' disabled':'')+'>BUY · '+shopPrice(item)+'</button></div>';
+  const detail='<div class="zshop-details">'+shopArt(item,true)+'<strong class="zshop-detail-name">'+shopSafe(item.name)+'</strong><span class="zshop-item-owned">OWNED: '+owned+'</span><p class="zshop-detail-description">'+shopSafe(item.desc)+'</p><button class="zshop-action" type="button" data-shop-action="use-service"'+(shopDisabled(item)?' disabled':'')+'>'+shopPurchaseLabel(item)+'</button></div>';
   return '<div class="zshop-work zrc-work">'+shopPanel("TICKETS","AVAILABLE",consoleBody)+'<div class="zrc-detail zshop-panel"><div class="zshop-panel-head"><strong>DETAILS</strong><small>SELECTED</small></div>'+detail+'</div></div>';
 }
 
@@ -1031,7 +1035,7 @@ function renderBoostBody(){
       '<strong class="zmb-cardname">'+shopSafe(v.label||v.name)+'</strong><div class="zmb-owned">OWNED: '+(shopInventory.get(v.name)||0)+'</div>'+
       (v.name==="Lucky Stone"&&shopReservedStones>0?'<small class="zmb-reserved">☄️ ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(v.name)||0)+'</small>':'')+
       '<p class="zmb-desc">'+shopSafe(v.desc)+'</p>'+
-      '<button class="zmb-buy" type="button" data-shop-action="buy-boost" data-index="'+selectedBoost+'"'+(shopDisabled(v)?' disabled':'')+'>BUY · '+shopPrice(v)+'</button></section></div>';
+      '<button class="zmb-buy" type="button" data-shop-action="buy-boost" data-index="'+selectedBoost+'"'+(shopDisabled(v)?' disabled':'')+'>'+shopPurchaseLabel(v)+'</button></section></div>';
   }
   return '<div class="zmb-subtitle">BOOST ITEMS</div><div class="zmb-items"'+(boostCardOpen?' inert':'')+'>'+list+'</div><div class="zmb-shelf"></div><div class="zmb-hint">◇ &nbsp; CLICK AN ITEM TO VIEW &nbsp; ◇</div><div class="zmb-effect" aria-hidden="true"></div>'+overlay;
 }
