@@ -2,12 +2,12 @@
 (function(){
   "use strict";
   const catalog={
-    "Lucky Charm":{icon:"🍀",desc:"Journey only: 1 Lucky Retry and +1% stats per charm. Maximum 5. Consumed on retry."},
-  "Lucky Stone":{icon:"🪨",desc:"Raid only: 1 Lucky Retry and +1% Raid stats per stone. Maximum 5. Consumed on retry."},
-    "Swift Boots":{icon:"🥾",desc:"+1 SPEED per pair held. Using one removes 15 seconds from a Journey, once per Stage."},
-    "Hunt Lantern":{icon:"🏮",desc:"Nullifies one Stage RPS advantage for one encounter. Consumed on use."},
-    "Stage Ticket":{icon:"🎟️",desc:"Enter a Stage without paying its entry fee. Consumed on entry."},
-    "Emergency Recall Ticket":{icon:"🚨",desc:"Recall one or all VCards from Journeys. Earned rewards remain; unresolved encounters are forfeited."}
+    "Lucky Charm":{"icon":"🍀","desc":"Journey only. Each charm grants 1 Lucky Retry and +1% to player stats. Maximum 5. Consumed when a retry is used."},
+    "Lucky Stone":{"icon":"☄️","label":"Raid Stones","desc":"Raid only. Each stone grants 1 Lucky Retry and +1% to Raid stats. Maximum 5. Consumed when a Raid retry is used."},
+    "Swift Boots":{"icon":"🥾","desc":"Each pair in inventory grants +1 SPEED. Use a pair to reduce Journey time by 15 seconds, once per Stage. Used boots are consumed, reducing SPEED by 1."},
+    "Hunt Lantern":{"icon":"🔮","desc":"Nullifies the Stage's RPS advantage for one encounter, once. The lantern is consumed after use."},
+    "Stage Ticket":{"icon":"🎟️","desc":"Enter one Stage without paying its entry fee. One ticket is consumed per entry."},
+    "Emergency Recall Ticket":{"icon":"🚨","desc":"Bring 1 VCard or ALL VCards home early from active Journeys. Keep rewards already earned; forfeit rewards from unresolved encounters."}
   };
   function init(root){
     if(!root||root.dataset.stuffReady==="yes")return root;
@@ -52,7 +52,7 @@
           slot.classList.toggle("selected",selected);
           slot.setAttribute("aria-pressed",String(selected));
         });
-        name.textContent=item.thing;
+        name.textContent=catalog[item.thing]?.label||item.thing;
         description.textContent=catalog[item.thing]?.desc||"Stored in player inventory.";
       };
       for(const item of items){
@@ -63,7 +63,7 @@
         const meta=catalog[item.thing]||{};
         for(const [cls,value] of [
           ["itemicon",meta.icon||"📦"],
-          ["itemname",item.thing],
+          ["itemname",meta.label||item.thing],
           ["qty","× "+item.quantity]
         ]){
           const node=document.createElement("span");
