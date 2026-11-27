@@ -172,6 +172,29 @@ html, body {
   width:80%;height:84%;min-width:0;min-height:0;
 }
 .closet-stats-content{width:100%;height:100%;min-width:0;min-height:0}
+/* Closet assignment only: Recall-style mechanical button and decorative energy layer. */
+.closet-active-fx{position:relative;flex:0 0 28%;min-width:0;height:100%;isolation:isolate}
+.closet-active-fx #confirmPlaceholder{display:block;width:100%;height:100%}
+#confirmPlaceholder{position:relative;z-index:1;background:linear-gradient(180deg,#ffe9b2 0%,#e6bf80 48%,#c89b5b 49%,#b6894e 100%);color:#281e28;border:1px solid #ffe6b5;box-shadow:0 3px 0 #80633f,0 4px 0 #f5d49b,0 5px 8px #0008,inset 0 2px 1px #fff9;transition:transform .12s,box-shadow .12s;isolation:isolate}
+#confirmPlaceholder::before{content:"";position:absolute;inset:3px;border:1px solid #8b673c;border-radius:3px;pointer-events:none}
+#confirmPlaceholder:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 0 #80633f,0 6px 0 #f5d49b,0 0 15px #f5d49b88,inset 0 2px 1px #fff9}
+#confirmPlaceholder:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 #80633f,0 0 12px white}
+.closet-active-energy{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:visible;border-radius:7px}
+.closet-active-edge{position:absolute;inset:-2px;border-radius:8px;padding:2px;overflow:hidden;opacity:0;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude}
+.closet-active-edge::before{content:"";position:absolute;inset:-500%;background:conic-gradient(#45dfff,#39ff88,#fff,#ffb52e,#ff446f,#ff54d5,#b46aff,#45dfff)}
+.closet-active-zaps{position:absolute;inset:-22px -6px;width:calc(100% + 12px);height:calc(100% + 44px);overflow:visible;opacity:0}
+.closet-active-zaps path{fill:none;stroke-width:.65;vector-effect:non-scaling-stroke;stroke-dasharray:180;filter:drop-shadow(0 0 3px currentColor)}
+.closet-active-fx.is-energized #confirmPlaceholder{opacity:1;transform:translateY(2px);color:white;background:linear-gradient(135deg,#60447d,#211b30 55%,#49384f);border-color:white;box-shadow:0 2px 0 #887450,0 0 10px white,0 0 18px #b46aff88,inset 0 0 12px #45dfff55;text-shadow:0 0 5px white;animation:closet-active-kick .35s ease-out}
+.closet-active-fx.is-energized #confirmPlaceholder::before{border-color:#f5d49b}
+.closet-active-fx.is-energized .closet-active-edge{opacity:1}
+.closet-active-fx.is-energized .closet-active-edge::before{animation:closet-active-spin 1s linear infinite}
+.closet-active-fx.is-energized .closet-active-zaps{opacity:1}
+.closet-active-fx.is-energized .closet-active-zaps path{animation:closet-active-zap .7s ease-out both}
+@keyframes closet-active-spin{to{transform:rotate(360deg)}}
+@keyframes closet-active-zap{0%{stroke-dashoffset:180;opacity:1}20%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes closet-active-kick{0%{transform:translateY(2px)}35%{transform:translateY(-3px);box-shadow:0 0 12px white,0 0 20px #45dfff}100%{transform:translateY(2px)}}
+@media(prefers-reduced-motion:reduce){#confirmPlaceholder,.closet-active-fx.is-energized #confirmPlaceholder{animation:none;transition:none;transform:none}.closet-active-energy{display:none}}
+
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-vcard.css">
@@ -212,7 +235,13 @@ html, body {
       <div class="closet-assignment-info" title="VCard selected in the Closet">
         SELECTED VCARD: <strong id="closetSelectedName">NONE</strong>
       </div>
-      <button class="closet-confirm" id="confirmPlaceholder" type="button" disabled>SET AS ACTIVE</button>
+      <div class="closet-active-fx">
+        <button class="closet-confirm" id="confirmPlaceholder" type="button" disabled>SET AS ACTIVE</button>
+        <div class="closet-active-energy" aria-hidden="true">
+          <div class="closet-active-edge"></div>
+          <svg class="closet-active-zaps" viewBox="0 0 300 180" preserveAspectRatio="none"><path d="M260.0 90.0 L276.0 85.0 L281.0 93.0 L300.0 90.0" stroke="#45dfff" style="color:#45dfff"/><path d="M255.5 99.6 L271.1 98.0 L275.6 109.3 L293.9 110.8" stroke="#ff54d5" style="color:#ff54d5"/><path d="M242.5 108.4 L256.6 109.9 L259.7 124.4 L276.2 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M222.0 115.7 L233.9 119.8 L234.8 136.8 L248.2 145.9" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 120.9 L204.7 126.8 L202.7 145.8 L212.3 157.3" stroke="#b46aff" style="color:#b46aff"/><path d="M165.7 123.7 L171.4 130.5 L166.1 150.4 L171.3 163.2" stroke="#ff446f" style="color:#ff446f"/><path d="M134.3 123.7 L136.6 130.5 L127.9 150.4 L128.7 163.2" stroke="#ffffff" style="color:#ffffff"/><path d="M104.3 120.9 L103.3 126.8 L91.3 145.8 L87.7 157.3" stroke="#45dfff" style="color:#45dfff"/><path d="M78.0 115.7 L74.1 119.8 L59.2 136.8 L51.8 145.9" stroke="#ff54d5" style="color:#ff54d5"/><path d="M57.5 108.4 L51.4 109.9 L34.3 124.4 L23.8 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M44.5 99.6 L36.9 98.0 L18.4 109.3 L6.1 110.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M40.0 90.0 L32.0 85.0 L13.0 93.0 L0.0 90.0" stroke="#b46aff" style="color:#b46aff"/><path d="M44.5 80.4 L36.9 72.0 L18.4 76.7 L6.1 69.2" stroke="#ff446f" style="color:#ff446f"/><path d="M57.5 71.6 L51.4 60.1 L34.3 61.6 L23.8 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M78.0 64.3 L74.1 50.2 L59.2 49.2 L51.8 34.1" stroke="#45dfff" style="color:#45dfff"/><path d="M104.3 59.1 L103.3 43.2 L91.3 40.2 L87.7 22.7" stroke="#ff54d5" style="color:#ff54d5"/><path d="M134.3 56.3 L136.6 39.5 L127.9 35.6 L128.7 16.8" stroke="#39ff88" style="color:#39ff88"/><path d="M165.7 56.3 L171.4 39.5 L166.1 35.6 L171.3 16.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 59.1 L204.7 43.2 L202.7 40.2 L212.3 22.7" stroke="#b46aff" style="color:#b46aff"/><path d="M222.0 64.3 L233.9 50.2 L234.8 49.2 L248.2 34.1" stroke="#ff446f" style="color:#ff446f"/><path d="M242.5 71.6 L256.6 60.1 L259.7 61.6 L276.2 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M255.5 80.4 L271.1 72.0 L275.6 76.7 L293.9 69.2" stroke="#45dfff" style="color:#45dfff"/></svg>
+        </div>
+      </div>
     </div>
     <div id="closetMessage" class="vhouse-message--game" aria-live="polite" data-vhouse-message
       data-header="VCARD CLOSET" data-title="VCard Closet" data-info="Finished VCards and outfits are displayed here."></div>
@@ -770,6 +799,21 @@ html, body {
       });
     }
   }
+/* Decorative Closet assignment button animation; no activation state changes. */
+{
+  const button=confirmButton,visual=button.closest(".closet-active-fx");
+  if(visual){
+    let animationTimer;
+    button.addEventListener("click",()=>{
+      clearTimeout(animationTimer);
+      visual.classList.remove("is-energized");
+      void visual.offsetWidth;
+      visual.classList.add("is-energized");
+      animationTimer=setTimeout(()=>visual.classList.remove("is-energized"),850);
+    },{capture:true});
+  }
+}
+
   confirmButton.addEventListener("click", () => { void confirmSelection(); });
   function move(direction) {
     if (assigning) return;
