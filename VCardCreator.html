@@ -572,6 +572,38 @@ button:disabled{opacity:.5;cursor:default}
   :is(#chooseMintButton,#mintIntroContinueButton,#mintButton){animation:none!important;transition:none!important;transform:none!important}
 }
 
+
+/* Final paid Upgrade/Customize and Burn confirmations reuse the MINT visuals. */
+#creationUnit .creator-purchase-control{width:100%;min-width:0}
+#creationUnit .creator-purchase-control:has(> button[hidden]){display:none}
+#creationUnit .upgrade-workspace #creatorApplyControl{width:calc(100% - 32px);margin:12px 16px}
+#creationUnit .upgrade-workspace #creatorApplyControl #applyButton{width:100%;margin:0}
+#creationUnit #creatorBurnControl #burnSubmitButton{margin:0!important}
+#creationUnit .creator-purchase-control > :is(#applyButton,#burnSubmitButton){
+  position:relative;z-index:1;isolation:isolate;
+  color:#281e28;border:1px solid #ffe6b5;
+  background:linear-gradient(#ffe9b2 0%,#e6bf80 48%,#c89b5b 49%,#b6894e 100%);
+  box-shadow:0 3px 0 #80633f,0 4px 0 #f5d49b,0 6px 9px #0008,inset 0 2px 1px #fff9;
+  transition:transform .12s,box-shadow .12s;
+}
+#creationUnit .creator-purchase-control > :is(#applyButton,#burnSubmitButton)::before{
+  content:"";position:absolute;inset:4px;border:1px solid #8b673c;border-radius:inherit;pointer-events:none;
+}
+#creationUnit .creator-purchase-control > :is(#applyButton,#burnSubmitButton):is(:hover,:focus-visible):not(:disabled){
+  background:linear-gradient(#ffe9b2 0%,#e6bf80 48%,#c89b5b 49%,#b6894e 100%);
+  border-color:#ffe6b5;transform:translateY(-2px);
+  box-shadow:0 5px 0 #80633f,0 6px 0 #f5d49b,0 0 16px #eac58d88;
+}
+#creationUnit .creator-purchase-control > :is(#applyButton,#burnSubmitButton):active:not(:disabled){transform:translateY(2px)}
+#creationUnit .creator-purchase-control.creator-mint-energized > :is(#applyButton,#burnSubmitButton){
+  opacity:1;color:white;background:linear-gradient(135deg,#60447d,#211b30 55%,#49384f);
+  border-color:white;box-shadow:0 2px 0 #887450,0 0 10px white,0 0 18px #b46aff88,inset 0 0 12px #45dfff55;
+  text-shadow:0 0 5px white;animation:creatorMintKick .35s ease-out;
+}
+@media(prefers-reduced-motion:reduce){
+  #creationUnit .creator-purchase-control > :is(#applyButton,#burnSubmitButton){animation:none!important;transition:none!important;transform:none!important}
+}
+
 </style>
 
 <script type="importmap">
@@ -747,7 +779,13 @@ button:disabled{opacity:.5;cursor:default}
           </div>
         </div>
         <div class="status" id="burnPrice"></div>
-        <button class="action" id="burnSubmitButton" type="button" style="width:100%;margin-top:12px">BURN VCARD</button>
+        <div class="creator-mint-control creator-purchase-control" id="creatorBurnControl">
+          <button class="action" id="burnSubmitButton" type="button" style="width:100%;margin-top:12px">BURN VCARD</button>
+          <div class="creator-mint-energy" aria-hidden="true">
+          <div class="creator-mint-edge"></div>
+          <svg class="creator-mint-zaps" viewBox="0 0 300 180" preserveAspectRatio="none"><path d="M260.0 90.0 L276.0 85.0 L281.0 93.0 L300.0 90.0" stroke="#45dfff" style="color:#45dfff"/><path d="M255.5 99.6 L271.1 98.0 L275.6 109.3 L293.9 110.8" stroke="#ff54d5" style="color:#ff54d5"/><path d="M242.5 108.4 L256.6 109.9 L259.7 124.4 L276.2 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M222.0 115.7 L233.9 119.8 L234.8 136.8 L248.2 145.9" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 120.9 L204.7 126.8 L202.7 145.8 L212.3 157.3" stroke="#b46aff" style="color:#b46aff"/><path d="M165.7 123.7 L171.4 130.5 L166.1 150.4 L171.3 163.2" stroke="#ff446f" style="color:#ff446f"/><path d="M134.3 123.7 L136.6 130.5 L127.9 150.4 L128.7 163.2" stroke="#ffffff" style="color:#ffffff"/><path d="M104.3 120.9 L103.3 126.8 L91.3 145.8 L87.7 157.3" stroke="#45dfff" style="color:#45dfff"/><path d="M78.0 115.7 L74.1 119.8 L59.2 136.8 L51.8 145.9" stroke="#ff54d5" style="color:#ff54d5"/><path d="M57.5 108.4 L51.4 109.9 L34.3 124.4 L23.8 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M44.5 99.6 L36.9 98.0 L18.4 109.3 L6.1 110.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M40.0 90.0 L32.0 85.0 L13.0 93.0 L0.0 90.0" stroke="#b46aff" style="color:#b46aff"/><path d="M44.5 80.4 L36.9 72.0 L18.4 76.7 L6.1 69.2" stroke="#ff446f" style="color:#ff446f"/><path d="M57.5 71.6 L51.4 60.1 L34.3 61.6 L23.8 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M78.0 64.3 L74.1 50.2 L59.2 49.2 L51.8 34.1" stroke="#45dfff" style="color:#45dfff"/><path d="M104.3 59.1 L103.3 43.2 L91.3 40.2 L87.7 22.7" stroke="#ff54d5" style="color:#ff54d5"/><path d="M134.3 56.3 L136.6 39.5 L127.9 35.6 L128.7 16.8" stroke="#39ff88" style="color:#39ff88"/><path d="M165.7 56.3 L171.4 39.5 L166.1 35.6 L171.3 16.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 59.1 L204.7 43.2 L202.7 40.2 L212.3 22.7" stroke="#b46aff" style="color:#b46aff"/><path d="M222.0 64.3 L233.9 50.2 L234.8 49.2 L248.2 34.1" stroke="#ff446f" style="color:#ff446f"/><path d="M242.5 71.6 L256.6 60.1 L259.7 61.6 L276.2 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M255.5 80.4 L271.1 72.0 L275.6 76.7 L293.9 69.2" stroke="#45dfff" style="color:#45dfff"/></svg>
+        </div>
+        </div>
       </div>
       <div class="status" id="burnStatus" hidden></div>
       <a id="burnReceiptLink" href="#" target="_blank" rel="noopener noreferrer" hidden style="display:block;margin:12px 0;color:#61e9ff;overflow-wrap:anywhere">VIEW SOLANA TRANSACTION</a>
@@ -910,7 +948,13 @@ button:disabled{opacity:.5;cursor:default}
           <button class="effect-button" data-effect="prism">PRISM</button>
         </div>
         <div class="post-mint-note" id="operationNote">Select UPGRADE to edit name and description, or CUSTOMIZE to apply a card effect. USD price is converted to SOL when submitted; <span class="tag-fee">$0.50</span> goes to VHouse and <span class="tag-balance">$0.25</span> to this NFT.</div>
-        <button class="action" id="applyButton" hidden>CONFIRM UPGRADE</button>
+        <div class="creator-mint-control creator-purchase-control" id="creatorApplyControl">
+          <button class="action" id="applyButton" hidden>CONFIRM UPGRADE</button>
+          <div class="creator-mint-energy" aria-hidden="true">
+          <div class="creator-mint-edge"></div>
+          <svg class="creator-mint-zaps" viewBox="0 0 300 180" preserveAspectRatio="none"><path d="M260.0 90.0 L276.0 85.0 L281.0 93.0 L300.0 90.0" stroke="#45dfff" style="color:#45dfff"/><path d="M255.5 99.6 L271.1 98.0 L275.6 109.3 L293.9 110.8" stroke="#ff54d5" style="color:#ff54d5"/><path d="M242.5 108.4 L256.6 109.9 L259.7 124.4 L276.2 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M222.0 115.7 L233.9 119.8 L234.8 136.8 L248.2 145.9" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 120.9 L204.7 126.8 L202.7 145.8 L212.3 157.3" stroke="#b46aff" style="color:#b46aff"/><path d="M165.7 123.7 L171.4 130.5 L166.1 150.4 L171.3 163.2" stroke="#ff446f" style="color:#ff446f"/><path d="M134.3 123.7 L136.6 130.5 L127.9 150.4 L128.7 163.2" stroke="#ffffff" style="color:#ffffff"/><path d="M104.3 120.9 L103.3 126.8 L91.3 145.8 L87.7 157.3" stroke="#45dfff" style="color:#45dfff"/><path d="M78.0 115.7 L74.1 119.8 L59.2 136.8 L51.8 145.9" stroke="#ff54d5" style="color:#ff54d5"/><path d="M57.5 108.4 L51.4 109.9 L34.3 124.4 L23.8 130.0" stroke="#39ff88" style="color:#39ff88"/><path d="M44.5 99.6 L36.9 98.0 L18.4 109.3 L6.1 110.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M40.0 90.0 L32.0 85.0 L13.0 93.0 L0.0 90.0" stroke="#b46aff" style="color:#b46aff"/><path d="M44.5 80.4 L36.9 72.0 L18.4 76.7 L6.1 69.2" stroke="#ff446f" style="color:#ff446f"/><path d="M57.5 71.6 L51.4 60.1 L34.3 61.6 L23.8 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M78.0 64.3 L74.1 50.2 L59.2 49.2 L51.8 34.1" stroke="#45dfff" style="color:#45dfff"/><path d="M104.3 59.1 L103.3 43.2 L91.3 40.2 L87.7 22.7" stroke="#ff54d5" style="color:#ff54d5"/><path d="M134.3 56.3 L136.6 39.5 L127.9 35.6 L128.7 16.8" stroke="#39ff88" style="color:#39ff88"/><path d="M165.7 56.3 L171.4 39.5 L166.1 35.6 L171.3 16.8" stroke="#ffb52e" style="color:#ffb52e"/><path d="M195.7 59.1 L204.7 43.2 L202.7 40.2 L212.3 22.7" stroke="#b46aff" style="color:#b46aff"/><path d="M222.0 64.3 L233.9 50.2 L234.8 49.2 L248.2 34.1" stroke="#ff446f" style="color:#ff446f"/><path d="M242.5 71.6 L256.6 60.1 L259.7 61.6 L276.2 50.0" stroke="#ffffff" style="color:#ffffff"/><path d="M255.5 80.4 L271.1 72.0 L275.6 76.7 L293.9 69.2" stroke="#45dfff" style="color:#45dfff"/></svg>
+        </div>
+        </div>
       </div>
       <div class="status" id="status">
         Mint creation fee: <span class="tag-fee">0.001 SOL</span> paid to VHouse.
@@ -1271,7 +1315,7 @@ function showScreen(screen) {
 }
 
 function placeUpgradeControls(enabled) {
-  const workspace = $("workspace"), editor = $("editor"), panel = $("postMint"), apply = $("applyButton");
+  const workspace = $("workspace"), editor = $("editor"), panel = $("postMint"), apply = $("creatorApplyControl");
   workspace.classList.toggle("upgrade-workspace",enabled);
   workspace.classList.toggle("customize-workspace",minted && editMode === "customize" && !workspace.hidden);
   if (enabled) {
@@ -1872,8 +1916,8 @@ document.querySelectorAll(".team-button").forEach(btn => {
     }
     setTimeout(()=>{fx.remove();if(!b.querySelector(".creator-element-fx"))b.classList.remove("creator-element-fire")},1000);
   }));
-  // Decorative animation on the MINT path; never intercept or delay existing actions.
-  for(const id of ["chooseMintButton","mintIntroContinueButton","mintButton"]){
+  // Decorative animation on the MINT path and paid confirmations; never intercept or delay existing actions.
+  for(const id of ["chooseMintButton","mintIntroContinueButton","mintButton","applyButton","burnSubmitButton"]){
     const button=$(id),wrap=id==="mintButton"?$("editorActions"):button.closest(".creator-mint-control");
     let timer;
     function energize(){
@@ -1882,7 +1926,7 @@ document.querySelectorAll(".team-button").forEach(btn => {
       wrap.classList.add("creator-mint-energized");
       timer=setTimeout(()=>wrap.classList.remove("creator-mint-energized"),850);
     }
-    if(id!=="mintButton")button.addEventListener("pointerdown",event=>{if(event.button===0)energize()});
+    if(id==="chooseMintButton"||id==="mintIntroContinueButton")button.addEventListener("pointerdown",event=>{if(event.button===0)energize()});
     button.addEventListener("click",energize,{capture:true});
   }
   // Restore the first visible preset when the existing creation reset selects it.
