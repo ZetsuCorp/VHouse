@@ -68,6 +68,34 @@ html, body {
   -webkit-user-drag: none;
   pointer-events: none;
 }
+
+/* Tiny ambient shop sparkles, aligned to the visible 16:9 artwork. */
+.shop-ambient-sparkles{
+  position:absolute;inset-block:0;left:50%;width:88.888889%;
+  transform:translateX(-50%);overflow:hidden;pointer-events:none;
+  container-type:inline-size;
+}
+.shop-ambient-sparkles .shop-sparkle{
+  position:absolute;left:var(--x);top:var(--y);
+  width:clamp(2px,var(--size),5px);height:clamp(3px,calc(var(--size) * 1.45),7px);
+  pointer-events:none;animation:shop-sparkle-float var(--float) ease-in-out var(--delay) infinite;
+  filter:drop-shadow(0 0 2px var(--energy));
+}
+.shop-ambient-sparkles .shop-sparkle::before{
+  content:"";display:block;width:100%;height:100%;background:var(--energy);
+  clip-path:polygon(50% 0,58% 40%,100% 50%,58% 60%,50% 100%,42% 60%,0 50%,42% 40%);
+  animation:shop-sparkle-twinkle var(--twinkle) ease-in-out var(--delay) infinite;
+}
+@keyframes shop-sparkle-float{
+  0%,100%{transform:translateY(-.55cqw)}
+  50%{transform:translateY(.55cqw)}
+}
+@keyframes shop-sparkle-twinkle{
+  0%,100%{opacity:.15;transform:scale(.35) rotate(0deg)}
+  50%{opacity:.9;transform:scale(1) rotate(25deg)}
+}
+@media(prefers-reduced-motion:reduce){.shop-ambient-sparkles{display:none}}
+
 /* The artwork is 16:9 inside the shared 2:1 game frame. */
 .shop-hotspot-layer {
   position: absolute;
@@ -429,6 +457,33 @@ html, body {
 <main class="game-container">
   <div class="map-container">
     <img class="game-map" src="assets/V%20Shop.png?v=20261102" alt="VHouse Shop interior" draggable="false">
+
+    <div class="shop-ambient-sparkles" aria-hidden="true">
+      <span class="shop-sparkle" style="--x:9%;--y:42%;--size:0.24cqw;--energy:#39ff88;--float:3.40s;--twinkle:1.80s;--delay:-0.00s"></span>
+      <span class="shop-sparkle" style="--x:14%;--y:56%;--size:0.32cqw;--energy:#ff446f;--float:3.83s;--twinkle:2.06s;--delay:-0.37s"></span>
+      <span class="shop-sparkle" style="--x:20%;--y:30%;--size:0.4cqw;--energy:#ffb52e;--float:4.26s;--twinkle:2.32s;--delay:-0.74s"></span>
+      <span class="shop-sparkle" style="--x:23%;--y:64%;--size:0.28cqw;--energy:#b46aff;--float:4.69s;--twinkle:2.58s;--delay:-1.11s"></span>
+      <span class="shop-sparkle" style="--x:29%;--y:37%;--size:0.24cqw;--energy:#ff54d5;--float:5.12s;--twinkle:2.84s;--delay:-1.48s"></span>
+      <span class="shop-sparkle" style="--x:33%;--y:71%;--size:0.32cqw;--energy:#45dfff;--float:5.55s;--twinkle:1.80s;--delay:-1.85s"></span>
+      <span class="shop-sparkle" style="--x:38%;--y:27%;--size:0.4cqw;--energy:#ffffff;--float:3.40s;--twinkle:2.06s;--delay:-2.22s"></span>
+      <span class="shop-sparkle" style="--x:42%;--y:49%;--size:0.28cqw;--energy:#39ff88;--float:3.83s;--twinkle:2.32s;--delay:-2.59s"></span>
+      <span class="shop-sparkle" style="--x:46%;--y:76%;--size:0.24cqw;--energy:#ff446f;--float:4.26s;--twinkle:2.58s;--delay:-2.96s"></span>
+      <span class="shop-sparkle" style="--x:51%;--y:34%;--size:0.32cqw;--energy:#ffb52e;--float:4.69s;--twinkle:2.84s;--delay:-3.33s"></span>
+      <span class="shop-sparkle" style="--x:55%;--y:60%;--size:0.4cqw;--energy:#b46aff;--float:5.12s;--twinkle:1.80s;--delay:-3.70s"></span>
+      <span class="shop-sparkle" style="--x:60%;--y:24%;--size:0.28cqw;--energy:#ff54d5;--float:5.55s;--twinkle:2.06s;--delay:-4.07s"></span>
+      <span class="shop-sparkle" style="--x:64%;--y:45%;--size:0.24cqw;--energy:#45dfff;--float:3.40s;--twinkle:2.32s;--delay:-4.44s"></span>
+      <span class="shop-sparkle" style="--x:68%;--y:73%;--size:0.32cqw;--energy:#ffffff;--float:3.83s;--twinkle:2.58s;--delay:-4.81s"></span>
+      <span class="shop-sparkle" style="--x:72%;--y:33%;--size:0.4cqw;--energy:#39ff88;--float:4.26s;--twinkle:2.84s;--delay:-5.18s"></span>
+      <span class="shop-sparkle" style="--x:77%;--y:53%;--size:0.28cqw;--energy:#ff446f;--float:4.69s;--twinkle:1.80s;--delay:-5.55s"></span>
+      <span class="shop-sparkle" style="--x:81%;--y:24%;--size:0.24cqw;--energy:#ffb52e;--float:5.12s;--twinkle:2.06s;--delay:-5.92s"></span>
+      <span class="shop-sparkle" style="--x:85%;--y:69%;--size:0.32cqw;--energy:#b46aff;--float:5.55s;--twinkle:2.32s;--delay:-6.29s"></span>
+      <span class="shop-sparkle" style="--x:90%;--y:44%;--size:0.4cqw;--energy:#ff54d5;--float:3.40s;--twinkle:2.58s;--delay:-6.66s"></span>
+      <span class="shop-sparkle" style="--x:94%;--y:58%;--size:0.28cqw;--energy:#45dfff;--float:3.83s;--twinkle:2.84s;--delay:-7.03s"></span>
+      <span class="shop-sparkle" style="--x:18%;--y:81%;--size:0.24cqw;--energy:#ffffff;--float:4.26s;--twinkle:1.80s;--delay:-7.40s"></span>
+      <span class="shop-sparkle" style="--x:35%;--y:85%;--size:0.32cqw;--energy:#39ff88;--float:4.69s;--twinkle:2.06s;--delay:-7.77s"></span>
+      <span class="shop-sparkle" style="--x:63%;--y:86%;--size:0.4cqw;--energy:#ff446f;--float:5.12s;--twinkle:2.32s;--delay:-8.14s"></span>
+      <span class="shop-sparkle" style="--x:83%;--y:85%;--size:0.28cqw;--energy:#ffb52e;--float:5.55s;--twinkle:2.58s;--delay:-8.51s"></span>
+    </div>
 
     <!-- Clickable shop displays: left, center, right. -->
     <div class="shop-hotspot-layer">
