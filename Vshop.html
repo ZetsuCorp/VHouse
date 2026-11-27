@@ -182,6 +182,93 @@ html, body {
   .zshop-detail-icon{font-size:20px}
 }
 
+
+/* Journey Service only — Emergency Recall transmission presentation. */
+.zrc-work{grid-template-columns:minmax(0,1.52fr) minmax(0,1fr)}
+.zrc-console{position:relative;flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;padding:.5cqw .7cqw .65cqw;gap:.35cqw;background:linear-gradient(160deg,#30263d,#1d192c 45%);text-align:center}
+.zrc-heading{font:700 2.05cqw/1.08 Georgia,serif;color:#f5d49b;flex-shrink:0}
+.zrc-sub{font:700 1cqw/1.1 Arial,sans-serif;letter-spacing:.18cqw;color:#f5d49b;flex-shrink:0}
+.zrc-stage{position:relative;flex:1;min-height:0;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 50% 75%,#49384f55,transparent 65%)}
+.zrc-stage svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.zrc-pedestal{position:absolute;bottom:13%;left:50%;width:29%;height:13%;transform:translateX(-50%);border:1px solid #f5d49b;border-radius:50%;background:linear-gradient(#49384f,#181525);box-shadow:0 .7cqw 0 #211b30,0 .8cqw 0 #887450,0 1.4cqw 1.8cqw #0009}
+.zrc-gate{position:absolute;left:50%;bottom:17%;width:25%;height:10%;border:1px solid #b46aff;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 1.4cqw #b46aff,inset 0 0 1.2cqw #45dfff55;animation:zrc-glow 2s infinite alternate}
+.zrc-ticket{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);font-size:7.4cqw;line-height:1;z-index:3;filter:drop-shadow(0 0 1.4cqw #ff446f77);animation:zrc-float 2.5s ease-in-out infinite}
+.zrc-ring{position:absolute;left:50%;top:49%;width:29%;height:24%;border:1px solid #b46aff;border-radius:50%;transform:translate(-50%,-50%) rotate(-28deg);box-shadow:0 0 .6cqw #b46aff66;opacity:.65}
+.zrc-ring.second{border-color:#45dfff;transform:translate(-50%,-50%) rotate(28deg)}
+.zrc-charging .zrc-ring{animation:zrc-orbit .7s linear infinite;opacity:1}
+.zrc-charging .zrc-ring.second{animation-direction:reverse;animation-duration:.45s}
+.zrc-charging .zrc-gate{animation:zrc-gate .7s ease-in-out forwards}
+.zrc-charging .zrc-ticket{animation:zrc-charge .95s ease-in-out forwards}
+.zrc-launching .zrc-ticket,.zrc-waiting .zrc-ticket,.zrc-sent .zrc-ticket{visibility:hidden}
+.zrc-launching .zrc-ring{animation:zrc-ring-out .65s ease-out forwards}
+.zrc-launching .zrc-gate{animation:zrc-gate-out .8s ease-out forwards}
+.zrc-waiting .zrc-ring,.zrc-sent .zrc-ring{opacity:0}
+.zrc-fx{z-index:4}
+.zrc-charge-line{fill:none;stroke-linecap:round;stroke-dasharray:25 160;animation:zrc-gather .9s ease-in forwards}
+.zrc-trail{fill:none;stroke-linecap:round;stroke-dasharray:450;stroke-dashoffset:450;animation:zrc-trail .9s ease-out forwards}
+.zrc-core{fill:none;stroke:white;stroke-linecap:round;stroke-dasharray:450;stroke-dashoffset:450;filter:drop-shadow(0 0 2px white) drop-shadow(0 0 6px white);animation:zrc-core .65s ease-out forwards}
+.zrc-flare{fill:none;stroke:#fff;transform-origin:300px 132px;filter:drop-shadow(0 0 4px white);animation:zrc-flare .52s ease-out forwards}
+.zrc-wave{fill:none;transform-origin:300px 132px;animation:zrc-wave 1.2s ease-out forwards}
+.zrc-spark{transform-box:fill-box;transform-origin:center;animation:zrc-spark .95s ease-out forwards}
+.zrc-flash{position:absolute;inset:0;pointer-events:none;z-index:5;opacity:0;background:radial-gradient(ellipse at 50% 49%,#ffffffa8,transparent 45%)}
+.zrc-launching .zrc-flash{animation:zrc-flash .38s ease-out forwards}
+.zrc-letters{position:absolute;inset:0;pointer-events:none;z-index:6}
+.zrc-letter{position:absolute;left:50%;top:49%;font-size:var(--letter-size,4.7cqw);line-height:1;opacity:0;filter:drop-shadow(0 0 3px white) drop-shadow(0 0 11px var(--energy));animation:zrc-letter 1.15s cubic-bezier(.35,.05,.65,.6) forwards;animation-delay:var(--delay)}
+.zrc-letter:after{content:'';position:absolute;width:1px;height:4.5cqw;top:95%;left:50%;background:linear-gradient(white,var(--energy),transparent);box-shadow:0 0 5px white}
+.zrc-status{font:700 1.3cqw/1.2 Georgia,serif;color:#f5d49b;letter-spacing:.1cqw;min-height:1.6cqw;flex-shrink:0}
+.zrc-progress{height:.3cqw;min-height:2px;width:65%;margin:.2cqw auto;background:#49384f;border-radius:3px;overflow:hidden;flex-shrink:0}
+.zrc-progress span{display:block;height:100%;width:var(--progress);background:linear-gradient(90deg,#b46aff,#45dfff,#39ff88,#ffb52e,#ff54d5,#fff);box-shadow:0 0 8px white}
+.zrc-select{flex-shrink:0;min-width:0;width:100%;font:600 1.4cqw/1.2 Arial,sans-serif;padding:.45cqw;color:#ffe2ab;background:#21162c;border:1px solid #bc9357;border-radius:.25cqw}
+.zrc-controls{display:flex;gap:1cqw;padding:.45cqw .2cqw .75cqw;flex-shrink:0}
+.zrc-control{position:relative;flex:1;min-width:0;isolation:isolate;height:4.9cqw;padding:.3cqw;border:1px solid #ffe6b5;border-radius:.5cqw;background:linear-gradient(180deg,#ffe9b2 0%,#e6bf80 48%,#c89b5b 49%,#b6894e 100%);color:#281e28;font-weight:900;cursor:pointer;box-shadow:0 .5cqw 0 #80633f,0 .6cqw 0 #f5d49b,0 1cqw 1.3cqw #0008,inset 0 2px 1px #fff9;transition:transform .12s,box-shadow .12s}
+.zrc-button-text{position:relative;z-index:4;display:block;font-size:1.65cqw;line-height:1.1;letter-spacing:.08cqw;white-space:nowrap}
+.zrc-indicator{position:relative;z-index:4;display:block;font-size:.9cqw;letter-spacing:.1cqw;margin-top:.35cqw;white-space:nowrap}
+.zrc-control:before{content:'';position:absolute;inset:.35cqw;border:1px solid #8b673c;border-radius:.2cqw;pointer-events:none}
+.zrc-control:hover:not(:disabled){transform:translateY(-.3cqw);box-shadow:0 .8cqw 0 #80633f,0 .9cqw 0 #f5d49b,0 0 2.3cqw #f5d49b88,inset 0 2px 1px #fff9}
+.zrc-control:active:not(:disabled){transform:translateY(.4cqw);box-shadow:0 .1cqw 0 #80633f,0 0 2cqw white}
+.zrc-control:disabled{cursor:default;opacity:1}
+.zrc-control:disabled:not(.engaged):not(.sent){filter:saturate(.75);box-shadow:0 .3cqw 0 #80633f,0 .4cqw 0 #f5d49b}
+.zrc-control.unavailable:disabled:not(.engaged):not(.sent){opacity:.45}
+.zrc-control.engaged{transform:translateY(.3cqw);color:#fff;background:linear-gradient(135deg,#60447d,#211b30 55%,#49384f);border-color:white;box-shadow:0 .2cqw 0 #887450,0 0 1.2cqw #fff,0 0 2.4cqw #b46aff88,inset 0 0 1.5cqw #45dfff55}
+.zrc-control.engaged .zrc-button-text{text-shadow:0 0 7px white}
+.zrc-control.engaged .zrc-indicator{color:#d5f3e4}
+.zrc-power-edge{position:absolute;inset:-2px;border-radius:.6cqw;overflow:hidden;z-index:-1;opacity:0;pointer-events:none}
+.zrc-power-edge:before{content:'';position:absolute;inset:-100%;background:conic-gradient(#45dfff,#39ff88,#fff,#ffb52e,#ff446f,#ff54d5,#b46aff,#45dfff);animation:zrc-spin 1s linear infinite}
+.zrc-power-edge:after{content:'';position:absolute;inset:2px;border-radius:.4cqw;background:#30263d}
+.zrc-control.engaged .zrc-power-edge{opacity:1}
+.zrc-button-fx{position:absolute;inset:-4cqw -2cqw;width:calc(100% + 4cqw);height:calc(100% + 8cqw);z-index:5;pointer-events:none;overflow:visible}
+.zrc-button-zap{fill:none;stroke-width:.65;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 3px currentColor);stroke-dasharray:180;animation:zrc-zap .7s ease-out forwards}
+.zrc-control.firing{animation:zrc-kick .35s ease-out}
+.zrc-control.sent{color:#d5f3e4;background:linear-gradient(#3d304a,#211b30);border-color:#39ff88;box-shadow:0 .4cqw 0 #887450,0 0 1.8cqw #39ff8866,inset 0 0 1.5cqw #39ff8822}
+.zrc-received{position:absolute;inset:0;z-index:7;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:.8cqw;background:radial-gradient(ellipse,#3d304aee,transparent 78%);animation:zrc-appear .5s ease-out;padding:.4cqw}
+.zrc-received-icon{display:flex;flex-wrap:wrap;justify-content:center;gap:.3cqw;font-size:clamp(12px,3cqw,36px);line-height:1.05;filter:drop-shadow(0 0 8px #39ff88)}
+.zrc-complete{font:700 1.7cqw/1.15 Georgia,serif;color:#d5f3e4;text-shadow:0 0 9px #39ff8877}
+.zrc-detail .zshop-details{justify-content:center;gap:.6cqw}
+.zrc-detail .zshop-detail-icon.zshop-item-art{max-height:35%;width:12cqw;height:12cqw;font-size:7cqw}
+.zrc-detail .zshop-detail-name{font-size:2.1cqw}
+.zrc-detail .zshop-detail-description{font-size:1.65cqw;line-height:1.18;margin:.35cqw 0}
+.zrc-detail .zshop-action{font-size:1.7cqw;min-height:3.25cqw}
+@keyframes zrc-float{50%{transform:translate(-50%,-60%)}}
+@keyframes zrc-glow{to{box-shadow:0 0 2.2cqw #b46aff,inset 0 0 1.6cqw #45dfff}}
+@keyframes zrc-orbit{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes zrc-charge{0%{transform:translate(-50%,-50%)}70%{transform:translate(-50%,-32%) scale(.75);filter:drop-shadow(0 0 2cqw #ff54d5)}100%{transform:translate(-50%,-50%) scale(1.1);filter:drop-shadow(0 0 2cqw #fff)}}
+@keyframes zrc-gate{to{box-shadow:0 0 2.4cqw #fff,inset 0 0 1.5cqw #45dfff;transform:translateX(-50%) scale(.8)}}
+@keyframes zrc-letter{0%{left:50%;top:49%;opacity:0;transform:translate(-50%,-50%) scale(.4)}10%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}40%{left:calc(50% + var(--mid));top:34%;opacity:1;transform:translate(-50%,-50%) rotate(var(--angle)) scale(1)}80%{opacity:1}100%{left:calc(50% + var(--end));top:-18%;opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) scale(.6)}}
+@keyframes zrc-ring-out{to{transform:translate(-50%,-50%) scale(3);opacity:0}}
+@keyframes zrc-gate-out{to{transform:translateX(-50%) scale(2);opacity:0}}
+@keyframes zrc-gather{0%{stroke-dashoffset:-170;opacity:0}25%{opacity:1}85%{opacity:1}100%{stroke-dashoffset:30;opacity:0}}
+@keyframes zrc-trail{0%{stroke-dashoffset:450;opacity:1}40%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes zrc-core{0%{stroke-dashoffset:450;opacity:1}15%{stroke-dashoffset:0;opacity:1}40%{opacity:.95}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes zrc-flare{0%{transform:scale(.1);opacity:1}30%{opacity:1}100%{transform:scale(2.3);opacity:0}}
+@keyframes zrc-wave{0%{transform:scale(.2);opacity:1}100%{transform:scale(4);opacity:0}}
+@keyframes zrc-spark{0%{opacity:0;transform:scale(.3)}20%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.1)}}
+@keyframes zrc-flash{0%{opacity:0}18%{opacity:.85}100%{opacity:0}}
+@keyframes zrc-appear{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@keyframes zrc-spin{to{transform:rotate(360deg)}}
+@keyframes zrc-zap{0%{stroke-dashoffset:180;opacity:1}20%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes zrc-kick{0%{transform:translateY(.3cqw)}35%{transform:translateY(-.5cqw);box-shadow:0 0 1.5cqw white,0 0 3cqw #45dfff}100%{transform:translateY(.3cqw)}}
+@media(prefers-reduced-motion:reduce){.zrc-work *{animation:none!important;transition:none!important}.zrc-fx,.zrc-flash,.zrc-button-fx,.zrc-letters{display:none}}
+
 /* Mission Boosts only — animated display and in-place item card. */
 .zmb-shop{position:relative;isolation:isolate;background:linear-gradient(160deg,#30263d,#1d192c 45%);}
 .zmb-body{position:relative;isolation:isolate;flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;padding:1.4cqw 1.2cqw .7cqw;overflow:hidden}
@@ -672,6 +759,122 @@ async function buyShopItem(item){
   }
 }
 
+
+/* Recall visual state only. The existing recall RPC and ticket rules remain authoritative. */
+const recallColors=["#45dfff","#ff54d5","#39ff88","#ffb52e","#b46aff","#ff446f"];
+let recallVisual=null,recallVisualId=0;
+const recallVisualBusy=()=>!!recallVisual&&["charging","launching","waiting"].includes(recallVisual.phase);
+function renderRecallIfVisible(){
+  if(activeShop==="Journey Service"&&!shopMenuOverlay.hidden)renderShop();
+}
+function finishRecallVisual(v){
+  if(recallVisual!==v||v.outcome===null||!v.animationDone)return;
+  v.phase=v.outcome>0?"sent":"failed";
+  renderRecallIfVisible();
+}
+function beginRecallVisual(all){
+  const v={id:++recallVisualId,all,count:all?shopActiveJourneys.length:1,phase:"charging",outcome:null,animationDone:false};
+  recallVisual=v;
+  const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  setTimeout(()=>{
+    if(recallVisual!==v||v.phase!=="charging")return;
+    if(v.outcome!==null&&v.outcome>0)v.count=v.outcome;
+    v.phase="launching";renderRecallIfVisible();
+    setTimeout(()=>{
+      if(recallVisual!==v||v.phase!=="launching")return;
+      v.animationDone=true;
+      if(v.outcome===null){v.phase="waiting";renderRecallIfVisible();}
+      else finishRecallVisual(v);
+    },reduced?0:1800);
+  },reduced?0:1000);
+  return v;
+}
+function recordRecallVisual(v,count){
+  if(recallVisual!==v)return;
+  v.outcome=count;
+  if(count<=0){v.phase="failed";renderRecallIfVisible();return;}
+  finishRecallVisual(v);
+}
+function recallArt(phase,all){
+  let art="";
+  if(phase==="charging"){
+    for(let i=0;i<42;i++){
+      const a=i*Math.PI*2/42,c=recallColors[i%6],x=300+Math.cos(a)*(95+i%5*14),y=132+Math.sin(a)*90;
+      art+='<path class="zrc-charge-line" d="M'+x+' '+y+' Q'+(300+Math.cos(a+.65)*65)+' '+(132+Math.sin(a+.65)*45)+' 300 132" stroke="'+c+'" stroke-width=".65" vector-effect="non-scaling-stroke" style="filter:drop-shadow(0 0 4px '+c+');animation-delay:'+(i%8*.025)+'s"/>';
+    }
+  }
+  if(phase==="launching"){
+    for(let i=0;i<30;i++){
+      const c=recallColors[i%6],end=all?20+i*19.3:300+(i-15)*2.5,w=Math.sin(i*2.2)*40;
+      art+='<path class="zrc-trail" d="M300 217 C'+(300+w)+' 170 '+(end-w)+' 83 '+end+' -30" stroke="'+c+'" stroke-width="'+(i%5===0?1:.5)+'" vector-effect="non-scaling-stroke" style="filter:drop-shadow(0 0 4px '+c+');animation-delay:'+(i%7*.014)+'s"/>';
+    }
+    const n=all?9:5;
+    for(let i=0;i<n;i++){
+      const x=all?45+i*63.75:300+(i-2)*5;
+      art+='<path class="zrc-core" d="M300 210 Q'+(300+(x-300)*.35)+' 87 '+x+' -30" stroke-width="'+(i===Math.floor(n/2)?1.35:.55)+'" vector-effect="non-scaling-stroke"/>';
+    }
+    for(let i=0;i<28;i++){
+      const a=i*Math.PI*2/28,len=55+i%5*17,x=300+Math.cos(a)*len,y=132+Math.sin(a)*len*.65;
+      art+='<path class="zrc-flare" d="M'+(300+Math.cos(a)*12)+' '+(132+Math.sin(a)*12)+' L'+x+' '+y+'" stroke-width=".45" vector-effect="non-scaling-stroke"/>';
+    }
+    for(let i=0;i<6;i++)art+='<ellipse class="zrc-wave" cx="300" cy="132" rx="75" ry="22" stroke="'+recallColors[i]+'" stroke-width=".65" vector-effect="non-scaling-stroke" style="animation-delay:'+(i*.065)+'s;filter:drop-shadow(0 0 4px '+recallColors[i]+')"/>';
+    for(let i=0;i<32;i++){
+      const a=i*2.39996,dist=35+(i%9)*14,x=300+Math.cos(a)*dist,y=132+Math.sin(a)*dist*.75,c=i%3===0?"white":recallColors[i%6];
+      art+='<path class="zrc-spark" d="M'+x+' '+(y-4)+' l.7 3.3 3.3 .7 -3.3 .7 -.7 3.3 -.7 -3.3 -3.3 -.7 3.3 -.7 Z" fill="'+c+'" style="filter:drop-shadow(0 0 3px '+c+');animation-delay:'+(i%8*.035)+'s"/>';
+    }
+  }
+  return art;
+}
+function recallButtonZap(){
+  let art="";
+  for(let i=0;i<22;i++){
+    const a=i*Math.PI*2/22,x=150+Math.cos(a)*108,y=90+Math.sin(a)*28,c=i%3===0?"white":recallColors[i%6],ex=x+Math.cos(a)*42,ey=y+Math.sin(a)*37;
+    art+='<path class="zrc-button-zap" d="M'+x+' '+y+' L'+(x+(ex-x)*.3+4)+' '+(y+(ey-y)*.3-5)+' L'+(x+(ex-x)*.6-3)+' '+(y+(ey-y)*.6+3)+' L'+ex+' '+ey+'" stroke="'+c+'" style="color:'+c+'"/>';
+  }
+  return art;
+}
+function renderRecallStage(v){
+  const phase=v?.phase||"idle";
+  let letters="",received="";
+  if(phase==="launching"){
+    const n=v.count;
+    for(let i=0;i<n;i++){
+      const spread=n>1?(i/(n-1))*2-1:0;
+      const delay=n>1?i/(n-1)*.55:0;
+      letters+='<span class="zrc-letter" style="--energy:'+(v.all?recallColors[i%6]:"#ffffff")+';--mid:'+(spread*27)+'%;--end:'+(spread*47)+'%;--angle:'+(spread*35)+'deg;--delay:'+delay+'s;--letter-size:'+(n>8?3.5:4.7)+'cqw">✉️</span>';
+    }
+  }
+  if(phase==="sent"){
+    const n=v.outcome;
+    received='<div class="zrc-received"><div class="zrc-received-icon" style="font-size:'+(n>8?1.9:3.8)+'cqw">'+Array.from({length:n},()=>'<span>✉️</span>').join("")+'</div><div class="zrc-complete">'+(n===1?"RECALL MESSAGE DELIVERED":"RECALL MESSAGES DELIVERED")+'</div></div>';
+  }
+  return '<div class="zrc-stage zrc-'+phase+'" data-recall-stage="'+(v?.id||0)+':'+phase+'" aria-hidden="true">'+
+    '<svg viewBox="0 0 600 270" preserveAspectRatio="none"><g fill="none" stroke="#f5d49b" stroke-width=".5" opacity=".22"><ellipse cx="300" cy="217" rx="113" ry="24"/><ellipse cx="300" cy="217" rx="133" ry="32" stroke-dasharray="3 7"/><path d="M300 185 L340 217 L300 249 L260 217 Z M240 198 L360 236 M360 198 L240 236"/></g></svg>'+
+    '<div class="zrc-pedestal"></div><div class="zrc-gate"></div><div class="zrc-ring"></div><div class="zrc-ring second"></div><div class="zrc-ticket">🚨</div>'+
+    '<svg class="zrc-fx" viewBox="0 0 600 270" preserveAspectRatio="none">'+recallArt(phase,!!v?.all)+'</svg><div class="zrc-flash"></div><div class="zrc-letters">'+letters+'</div>'+received+'</div>';
+}
+function renderRecallControl(all,unavailable){
+  const v=recallVisual,phase=v?.phase||"idle",chosen=v&&v.all===all,engaged=chosen&&recallVisualBusy(),sent=chosen&&phase==="sent";
+  const text=engaged?(phase==="charging"?"CHARGING":"TRANSMITTING"):sent?"✓ SENT":all?"RECALL ALL":"RECALL 1";
+  const indicator=engaged?(phase==="charging"?"◆ ENERGY ACTIVE ◆":"◆ SIGNAL LAUNCHED ◆"):sent?"◆ COMPLETE ◆":unavailable&&!recallVisualBusy()?"◆ UNAVAILABLE ◆":"◆ READY ◆";
+  return '<button type="button" class="zrc-control'+(unavailable?" unavailable":"")+(engaged?" engaged":"")+(chosen&&phase==="launching"?" firing":"")+(sent?" sent":"")+'" data-shop-action="'+(all?"recall-all":"recall-one")+'" data-recall-control="'+(v?.id||0)+':'+phase+':'+all+'"'+(unavailable||recallVisualBusy()?' disabled':'')+'>'+
+    '<span class="zrc-power-edge"></span><span class="zrc-button-text">'+text+'</span><span class="zrc-indicator">'+indicator+'</span><svg class="zrc-button-fx" viewBox="0 0 300 180" preserveAspectRatio="none" aria-hidden="true">'+(engaged&&(phase==="charging"||phase==="launching")?recallButtonZap():"")+'</svg></button>';
+}
+function renderRecallService(){
+  const item=services[selectedService],owned=shopInventory.get("Emergency Recall Ticket")||0;
+  const v=recallVisual,phase=v?.phase||"idle";
+  const unavailable=shopBusy||shopLoading||owned<1||!shopActiveJourneys.length;
+  const status=phase==="charging"?"CHARGING RECALL SIGNAL…":phase==="launching"?(v.all?"BROADCASTING RECALL MESSAGES…":"TRANSMITTING RECALL MESSAGE…"):phase==="waiting"?"AWAITING RECALL CONFIRMATION…":phase==="sent"?"TRANSMISSION COMPLETE":phase==="failed"?"RECALL UNSUCCESSFUL":"READY TO TRANSMIT";
+  const progress=({charging:42,launching:85,waiting:85,sent:100})[phase]||0;
+  const consoleBody='<div class="zrc-console"><div class="zrc-heading">EMERGENCY RECALL</div><div class="zrc-sub">MAGICAL TRANSMISSION</div>'+renderRecallStage(v)+
+    '<div class="zrc-status" aria-live="polite">'+status+'</div><div class="zrc-progress" aria-hidden="true" style="--progress:'+progress+'%"><span></span></div>'+
+    '<select class="zrc-select" id="shopRecallCard" aria-label="Choose VCard to recall"'+(recallVisualBusy()?' disabled':'')+'>'+
+    (shopActiveJourneys.length?shopActiveJourneys.map(card=>'<option value="'+shopSafe(card.id)+'">'+shopSafe(card.name)+'</option>').join(""):'<option value="">No active Journeys</option>')+'</select>'+
+    '<div class="zrc-controls">'+renderRecallControl(false,unavailable)+renderRecallControl(true,unavailable)+'</div></div>';
+  const detail='<div class="zshop-details">'+shopArt(item,true)+'<strong class="zshop-detail-name">'+shopSafe(item.name)+'</strong><span class="zshop-item-owned">OWNED: '+owned+'</span><p class="zshop-detail-description">'+shopSafe(item.desc)+'</p><button class="zshop-action" type="button" data-shop-action="use-service"'+(shopDisabled(item)?' disabled':'')+'>BUY · '+shopPrice(item)+'</button></div>';
+  return '<div class="zshop-work zrc-work">'+shopPanel("TICKETS","AVAILABLE",consoleBody)+'<div class="zrc-detail zshop-panel"><div class="zshop-panel-head"><strong>DETAILS</strong><small>SELECTED</small></div>'+detail+'</div></div>';
+}
+
 async function recallShopJourneys(all){
   if(shopBusy||shopLoading)return;
   if(!shopPlayerId||window.VHouseAuth?.getUser?.()?.id!==shopPlayerId){
@@ -682,6 +885,7 @@ async function recallShopJourneys(all){
   }
   const target=all?null:shopMenuContent.querySelector("#shopRecallCard")?.value;
   if(!all&&!target){shopStatus="Select a VCard to recall.";renderShop();return;}
+  const visual=beginRecallVisual(all);
   shopBusy=true;
   renderShop();
   try{
@@ -689,6 +893,7 @@ async function recallShopJourneys(all){
     const {data,error}=await auth.getClient().rpc("vhouse_recall_item_journeys",{p_card_id:target});
     if(error)throw error;
     shopStatus=data.recalledCount+" VCard"+(data.recalledCount===1?"":"s")+" recalled. Results ready.";
+    recordRecallVisual(visual,Number(data.recalledCount)||0);
     window.dispatchEvent(new Event("vhouse:inventory-updated"));
     window.dispatchEvent(new Event("vhouse:cash-updated"));
     shopBusy=false;
@@ -699,6 +904,7 @@ async function recallShopJourneys(all){
     shopStatus=message.includes("NO_ACTIVE_JOURNEYS")?"No active Journeys to recall.":
       message.includes("RECALL_TICKET_NOT_OWNED")?"You need an Emergency Recall Ticket.":
       "Recall failed. Ticket was not used.";
+    recordRecallVisual(visual,0);
   }finally{
     shopBusy=false;
     if(!shopMenuOverlay.hidden)renderShop();
@@ -784,38 +990,7 @@ function renderShop(){
   if(activeShop==="Mission Boosts"){
     body=renderBoostBody();
   }else if(activeShop==="Journey Service"){
-    const isBoost=activeShop==="Mission Boosts";
-    const items=isBoost?boosts:services;
-    const selected=isBoost?selectedBoost:selectedService;
-    const item=items[selected];
-    const list=items.map((v,i)=>'<div class="zshop-purchase-tile">'+
-      '<button type="button" class="zshop-item'+(selected===i?' selected':'')+'" data-shop-action="'+(isBoost?"select-boost":"select-service")+'" data-index="'+i+'" aria-pressed="'+(selected===i)+'">'+
-      shopArt(v)+'<span class="zshop-item-name">'+shopSafe(v.label||v.name)+'</span><span class="zshop-item-owned">OWNED: '+(shopInventory.get(v.name)||0)+'</span></button>'+
-      '<button type="button" class="zshop-action zshop-hover-buy" data-shop-action="'+(isBoost?"buy-boost":"use-service")+'" data-index="'+i+'"'+(shopDisabled(v)?' disabled':'')+'>BUY · '+shopPrice(v)+'</button></div>').join("");
-    const recallOwned=shopInventory.get("Emergency Recall Ticket")||0;
-    const recallControls=!isBoost
-      ?'<div class="shop-recall-controls" style="display:grid;gap:5px;width:100%;font-size:11px">'+
-        '<select id="shopRecallCard" aria-label="Choose VCard to recall" style="min-width:0;width:100%;padding:5px;color:#ffe2ab;background:#21162c;border:1px solid #bc9357">'+
-        (shopActiveJourneys.length?shopActiveJourneys.map(card=>
-          '<option value="'+shopSafe(card.id)+'">'+shopSafe(card.name)+'</option>').join("")
-          :'<option value="">No active Journeys</option>')+'</select>'+
-        '<div style="display:flex;gap:5px">'+
-        '<button class="zshop-action" style="min-width:0;flex:1" data-shop-action="recall-one"'+
-        (shopBusy||shopLoading||recallOwned<1||!shopActiveJourneys.length?' disabled':'')+'>RECALL 1</button>'+
-        '<button class="zshop-action" style="min-width:0;flex:1" data-shop-action="recall-all"'+
-        (shopBusy||shopLoading||recallOwned<1||!shopActiveJourneys.length?' disabled':'')+'>RECALL ALL</button>'+
-        '</div></div>':'';
-    const detail='<div class="zshop-details">'+
-      shopArt(item,true)+
-      '<strong class="zshop-detail-name">'+(item.label||item.name)+'</strong>'+
-      '<p class="zshop-detail-description">'+item.desc+'</p>'+
-      (item.name==="Lucky Stone"&&shopReservedStones>0
-        ?'<small>☄️ ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(item.name)||0)+'</small>':'')+
-      '<button class="zshop-action" type="button" data-shop-action="'+(isBoost?"buy-boost":"use-service")+
-      '"'+(shopDisabled(item)?' disabled':'')+'>BUY · '+shopPrice(item)+'</button>'+recallControls+'</div>';
-    body='<div class="zshop-work">'+shopPanel(isBoost?"BOOST ITEMS":"TICKETS","AVAILABLE",
-      '<div class="zshop-grid'+(isBoost?' boost-grid':' service-grid')+'">'+list+'</div>')+
-      shopPanel("DETAILS","SELECTED",detail)+'</div>';
+    body=renderRecallService();
   }else{
     if(!ownedScraps[tradeFrom]){
       tradeFrom=Object.keys(ownedScraps).find(key=>ownedScraps[key]>0)||"scrap";
@@ -836,9 +1011,22 @@ function renderShop(){
   }
   if(shopStatus||shopPaymentSignature)footer='<div class="zshop-status" role="status">'+shopSafe(shopStatus)+
     (shopPaymentSignature?' · <a target="_blank" rel="noopener noreferrer" href="https://solscan.io/tx/'+encodeURIComponent(shopPaymentSignature)+'">VIEW ON SOLSCAN</a>':'')+'</div>';
+  const oldRecallStage=activeShop==="Journey Service"?shopMenuContent.querySelector(".zrc-stage"):null;
+  const oldRecallSelection=activeShop==="Journey Service"?shopMenuContent.querySelector("#shopRecallCard")?.value:null;
+  const oldRecallControls=activeShop==="Journey Service"?[...shopMenuContent.querySelectorAll(".zrc-control")]:[];
   shopMenuContent.innerHTML=activeShop==="Mission Boosts"
     ?'<div class="zshop zmb-shop"><div class="zmb-body"><h2 class="zshop-title">'+title+'</h2>'+body+'</div>'+footer+'</div>'
     :'<div class="zshop"><h2 class="zshop-title">'+title+'</h2>'+body+footer+'</div>';
+  if(activeShop==="Journey Service"){
+    const newStage=shopMenuContent.querySelector(".zrc-stage");
+    if(oldRecallStage&&newStage&&oldRecallStage.dataset.recallStage===newStage.dataset.recallStage)newStage.replaceWith(oldRecallStage);
+    const select=shopMenuContent.querySelector("#shopRecallCard");
+    if(select&&oldRecallSelection&&[...select.options].some(option=>option.value===oldRecallSelection))select.value=oldRecallSelection;
+    for(const oldButton of oldRecallControls){
+      const newButton=[...shopMenuContent.querySelectorAll(".zrc-control")].find(b=>b.dataset.recallControl===oldButton.dataset.recallControl);
+      if(newButton&&oldButton.className===newButton.className&&oldButton.disabled===newButton.disabled)newButton.replaceWith(oldButton);
+    }
+  }
   shopMenuWindow.setAttribute("aria-label",activeShop);
 }
 shopMenuContent.addEventListener("click",event=>{
@@ -880,6 +1068,7 @@ document.querySelectorAll(".shop-hotspot").forEach(button=>{
     shopMenuTrigger=button;
     resetBoostCard();
     activeShop=button.dataset.menu;
+    if(activeShop==="Journey Service"&&!recallVisualBusy())recallVisual=null;
     shopStatus="";
     shopMenuOverlay.hidden=false;
     renderShop();
