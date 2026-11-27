@@ -1864,6 +1864,21 @@ function returnJourney(){
 
 itemControl("useStageTicket")?.addEventListener("change",renderStageInfo);
 
+/* Decorative Start Journey button animation; no Journey or payment state changes. */
+{
+  const button=$("startButton"),visual=button.closest(".journey-start-fx");
+  if(visual){
+    let animationTimer;
+    button.addEventListener("click",()=>{
+      clearTimeout(animationTimer);
+      visual.classList.remove("is-energized");
+      void visual.offsetWidth;
+      visual.classList.add("is-energized");
+      animationTimer=setTimeout(()=>visual.classList.remove("is-energized"),850);
+    },{capture:true});
+  }
+}
+
 $("startButton").onclick=()=>{
   const mission=state.mission;
   if(mission&&["running","ready"].includes(mission.status)){
