@@ -181,6 +181,72 @@ html, body {
   .zshop-detail-description{font-size:10px}
   .zshop-detail-icon{font-size:20px}
 }
+
+/* Mission Boosts only — animated display and in-place item card. */
+.zmb-shop{position:relative;isolation:isolate;background:linear-gradient(160deg,#30263d,#1d192c 45%);}
+.zmb-body{position:relative;isolation:isolate;flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;padding:1.4cqw 1.2cqw .7cqw;overflow:hidden}
+.zmb-body .zshop-title{text-align:center;padding:0;font:700 3.25cqw/1.08 Georgia,serif;color:#f5d49b}
+.zmb-subtitle,.zmb-hint{text-align:center;font:700 1.3cqw/1.2 Arial,sans-serif;letter-spacing:.25cqw;color:#f5d49b}
+.zmb-subtitle{margin:.7cqw 0 1.3cqw}
+.zmb-items{display:flex;flex:1;min-height:0;align-items:stretch;gap:.75cqw;padding:1.2cqw .2cqw 0}
+.zmb-item{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;background:none;border:0;padding:0;cursor:pointer;color:inherit;transition:transform .25s}
+.zmb-item:hover,.zmb-item:focus-visible{transform:translateY(-.9cqw)}
+.zmb-dome{flex:1;min-height:0;width:100%;border:1px solid #887450;border-radius:50% 50% .7cqw .7cqw / 38% 38% .7cqw .7cqw;background:radial-gradient(ellipse at 50% 80%,#49384f,#211b30 65%,#181525);position:relative;display:flex;align-items:center;justify-content:center;isolation:isolate;box-shadow:inset 5px 3px 12px #ffffff13;transition:box-shadow .3s,border-color .3s}
+.zmb-dome:before{content:'';position:absolute;left:13%;top:14%;width:12%;height:37%;border-radius:50%;background:linear-gradient(#ffffff45,transparent);transform:rotate(15deg)}
+.zmb-aura{position:absolute;inset:15% 0 5%;background:radial-gradient(ellipse,var(--energy),transparent 65%);opacity:.19;filter:blur(.9cqw);transition:opacity .2s}
+.zmb-item:hover .zmb-aura,.zmb-item:focus-visible .zmb-aura{opacity:.7;animation:zmb-breath 1s ease-in-out infinite alternate}
+.zmb-item:hover .zmb-dome,.zmb-item:focus-visible .zmb-dome{border-color:var(--energy);box-shadow:0 0 1.2cqw var(--energy),inset 0 -.8cqw 2.3cqw color-mix(in srgb,var(--energy) 45%,transparent)}
+.zmb-symbol{position:relative;z-index:3;display:grid;place-items:center;width:70%;height:65%;min-height:0;font-size:5.9cqw;line-height:1;filter:drop-shadow(0 .5cqw .6cqw #181525);animation:zmb-float 2.8s ease-in-out infinite}
+.zmb-symbol .zshop-item-art{display:grid;place-items:center;width:100%;height:100%;min-height:0;font:inherit}
+.zmb-symbol img{object-fit:contain;width:100%;height:100%}
+.zmb-item:hover .zmb-symbol,.zmb-item:focus-visible .zmb-symbol{filter:drop-shadow(0 0 1.1cqw var(--energy))}
+.zmb-base{position:absolute;bottom:7%;left:8%;width:84%;height:17%;border:1px solid #887450;border-radius:50%;background:linear-gradient(#49384f,#181525);box-shadow:0 .5cqw 0 #181525,0 .6cqw 0 #887450}
+.zmb-ring{position:absolute;bottom:14%;left:12%;width:76%;height:15%;border:1px solid var(--energy);border-radius:50%;box-shadow:0 0 .9cqw var(--energy),inset 0 0 .9cqw var(--energy);animation:zmb-ring 2s ease-in-out infinite}
+.zmb-plaque{width:100%;flex:0 0 6.5cqw;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.35cqw .1cqw;background:linear-gradient(#3d304a,#211b30);border:1px solid #887450;border-radius:.35cqw;box-shadow:0 .4cqw 0 #181525;text-align:center}
+.zmb-name{font:700 1.75cqw/1.12 Georgia,serif;color:#f5d49b;white-space:nowrap}
+.zmb-owned{font:700 1.35cqw/1.12 Arial,sans-serif;color:#d5f3e4;margin-top:.55cqw}
+.zmb-shelf{height:1.25cqw;flex-shrink:0;background:linear-gradient(#887450,#f5d49b 15%,#887450 30%,#3d304a 45%,#181525);box-shadow:0 .9cqw 1.4cqw #181525;margin:.45cqw -.4cqw 0}
+.zmb-hint{margin:1.5cqw 0 .35cqw}
+.zmb-star{position:absolute;width:1.3cqw;height:1.9cqw;background:#fff;clip-path:polygon(50% 0,58% 40%,100% 50%,58% 60%,50% 100%,42% 60%,0 50%,42% 40%);filter:drop-shadow(0 0 .6cqw var(--energy));z-index:5;pointer-events:none;animation:zmb-twinkle 2s ease-in-out infinite}
+.zmb-star.one{left:17%;top:31%}
+.zmb-star.two{right:13%;top:18%;animation-delay:.7s;width:.9cqw;height:1.3cqw}
+.zmb-star.three{right:18%;bottom:28%;animation-delay:1.2s;width:.8cqw;height:1.2cqw}
+.zmb-item:hover .zmb-star,.zmb-item:focus-visible .zmb-star{animation-duration:.7s;background:var(--energy)}
+.zmb-item.zmb-flash .zmb-dome{animation:zmb-flash .36s ease-out}
+.zmb-effect{position:absolute;inset:0;pointer-events:none;z-index:30;overflow:hidden}
+.zmb-burst{position:absolute;width:24cqw;height:24cqw;transform:translate(-50%,-50%);overflow:visible;filter:drop-shadow(0 0 .6cqw var(--energy));animation:zmb-burst .65s ease-out forwards}
+.zmb-burst svg{width:100%;height:100%;overflow:visible}
+.zmb-burst path{stroke-dasharray:180;animation:zmb-draw .35s ease-out}
+.zmb-overlay{position:absolute;inset:0;background:#181525d9;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:20;padding:1.1cqw}
+.zmb-card{position:relative;display:flex;flex-direction:column;align-items:center;width:42cqw;max-width:90%;height:100%;min-height:0;background:radial-gradient(ellipse at 50% 25%,#49384f,#211b30 70%);border:2px solid #f5d49b;border-radius:1cqw;padding:.8cqw 1.1cqw;text-align:center;box-shadow:0 0 0 .4cqw #181525,0 0 0 .5cqw #887450,0 1.2cqw 4cqw #000,0 0 3.4cqw color-mix(in srgb,var(--energy) 55%,transparent);overflow:hidden}
+.zmb-card.zmb-reveal{animation:zmb-reveal .5s cubic-bezier(.2,.8,.2,1)}
+.zmb-close{position:absolute;right:.6cqw;top:.6cqw;width:3.2cqw;height:3.2cqw;z-index:5;background:#211b30;border:1px solid #887450;color:#f5d49b;border-radius:50%;cursor:pointer;font-size:2.6cqw;line-height:1;padding:0}
+.zmb-cardlabel{flex-shrink:0;font-size:1.15cqw;letter-spacing:.22cqw;color:#f5d49b;margin-bottom:.5cqw}
+.zmb-art{flex:1;min-height:0;width:100%;position:relative;overflow:hidden;isolation:isolate;border:1px solid #887450;border-radius:.6cqw;background:radial-gradient(ellipse,color-mix(in srgb,var(--energy) 45%,#211b30),#181525 75%);display:flex;justify-content:center;align-items:center}
+.zmb-rays{position:absolute;inset:-80%;background:repeating-conic-gradient(from 0deg,transparent 0deg 19deg,color-mix(in srgb,var(--energy) 50%,transparent) 23deg,transparent 28deg 43deg);mask-image:radial-gradient(black,transparent 43%);animation:zmb-spin 18s linear infinite}
+.zmb-orbit{position:absolute;width:24%;aspect-ratio:1;border:1px solid var(--energy);border-radius:50%;box-shadow:0 0 1cqw var(--energy),inset 0 0 1cqw var(--energy);animation:zmb-breath 1.5s infinite alternate}
+.zmb-orbit:after{content:'';position:absolute;inset:-.8cqw;border:1px dashed var(--energy);border-radius:50%;animation:zmb-spin 9s linear infinite}
+.zmb-art .zmb-symbol{width:50%;height:85%;font-size:8cqw;filter:drop-shadow(0 0 1.4cqw var(--energy))}
+.zmb-sweep{position:absolute;inset:0;z-index:4;background:linear-gradient(115deg,transparent 35%,#ffffff75 48%,var(--energy) 50%,transparent 65%);transform:translateX(-130%);animation:zmb-sweep 3s ease-in-out infinite;pointer-events:none}
+.zmb-cardname{flex-shrink:0;font:700 2.65cqw/1.1 Georgia,serif;color:#f5d49b;margin:.6cqw 0 .15cqw}
+.zmb-card .zmb-owned{margin:.2cqw 0}
+.zmb-reserved{font-size:1.3cqw;line-height:1.1;color:#f2e9dd}
+.zmb-desc{flex-shrink:0;width:100%;font:600 1.65cqw/1.22 Arial,sans-serif;color:#f2e9dd;border-top:1px solid #887450;margin:.45cqw 0;padding:.6cqw 0 .15cqw}
+.zmb-buy{flex-shrink:0;width:100%;min-height:3.4cqw;background:linear-gradient(#ffe9b2,#c89b5b);color:#281e28;border:1px solid #ffe6b5;border-radius:.35cqw;font:900 1.75cqw/1.15 Arial,sans-serif;padding:.35cqw;cursor:pointer}
+.zmb-buy:hover:not(:disabled){box-shadow:0 0 1.6cqw #f5d49b}
+.zmb-buy:disabled{opacity:.4;cursor:default}
+@keyframes zmb-float{50%{transform:translateY(-.7cqw)}}
+@keyframes zmb-breath{to{transform:scale(1.1);opacity:1}}
+@keyframes zmb-ring{50%{transform:scaleX(.86);opacity:.55}}
+@keyframes zmb-twinkle{0%,100%{opacity:.1;transform:scale(.3) rotate(0deg)}50%{opacity:1;transform:scale(1) rotate(25deg)}}
+@keyframes zmb-flash{30%{filter:brightness(2);box-shadow:0 0 3.5cqw var(--energy),inset 0 0 2.4cqw white}100%{filter:brightness(1)}}
+@keyframes zmb-burst{0%{opacity:1;transform:translate(-50%,-50%) scale(.2) rotate(-15deg)}35%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6) rotate(12deg)}}
+@keyframes zmb-draw{from{stroke-dashoffset:180}to{stroke-dashoffset:0}}
+@keyframes zmb-reveal{0%{transform:perspective(600px) rotateY(-45deg) scale(.65);opacity:0;filter:brightness(2)}100%{transform:none;opacity:1;filter:brightness(1)}}
+@keyframes zmb-spin{to{transform:rotate(360deg)}}
+@keyframes zmb-sweep{0%,60%{transform:translateX(-130%)}90%,100%{transform:translateX(130%)}}
+@media(prefers-reduced-motion:reduce){.zmb-shop *{animation:none!important;transition:none!important}.zmb-effect{display:none}}
+
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 /* Keep shared HUD entirely within the 16:9 artwork's visible left edge. */
 .shop-player-hud { top: 2%; left: 7%; }
@@ -653,9 +719,71 @@ function shopPanel(title,subtitle,body){
   return '<section class="zshop-panel"><div class="zshop-panel-head"><strong>'+title+
     '</strong><small>'+subtitle+'</small></div>'+body+'</section>';
 }
+
+/* Mission Boosts presentation state; item catalog, inventory and purchases stay shared. */
+const boostEnergy=["#39ff88","#ff446f","#ffb52e","#b46aff","#ff54d5"];
+let boostCardOpen=false,boostOpeningTimer=null,boostReveal=false;
+const boostStars='<i class="zmb-star one"></i><i class="zmb-star two"></i><i class="zmb-star three"></i>';
+function renderBoostBody(){
+  const list=boosts.map((v,i)=>'<button type="button" class="zmb-item" style="--energy:'+boostEnergy[i]+'" data-shop-action="select-boost" data-index="'+i+'" aria-label="View '+shopSafe(v.label||v.name)+'" aria-haspopup="dialog"'+(boostCardOpen?' tabindex="-1"':'')+'>'+
+    '<span class="zmb-dome"><span class="zmb-aura"></span><span class="zmb-base"></span><span class="zmb-ring"></span>'+boostStars+'<span class="zmb-symbol">'+shopArt(v)+'</span></span>'+
+    '<span class="zmb-plaque"><span class="zmb-name">'+shopSafe(v.label||v.name)+'</span><span class="zmb-owned">OWNED: '+(shopInventory.get(v.name)||0)+'</span></span></button>').join("");
+  let overlay="";
+  if(boostCardOpen){
+    const v=boosts[selectedBoost];
+    overlay='<div class="zmb-overlay"><section class="zmb-card'+(boostReveal?' zmb-reveal':'')+'" role="dialog" aria-modal="true" aria-label="'+shopSafe(v.label||v.name)+'" style="--energy:'+boostEnergy[selectedBoost]+'">'+
+      '<button class="zmb-close" type="button" data-shop-action="close-boost" aria-label="Close item card">×</button>'+
+      '<div class="zmb-cardlabel">◆ &nbsp; MISSION BOOST &nbsp; ◆</div>'+
+      '<div class="zmb-art"><div class="zmb-rays"></div><div class="zmb-orbit"></div>'+boostStars+'<span class="zmb-symbol">'+shopArt(v)+'</span><div class="zmb-sweep"></div></div>'+
+      '<strong class="zmb-cardname">'+shopSafe(v.label||v.name)+'</strong><div class="zmb-owned">OWNED: '+(shopInventory.get(v.name)||0)+'</div>'+
+      (v.name==="Lucky Stone"&&shopReservedStones>0?'<small class="zmb-reserved">☄️ ON RAID: '+shopReservedStones+' · INVENTORY: '+(shopInventory.get(v.name)||0)+'</small>':'')+
+      '<p class="zmb-desc">'+shopSafe(v.desc)+'</p>'+
+      '<button class="zmb-buy" type="button" data-shop-action="buy-boost" data-index="'+selectedBoost+'"'+(shopDisabled(v)?' disabled':'')+'>BUY · '+shopPrice(v)+'</button></section></div>';
+  }
+  return '<div class="zmb-subtitle">BOOST ITEMS</div><div class="zmb-items"'+(boostCardOpen?' inert':'')+'>'+list+'</div><div class="zmb-shelf"></div><div class="zmb-hint">◇ &nbsp; CLICK AN ITEM TO VIEW &nbsp; ◇</div><div class="zmb-effect" aria-hidden="true"></div>'+overlay;
+}
+function boostBurst(target,color){
+  const fx=shopMenuContent.querySelector(".zmb-effect");
+  if(!target||!fx||window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const bounds=target.getBoundingClientRect(),parent=fx.getBoundingClientRect();
+  const node=document.createElement("div");
+  node.className="zmb-burst";node.style.left=(bounds.left-parent.left+bounds.width/2)+"px";node.style.top=(bounds.top-parent.top+bounds.height/2)+"px";node.style.setProperty("--energy",color);
+  let lines="";
+  for(let i=0;i<14;i++){
+    const a=i*360/14;
+    lines+='<g transform="rotate('+a+' 100 100)"><path d="M100 79 L96 61 L103 65 L98 38 L101 54" fill="none" stroke="'+color+'" stroke-width=".6" vector-effect="non-scaling-stroke"/><path d="M100 73 L100 25" fill="none" stroke="white" stroke-width=".3" vector-effect="non-scaling-stroke"/><path d="M100 12 L102 20 L110 22 L102 24 L100 32 L98 24 L90 22 L98 20 Z" fill="'+(i%2===0?"white":color)+'"/></g>';
+  }
+  node.innerHTML='<svg viewBox="0 0 200 200" aria-hidden="true"><ellipse cx="100" cy="100" rx="63" ry="41" transform="rotate(-30 100 100)" fill="none" stroke="'+color+'" stroke-width=".6" vector-effect="non-scaling-stroke"/><ellipse cx="100" cy="100" rx="74" ry="50" transform="rotate(30 100 100)" fill="none" stroke="white" stroke-width=".3" vector-effect="non-scaling-stroke"/>'+lines+'</svg>';
+  fx.appendChild(node);setTimeout(()=>node.remove(),680);
+}
+function resetBoostCard(){
+  if(boostOpeningTimer!==null)clearTimeout(boostOpeningTimer);
+  boostOpeningTimer=null;boostCardOpen=false;boostReveal=false;
+}
+function openBoostCard(button,index){
+  if(boostOpeningTimer!==null||boostCardOpen)return;
+  selectedBoost=index;
+  button.classList.add("zmb-flash");boostBurst(button.querySelector(".zmb-dome"),boostEnergy[index]);
+  const reveal=()=>{
+    boostOpeningTimer=null;
+    if(activeShop!=="Mission Boosts"||shopMenuOverlay.hidden)return;
+    boostCardOpen=true;boostReveal=true;renderShop();boostReveal=false;
+    boostBurst(shopMenuContent.querySelector(".zmb-art"),boostEnergy[index]);
+    shopMenuContent.querySelector(".zmb-close")?.focus({preventScroll:true});
+  };
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)reveal();
+  else boostOpeningTimer=setTimeout(reveal,300);
+}
+function closeBoostCard(){
+  resetBoostCard();renderShop();
+  shopMenuContent.querySelector('.zmb-item[data-index="'+selectedBoost+'"]')?.focus({preventScroll:true});
+}
+
 function renderShop(){
   let body,footer="",title=activeShop.toUpperCase();
-  if(activeShop==="Mission Boosts" || activeShop==="Journey Service"){
+  if(activeShop==="Mission Boosts"){
+    body=renderBoostBody();
+  }else if(activeShop==="Journey Service"){
     const isBoost=activeShop==="Mission Boosts";
     const items=isBoost?boosts:services;
     const selected=isBoost?selectedBoost:selectedService;
@@ -708,17 +836,20 @@ function renderShop(){
   }
   if(shopStatus||shopPaymentSignature)footer='<div class="zshop-status" role="status">'+shopSafe(shopStatus)+
     (shopPaymentSignature?' · <a target="_blank" rel="noopener noreferrer" href="https://solscan.io/tx/'+encodeURIComponent(shopPaymentSignature)+'">VIEW ON SOLSCAN</a>':'')+'</div>';
-  shopMenuContent.innerHTML='<div class="zshop">'+
-    '<h2 class="zshop-title">'+title+'</h2>'+body+footer+'</div>';
+  shopMenuContent.innerHTML=activeShop==="Mission Boosts"
+    ?'<div class="zshop zmb-shop"><div class="zmb-body"><h2 class="zshop-title">'+title+'</h2>'+body+'</div>'+footer+'</div>'
+    :'<div class="zshop"><h2 class="zshop-title">'+title+'</h2>'+body+footer+'</div>';
   shopMenuWindow.setAttribute("aria-label",activeShop);
 }
 shopMenuContent.addEventListener("click",event=>{
+  if(activeShop==="Mission Boosts"&&boostCardOpen&&event.target.classList.contains("zmb-overlay")){closeBoostCard();return;}
   const button=event.target.closest("button[data-shop-action]");
   if(!button||button.disabled)return;
   const action=button.dataset.shopAction;
   const index=button.dataset.index;
+  if(action==="close-boost"){closeBoostCard();return;}
   shopStatus="";
-  if(action==="select-boost")selectedBoost=Number(index);
+  if(action==="select-boost"){openBoostCard(button,Number(index));return;}
   if(action==="select-service")selectedService=Number(index);
   if(action==="select-player")tradeFrom=index;
   if(action==="select-stock")tradeTo=index;
@@ -747,6 +878,7 @@ shopMenuContent.addEventListener("click",event=>{
 document.querySelectorAll(".shop-hotspot").forEach(button=>{
   button.addEventListener("click",()=>{
     shopMenuTrigger=button;
+    resetBoostCard();
     activeShop=button.dataset.menu;
     shopStatus="";
     shopMenuOverlay.hidden=false;
@@ -766,6 +898,7 @@ window.addEventListener("pageshow",()=>{
 });
 function closeShopMenu(){
   if(shopMenuOverlay.hidden)return;
+  resetBoostCard();
   shopMenuOverlay.hidden=true;
   ++shopReadId;
   shopMenuContent.replaceChildren();
@@ -776,7 +909,10 @@ shopMenuOverlay.addEventListener("click",event=>{
   if(event.target===shopMenuOverlay)closeShopMenu();
 });
 document.addEventListener("keydown",event=>{
-  if(event.key==="Escape")closeShopMenu();
+  if(event.key==="Escape"){
+    if(activeShop==="Mission Boosts"&&boostCardOpen&&!shopMenuOverlay.hidden){closeBoostCard();return;}
+    closeShopMenu();
+  }
 });
 </script>
 <script src="assets/vhouse-public-config.js"></script>
