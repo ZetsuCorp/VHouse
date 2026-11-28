@@ -39,6 +39,7 @@
   `;
   document.head.append(style);
 
+  const MAX_VISIBLE_NPCS = 7;
   const npcs = new Map();
   let channel = null, client = null, local = null, subscribed = false;
   let frame = 0, lastTime = null;
@@ -183,8 +184,21 @@
       const present = population.get(local.player_id);
       population.set(local.player_id, present ? {...present, username:local.username, avatar_url:local.avatar_url} : local);
     }
-    for (const id of npcs.keys()) if (!population.has(id)) removeNPC(id);
-    for (const [id, player] of population) renderPlayer(id, player);
+    // Limit only this screen; the shared Presence population stays intact.
+    const visible = new Set();
+    if (local) visible.add(local.player_id);
+    // Keep existing walkers on screen to avoid reshuffling on Presence updates.
+    for (const id of npcs.keys()) {
+      if (visible.size >= MAX_VISIBLE_NPCS) break;
+      if (population.has(id)) visible.add(id);
+    }
+    const candidates = [...population.keys()].filter(id => !visible.has(id));
+    while (visible.size < MAX_VISIBLE_NPCS && candidates.length) {
+      const index = Math.floor(Math.random() * candidates.length);
+      visible.add(candidates.splice(index, 1)[0]);
+    }
+    for (const id of npcs.keys()) if (!visible.has(id)) removeNPC(id);
+    for (const id of visible) renderPlayer(id, population.get(id));
   }
 
   function profileFor(user) {
