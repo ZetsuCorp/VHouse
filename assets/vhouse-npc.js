@@ -43,6 +43,7 @@
   let channel = null, client = null, local = null, subscribed = false;
   let frame = 0, lastTime = null;
   const joinedAt = Date.now();
+  let pendingEmail = null;
 
   function position(npc) {
     npc.el.style.left = npc.x + "%";
@@ -178,7 +179,10 @@
         }
       }
     }
-    if (local && !population.has(local.player_id)) population.set(local.player_id, local);
+    if (local) {
+      const present = population.get(local.player_id);
+      population.set(local.player_id, present ? {...present, username:local.username, avatar_url:local.avatar_url} : local);
+    }
     for (const id of npcs.keys()) if (!population.has(id)) removeNPC(id);
     for (const [id, player] of population) renderPlayer(id, player);
   }
@@ -198,19 +202,12 @@
     };
   }
 
-  async function loadEmailProfile(user) {
-    if (!user?.email || user.identities?.some(item => item.provider === "discord")) return;
-    try {
-      const {data,error} = await auth.getClient().from("vhouse_accounts")
-        .select("username,display_name,avatar_url").eq("id",user.id).single();
-      if (error) throw error;
-      if (local?.player_id !== user.id || auth.getUser()?.id !== user.id) return;
-      local = {...local, username:data.display_name || data.username || "Player", avatar_url:data.avatar_url || ""};
-      renderPlayer(user.id,local);
-      if (channel) publish(channel);
-    } catch(error) {
-      console.warn("[VHouse Population] Profile:",error);
-    }
+  async function loadEmailProfile(user, player) {
+    await auth.ready;
+    const {data,error} = await auth.getClient().from("vhouse_accounts")
+      .select("username,display_name,avatar_url").eq("id",user.id).single();
+    if (error) throw error;
+    return {...player, username:data.display_name || data.username || "Player", avatar_url:data.avatar_url || ""};
   }
 
   function publish(room) {
@@ -234,17 +231,14 @@
     }
   }
 
-  function sync(user) {
-    if (!user) { disconnect(); return; }
-    const player = profileFor(user);
-    if (!user.identities?.some(item => item.provider === "discord") && local?.player_id === player.player_id) {
-      player.username = local.username;
-      player.avatar_url = local.avatar_url;
-    }
+  function connectPlayer(player) {
     if (channel && local?.player_id === player.player_id) {
       const changed = JSON.stringify(local) !== JSON.stringify(player);
       local = player;
-      if (changed) publish(channel);
+      if (changed) {
+        renderPlayer(player.player_id,player);
+        publish(channel);
+      }
       return;
     }
     disconnect();
@@ -252,7 +246,6 @@
     reconcile();
     client = auth.getClient();
     if (!client) return;
-    setTimeout(() => void loadEmailProfile(user),0);
     const room = client.channel("vhouse_population", {
       config: { presence: { key: player.player_id } }
     });
@@ -266,6 +259,32 @@
       else if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         reconcile();
       }
+    });
+  }
+
+  function sync(user) {
+    if (!user) { pendingEmail = null; disconnect(); return; }
+    const player = profileFor(user);
+    const emailOnly = user.email && !user.identities?.some(item => item.provider === "discord");
+    if (!emailOnly) {
+      pendingEmail = null;
+      connectPlayer(player);
+      return;
+    }
+    if (pendingEmail?.id === user.id) return;
+    if (local && local.player_id !== user.id) disconnect();
+    const request = {id:user.id};
+    pendingEmail = request;
+    // Resolve the saved email avatar before spawning or announcing Presence.
+    void loadEmailProfile(user,player).then(profile => {
+      if (pendingEmail !== request || auth.getUser()?.id !== user.id) return;
+      connectPlayer(profile);
+    }).catch(error => {
+      if (pendingEmail !== request || auth.getUser()?.id !== user.id) return;
+      console.warn("[VHouse Population] Profile:",error);
+      if (local?.player_id !== user.id) connectPlayer(player);
+    }).finally(() => {
+      if (pendingEmail === request) pendingEmail = null;
     });
   }
 
