@@ -1,4 +1,4 @@
-/* V Town: one NPC for the signed-in player. */
+/* V Town: shared online NPC population. */
 (() => {
   const map = document.querySelector(".map-container");
   const auth = window.VHouseAuth;
@@ -9,7 +9,7 @@
     { min: 12, max: 37, y: 80.5 },
     { min: 64, max: 89, y: 81 }
   ];
-  const zone = zones[Math.floor(Math.random() * zones.length)];
+  const localSide = Math.floor(Math.random() * zones.length);
   const random = (min, max) => min + Math.random() * (max - min);
 
   const style = document.createElement("style");
@@ -32,60 +32,62 @@
   `;
   document.head.append(style);
 
-  let npc = null;
-  let frame = 0;
-  let activeId = null;
-  let sprite, avatar, label;
-  let x, direction, moving, remaining, lastTime;
+  const npcs = new Map();
+  let channel = null, client = null, local = null, subscribed = false;
+  let frame = 0, lastTime = null;
+  const joinedAt = Date.now();
 
-  function position() {
-    npc.style.left = x + "%";
-    npc.style.top = zone.y + "%";
-    sprite.style.transform = "scaleX(" + direction + ")";
+  function position(npc) {
+    npc.el.style.left = npc.x + "%";
+    npc.el.style.top = npc.zone.y + "%";
+    npc.sprite.style.transform = "scaleX(" + npc.direction + ")";
   }
 
   function tick(now) {
-    if (!npc) return;
     const dt = lastTime === null ? 0 : Math.min((now - lastTime) / 1000, .1);
     lastTime = now;
-    remaining -= dt;
-
-    if (moving) {
-      x += direction * 1.4 * dt;
-      if (x >= zone.max || x <= zone.min) {
-        x = Math.max(zone.min, Math.min(zone.max, x));
-        direction *= -1;
-        moving = false;
-        remaining = random(1, 3);
-      } else if (remaining <= 0) {
-        moving = false;
-        remaining = random(.8, 3);
+    for (const npc of npcs.values()) {
+      npc.remaining -= dt;
+      if (npc.moving) {
+        npc.x += npc.direction * 1.4 * dt;
+        if (npc.x >= npc.zone.max || npc.x <= npc.zone.min) {
+          npc.x = Math.max(npc.zone.min, Math.min(npc.zone.max, npc.x));
+          npc.direction *= -1;
+          npc.moving = false;
+          npc.remaining = random(1, 3);
+        } else if (npc.remaining <= 0) {
+          npc.moving = false;
+          npc.remaining = random(.8, 3);
+        }
+      } else if (npc.remaining <= 0) {
+        npc.moving = true;
+        npc.remaining = random(2, 6);
       }
-    } else if (remaining <= 0) {
-      moving = true;
-      remaining = random(2, 6);
+      position(npc);
     }
-
-    position();
-    frame = requestAnimationFrame(tick);
+    frame = npcs.size ? requestAnimationFrame(tick) : 0;
+    if (!frame) lastTime = null;
   }
 
-  function removeNPC() {
-    cancelAnimationFrame(frame);
-    npc?.remove();
-    npc = null;
-    activeId = null;
+  function removeNPC(id) {
+    npcs.get(id)?.el.remove();
+    npcs.delete(id);
+    if (!npcs.size) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      lastTime = null;
+    }
   }
 
-  function spawn(user) {
-    npc = document.createElement("div");
-    npc.className = "town-npc";
+  function spawn(id, player) {
+    const el = document.createElement("div");
+    el.className = "town-npc";
 
-    sprite = document.createElement("div");
+    const sprite = document.createElement("div");
     sprite.className = "town-npc-sprite";
     const face = document.createElement("div");
     face.className = "town-npc-face";
-    avatar = document.createElement("img");
+    const avatar = document.createElement("img");
     avatar.className = "town-npc-avatar";
     avatar.alt = "";
     avatar.draggable = false;
@@ -99,42 +101,131 @@
     body.draggable = false;
     sprite.append(face, body);
 
-    label = document.createElement("span");
+    const label = document.createElement("span");
     label.className = "town-npc-name";
-    npc.append(sprite, label);
-    map.append(npc);
+    el.append(sprite, label);
+    map.append(el);
 
-    activeId = user.id;
-    x = random(zone.min, zone.max);
-    direction = Math.random() < .5 ? -1 : 1;
-    moving = true;
-    remaining = random(2, 6);
-    lastTime = null;
-    position();
-    frame = requestAnimationFrame(tick);
+    const zone = zones[player.side === 1 ? 1 : 0];
+    const npc = { el, sprite, avatar, label, zone,
+      x: random(zone.min, zone.max),
+      direction: Math.random() < .5 ? -1 : 1,
+      moving: true, remaining: random(2, 6) };
+    npcs.set(id, npc);
+    position(npc);
+    if (!frame) frame = requestAnimationFrame(tick);
+    return npc;
   }
 
-  function sync(user) {
-    if (!user) { removeNPC(); return; }
-    if (activeId !== user.id) { removeNPC(); spawn(user); }
+  function renderPlayer(id, player) {
+    const npc = npcs.get(id) || spawn(id, player);
+    const zone = zones[player.side === 1 ? 1 : 0];
+    if (npc.zone !== zone) {
+      npc.zone = zone;
+      npc.x = random(zone.min, zone.max);
+      position(npc);
+    }
+    const image = typeof player.avatar_url === "string" &&
+      /^https:\/\//i.test(player.avatar_url) ? player.avatar_url : "";
+    if (image) {
+      if (npc.avatar.getAttribute("src") !== image) npc.avatar.src = image;
+      npc.avatar.hidden = false;
+    } else {
+      npc.avatar.hidden = true;
+      npc.avatar.removeAttribute("src");
+    }
+    npc.label.textContent = typeof player.username === "string" ? player.username : "Player";
+  }
 
+  // Reconcile the complete Presence snapshot, deduplicating multiple tabs
+  // by player ID. The oldest connected tab determines that player's side.
+  function reconcile(state = {}) {
+    const population = new Map();
+    for (const entries of Object.values(state)) {
+      if (!Array.isArray(entries)) continue;
+      for (const player of entries) {
+        if (!player || typeof player.player_id !== "string") continue;
+        const previous = population.get(player.player_id);
+        const age = Number(player.joined_at) || 0;
+        const previousAge = Number(previous?.joined_at) || 0;
+        if (!previous || age < previousAge ||
+            (age === previousAge && player.side < previous.side)) {
+          population.set(player.player_id, player);
+        }
+      }
+    }
+    if (local && !population.has(local.player_id)) population.set(local.player_id, local);
+    for (const id of npcs.keys()) if (!population.has(id)) removeNPC(id);
+    for (const [id, player] of population) renderPlayer(id, player);
+  }
+
+  function profileFor(user) {
     const discord = user.identities?.find(identity => identity.provider === "discord");
     const profile = discord?.identity_data || {};
     const metadata = user.user_metadata || {};
-    const image = discord && (profile.avatar_url || profile.picture ||
-      metadata.avatar_url || metadata.picture);
-    if (image) {
-      if (avatar.getAttribute("src") !== image) avatar.src = image;
-      avatar.hidden = false;
-    } else {
-      avatar.hidden = true;
-      avatar.removeAttribute("src");
+    return {
+      player_id: user.id,
+      username: discord ? (profile.custom_claims?.global_name ||
+        profile.full_name || profile.name || metadata.name || "Discord Player") : "Player",
+      avatar_url: discord ? (profile.avatar_url || profile.picture ||
+        metadata.avatar_url || metadata.picture || "") : "",
+      side: localSide,
+      joined_at: joinedAt
+    };
+  }
+
+  function publish(room) {
+    if (room !== channel || !subscribed || !local) return;
+    room.track(local).then(result => {
+      if (room === channel && result !== "ok") console.warn("[VHouse Population] track:", result);
+    }).catch(error => console.warn("[VHouse Population]", error));
+  }
+
+  function disconnect() {
+    const previous = channel;
+    const previousClient = client;
+    channel = null;
+    client = null;
+    subscribed = false;
+    local = null;
+    reconcile();
+    if (previous && previousClient) {
+      void previousClient.removeChannel(previous).catch(error =>
+        console.warn("[VHouse Population]", error));
     }
-    label.textContent = discord ? (profile.custom_claims?.global_name ||
-      profile.full_name || profile.name || metadata.name || "Discord Player") : "Player";
+  }
+
+  function sync(user) {
+    if (!user) { disconnect(); return; }
+    const player = profileFor(user);
+    if (channel && local?.player_id === player.player_id) {
+      const changed = JSON.stringify(local) !== JSON.stringify(player);
+      local = player;
+      if (changed) publish(channel);
+      return;
+    }
+    disconnect();
+    local = player;
+    reconcile();
+    client = auth.getClient();
+    if (!client) return;
+    const room = client.channel("vhouse_population", {
+      config: { presence: { key: player.player_id } }
+    });
+    channel = room;
+    room.on("presence", { event: "sync" }, () => {
+      if (room === channel) reconcile(room.presenceState());
+    }).subscribe(status => {
+      if (room !== channel) return;
+      subscribed = status === "SUBSCRIBED";
+      if (subscribed) publish(room);
+      else if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        reconcile();
+      }
+    });
   }
 
   auth.subscribe(sync);
   auth.ready.then(() => sync(auth.getUser())).catch(error =>
-    console.warn("[VHouse NPC]", error));
+    console.warn("[VHouse Population]", error));
 })();
