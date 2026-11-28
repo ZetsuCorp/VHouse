@@ -125,6 +125,63 @@
     if (!discordLinked) $("discordLogin").textContent = "LINK DISCORD";
     if (!emailLinked) $("emailLogin").textContent = "LINK EMAIL";
   }
+  async function renderEmailProfile(user) {
+    const panel = $("emailMiniProfile");
+    panel.hidden = !user?.email || user.identities?.some(item => item.provider === "discord");
+    if (panel.hidden) return;
+    $("emailProfileName").textContent = "VHouse Player";
+    $("emailProfileStatus").textContent = "Loading profile…";
+    try {
+      const {data,error} = await authAdapter.getClient().from("vhouse_accounts")
+        .select("username,display_name,avatar_url").eq("id",user.id).single();
+      if (error) throw error;
+      if (authAdapter.getUser()?.id !== user.id || panel.hidden) return;
+      $("emailProfileName").textContent = data.display_name || data.username || "VHouse Player";
+      const avatar = $("discordAvatar");
+      avatar.alt = "Player profile image";
+      avatar.hidden = !data.avatar_url;
+      if (data.avatar_url) avatar.src = data.avatar_url;
+      $("emailProfileUpload").textContent = data.avatar_url ? "CHANGE PROFILE IMAGE" : "ADD PROFILE IMAGE";
+      $("emailProfileStatus").textContent = "Your image appears on your V Town character.";
+    } catch(error) {
+      $("emailProfileStatus").textContent = error.message || "Profile unavailable.";
+    }
+  }
+
+  async function saveEmailImage(file) {
+    const user = authAdapter.getUser();
+    if (!file || !user?.email || user.identities?.some(item => item.provider === "discord")) return;
+    const button = $("emailProfileUpload"), status = $("emailProfileStatus");
+    button.disabled = true;
+    $("sessionContinue").disabled = true;
+    try {
+      if (!["image/png","image/jpeg","image/webp"].includes(file.type)) throw Error("Choose a PNG, JPG or WebP image.");
+      status.textContent = "Saving profile image…";
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 256;
+      const size = Math.min(bitmap.width,bitmap.height);
+      canvas.getContext("2d").drawImage(bitmap,(bitmap.width-size)/2,(bitmap.height-size)/2,size,size,0,0,256,256);
+      bitmap.close();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve,"image/webp",.9));
+      if (!blob || blob.type !== "image/webp") throw Error("Could not prepare image.");
+      const client = authAdapter.getClient();
+      const path = user.id + "/avatar.webp";
+      const bucket = client.storage.from("vhouse-profiles");
+      const {error:uploadError} = await bucket.upload(path,blob,{upsert:true,contentType:"image/webp",cacheControl:"60"});
+      if (uploadError) throw uploadError;
+      const url = bucket.getPublicUrl(path).data.publicUrl + "?v=" + Date.now();
+      const {error} = await client.from("vhouse_accounts").update({avatar_url:url}).eq("id",user.id).select("id").single();
+      if (error) throw error;
+      await renderEmailProfile(user);
+    } catch(error) {
+      status.textContent = error.message || "Could not save profile image.";
+    } finally {
+      button.disabled = false;
+      $("sessionContinue").disabled = false;
+      $("emailProfileFile").value = "";
+    }
+  }
   async function preloadSignedInPlayer(user){
     if(!user?.id||typeof authAdapter?.preloadPlayerData!=="function")
       throw Error("Player and Raid preload unavailable.");
@@ -144,6 +201,7 @@
     const status = $("authStatus");
     $("sessionContinue").hidden = true;
     $("discordAvatar").hidden = true;
+    $("emailMiniProfile").hidden = true;
     $("authConnected").hidden = true;
     $("discordLogin").hidden = false;
     $("emailLogin").hidden = false;
@@ -162,6 +220,7 @@
           authMode = "authenticated";
           status.textContent = "Signed in. Player and Raid records loaded.";
           renderAccount(session.user);
+          await renderEmailProfile(session.user);
           $("sessionContinue").hidden = false;
           return;
         }
@@ -183,7 +242,12 @@
       if (session?.authenticated === true) {
         await preloadSignedInPlayer(session.user);
         authMode = "authenticated";
-        showLegal();
+        if (!session.user.identities?.some(item => item.provider === "discord") && session.user.email) {
+          renderAccount(session.user);
+          await renderEmailProfile(session.user);
+          $("sessionContinue").hidden = false;
+          $("authStatus").textContent = "Signed in. Player and Raid records loaded.";
+        } else showLegal();
       } else if (session?.pending) {
         $("authStatus").textContent = session.message ||
           "Complete the authentication step to return to VHouse.";
@@ -294,6 +358,8 @@
     event.preventDefault();
     void signIn("email", {email:$("startupEmail").value});
   });
+  $("emailProfileUpload").addEventListener("click", () => $("emailProfileFile").click());
+  $("emailProfileFile").addEventListener("change", event => void saveEmailImage(event.target.files[0]));
   $("sessionContinue").addEventListener("click", showLegal);
   $("policyFrame").addEventListener("load", bindPolicyScroll);
   $("legalConsent").addEventListener("change", updateLegalContinue);
