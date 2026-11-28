@@ -198,6 +198,21 @@
     };
   }
 
+  async function loadEmailProfile(user) {
+    if (!user?.email || user.identities?.some(item => item.provider === "discord")) return;
+    try {
+      const {data,error} = await auth.getClient().from("vhouse_accounts")
+        .select("username,display_name,avatar_url").eq("id",user.id).single();
+      if (error) throw error;
+      if (local?.player_id !== user.id || auth.getUser()?.id !== user.id) return;
+      local = {...local, username:data.display_name || data.username || "Player", avatar_url:data.avatar_url || ""};
+      renderPlayer(user.id,local);
+      if (channel) publish(channel);
+    } catch(error) {
+      console.warn("[VHouse Population] Profile:",error);
+    }
+  }
+
   function publish(room) {
     if (room !== channel || !subscribed || !local) return;
     room.track(local).then(result => {
@@ -222,6 +237,10 @@
   function sync(user) {
     if (!user) { disconnect(); return; }
     const player = profileFor(user);
+    if (!user.identities?.some(item => item.provider === "discord") && local?.player_id === player.player_id) {
+      player.username = local.username;
+      player.avatar_url = local.avatar_url;
+    }
     if (channel && local?.player_id === player.player_id) {
       const changed = JSON.stringify(local) !== JSON.stringify(player);
       local = player;
@@ -233,6 +252,7 @@
     reconcile();
     client = auth.getClient();
     if (!client) return;
+    setTimeout(() => void loadEmailProfile(user),0);
     const room = client.channel("vhouse_population", {
       config: { presence: { key: player.player_id } }
     });
