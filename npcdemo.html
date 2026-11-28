@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VHouse NPC Demo</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #120c1e;
+    color: gold;
+    font-family: Arial, sans-serif;
+}
+
+button {
+    background: #5865f2;
+    color: white;
+    border: 1px solid gold;
+    border-radius: 8px;
+    padding: 14px 25px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#npc {
+    position: relative;
+    width: min(340px, 90vw);
+    aspect-ratio: 517 / 600;
+}
+
+#face-layer {
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(
+        70.5% 26%, 79% 29%, 84% 33%,
+        88% 40%, 89% 46%, 87% 50%,
+        81% 54%, 73% 59%, 64% 60%,
+        53% 55%, 46% 51%, 42.5% 47%,
+        44% 43%, 49% 37%, 57% 32%,
+        63% 28%
+    );
+}
+
+#avatar {
+    position: absolute;
+    left: 42%;
+    top: 26%;
+    width: 47%;
+    height: 34%;
+    object-fit: cover;
+}
+
+#body {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#username {
+    color: gold;
+    text-align: center;
+    font-weight: bold;
+}
+
+#status {
+    color: white;
+    font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>VHouse NPC Demo</h2>
+
+<button id="login">Sign in with Discord</button>
+
+<div id="npc">
+    <div id="face-layer">
+        <img id="avatar" hidden alt="">
+    </div>
+
+    <img id="body"
+         src="https://raw.githubusercontent.com/ZetsuCorp/VHouse/main/assets/The%20NPC.png"
+         alt="VHouse NPC">
+</div>
+
+<div id="username"></div>
+<p id="status"></p>
+
+<script>
+const client = supabase.createClient(
+    "https://jqvnrdjrkdjgjbmqmbbl.supabase.co",
+    "sb_publishable_jmEahTk4OssD_IrOZq_6iQ_P6QFFJr6"
+);
+
+const login = document.getElementById("login");
+const avatar = document.getElementById("avatar");
+const username = document.getElementById("username");
+const status = document.getElementById("status");
+
+login.onclick = async () => {
+    const { error } = await client.auth.signInWithOAuth({
+        provider: "discord",
+        options: {
+            redirectTo: location.origin + location.pathname,
+            scopes: "identify email"
+        }
+    });
+
+    if (error) status.textContent = error.message;
+};
+
+function loadNPC(user) {
+    if (!user) {
+        avatar.hidden = true;
+        username.textContent = "";
+        login.hidden = false;
+        return;
+    }
+
+    const discord = user.identities?.find(
+        identity => identity.provider === "discord"
+    );
+
+    if (!discord) return;
+
+    const profile = discord.identity_data || {};
+    const metadata = user.user_metadata || {};
+
+    const image =
+        profile.avatar_url ||
+        profile.picture ||
+        metadata.avatar_url ||
+        metadata.picture;
+
+    if (image) {
+        avatar.src = image;
+        avatar.hidden = false;
+    }
+
+    username.textContent =
+        profile.custom_claims?.global_name ||
+        profile.full_name ||
+        profile.name ||
+        metadata.name ||
+        "Discord Player";
+
+    login.hidden = true;
+    status.textContent = "";
+}
+
+client.auth.onAuthStateChange((event, session) => {
+    loadNPC(session?.user);
+});
+</script>
+
+</body>
+</html>
