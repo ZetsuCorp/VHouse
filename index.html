@@ -422,6 +422,34 @@ html, body {
 .how2-overview-info p{margin:0}
 .how2-overview-info p+p{margin-top:.7cqw}
 .how2-overview-info strong{color:#ffd77d}
+/* HOW 2: VCard and NFT growth */
+.how2-detail-overlay{position:absolute;inset:0;z-index:31;display:grid;place-items:center;background:#0009;container-type:inline-size}
+.how2-detail-overlay[hidden]{display:none!important}
+.how2-detail-panel{width:94%;padding:1.2cqw 2cqw;text-align:left}
+.how2-detail-panel h2{text-align:center;margin:0 3.4cqw .9cqw;font-size:2.65cqw}
+.how2-detail-panel p{margin:.35cqw 0;font:400 1.35cqw/1.35 Arial;color:#f6ead5}
+.how2-detail-panel strong{color:#ffdb86}
+.how2-vcard-intro{display:grid;grid-template-columns:24% 1fr;align-items:center;gap:2cqw}
+.how2-vcard-art{width:100%;height:16cqw;display:block}
+.how2-vcard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.65cqw;margin:1cqw 0}
+.how2-vcard-stats>div{padding:.8cqw .3cqw;text-align:center;border:1px solid #aa843c;border-radius:.5cqw;background:linear-gradient(160deg,#211b11,#0d0d0d);color:#ffdb86;font:800 1.2cqw Arial}
+.how2-vcard-stats span{display:block;font-size:2.6cqw;margin-bottom:.35cqw}
+.how2-vcard-collect{border-top:1px solid #b18c47;padding-top:1cqw;text-align:center}
+.how2-growth-columns{display:grid;grid-template-columns:1fr 1fr;gap:1.3cqw;align-items:start}
+.how2-growth-column{min-width:0}
+.how2-growth-column p{font-size:1.18cqw;line-height:1.32}
+.how2-growth-column h3{margin:.2cqw 0 .5cqw;color:#ffdb86;font:800 1.4cqw Arial}
+.how2-load-steps{display:grid;grid-template-columns:1fr 1fr;gap:.55cqw;margin:.75cqw 0}
+.how2-load-steps article,.how2-growth-box{border:1px solid #aa843c;border-radius:.5cqw;background:linear-gradient(160deg,#211b11,#0d0d0d);padding:.65cqw .8cqw}
+.how2-load-steps article h3{font-size:1.25cqw}
+.how2-load-steps article p{margin:0}
+.how2-growth-box{margin-bottom:.5cqw}
+.how2-growth-box h3{display:flex;align-items:center;gap:.5cqw;font-size:1.3cqw;margin:0 0 .25cqw}
+.how2-growth-box h3 span{margin-left:auto;font-size:1.15cqw}
+.how2-growth-box p{margin:0}
+.how2-growth-box:last-child{margin-bottom:0}
+.how2-original-note{padding:.7cqw .85cqw;border:1px solid #aa843c;border-radius:.5cqw}
+.how2-detail-panel .how2-overview-money{color:#59e0a2}
 </style>
 <link rel="stylesheet" href="assets/vhouse-layout.css">
 <link rel="stylesheet" href="assets/vhouse-frame.css">
@@ -608,6 +636,80 @@ html, body {
         <div class="how2-overview-info">
           <p>VHouse goes beyond the traditional NFT earning model by giving players a way to <strong>push value into each NFT created and used within VHouse.</strong></p>
           <p>While you level up and grow your NFT monetarily, increases in the price of SOL also increase the dollar value of the SOL-backed portion of your collection.</p>
+        </div>
+      </section>
+    </div>
+    <div id="how2VCard" class="how2-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="how2VCardTitle" hidden>
+      <section class="how2-overview-panel how2-detail-panel">
+        <button type="button" class="how2-overview-close" id="how2VCardClose" aria-label="Close What Is a VCard">×</button>
+        <h2 id="how2VCardTitle">WHAT IS A VCARD?</h2>
+        <div class="how2-vcard-intro">
+          <svg class="how2-vcard-art" viewBox="0 0 120 150" aria-hidden="true">
+            <g transform="rotate(-15 60 75)">
+              <rect x="22" y="16" width="76" height="118" rx="5" fill="#160c22" stroke="#d4af37" stroke-width="2"/>
+              <rect x="28" y="35" width="64" height="64" rx="3" fill="#43235e" stroke="#d4af37"/>
+            </g>
+            <g transform="rotate(15 60 75)">
+              <rect x="22" y="16" width="76" height="118" rx="5" fill="#160c22" stroke="#d4af37" stroke-width="2"/>
+              <rect x="28" y="35" width="64" height="64" rx="3" fill="#43235e" stroke="#d4af37"/>
+            </g>
+            <rect x="22" y="16" width="76" height="118" rx="5" fill="#160c22" stroke="#d4af37" stroke-width="2"/>
+            <rect x="28" y="35" width="64" height="64" rx="3" fill="#43235e" stroke="#d4af37"/>
+            <text x="60" y="29" fill="#ffd777" font-size="9" text-anchor="middle" font-weight="bold">VCARD</text>
+            <text x="60" y="78" fill="#ffd777" font-size="30" text-anchor="middle" font-weight="bold">zV</text>
+            <text x="60" y="112" fill="#ffd777" font-size="9" text-anchor="middle">ATK · DEF</text>
+            <rect x="30" y="120" width="60" height="5" rx="2" fill="#b99140"/>
+          </svg>
+          <div>
+            <p>A VCard is an NFT on the Solana blockchain. A Soulbound, customizable, upgradable, monetizable NFT that grows in value multiple ways because of VHouse.</p>
+            <div class="how2-vcard-stats">
+              <div><span aria-hidden="true">📈</span>LEVEL</div>
+              <div><span aria-hidden="true">⚔️</span>STATS</div>
+              <div><span aria-hidden="true">📜</span>HISTORY</div>
+              <div><span aria-hidden="true">💰</span>VALUE</div>
+            </div>
+          </div>
+        </div>
+        <div class="how2-vcard-collect">
+          <p>The VCard holds an NFT's level, stats, gameplay history, and monetary value. A player can have multiple VCards, building a <strong>treasure of working NFTs!</strong></p>
+        </div>
+      </section>
+    </div>
+    <div id="how2Growth" class="how2-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="how2GrowthTitle" hidden>
+      <section class="how2-overview-panel how2-detail-panel">
+        <button type="button" class="how2-overview-close" id="how2GrowthClose" aria-label="Close Growing an NFT">×</button>
+        <h2 id="how2GrowthTitle">GROWING AN NFT</h2>
+        <div class="how2-growth-columns">
+          <div class="how2-growth-column">
+            <p><strong>VHouse LOAD</strong> allows you to bring OLD NFTs you already own into the game.</p>
+            <p>Transform static digital collectibles into active in-game characters that can participate in VHouse activities and earn real-money rewards.</p>
+            <div class="how2-load-steps">
+              <article><h3>🖼️ 1. LOAD</h3><p>LOAD an NFT from your connected Phantom wallet.</p></article>
+              <article><h3>🛡️ 2. TEAM</h3><p>Choose its VHouse TEAM and position its artwork.</p></article>
+              <article><h3>🃏 3. MINT</h3><p>MINT your new VCard to bring it into VHouse.</p></article>
+              <article><h3>⚔️ 4. PLAY</h3><p>Use your VCard in VHouse activities to pursue rewards and grow its in-game value.</p></article>
+            </div>
+            <div class="how2-original-note"><p><strong>Your original NFT remains yours and is never modified.</strong> Your new VCard gives it a separate playable identity within VHouse.</p></div>
+          </div>
+          <div class="how2-growth-column">
+            <h3>THREE MAIN WAYS TO PLAY AND EARN</h3>
+            <article class="how2-growth-box">
+              <h3>💰 Monetary Growth <span class="how2-overview-money">+$0.25</span></h3>
+              <p>Push value into your NFT through Missions, Journeys, and Raids! Each mission adds <strong class="how2-overview-money">$0.25</strong> into your active VCard.</p>
+            </article>
+            <article class="how2-growth-box">
+              <h3>⚔️ Character Growth <span>ATK / DEF</span></h3>
+              <p>Rewards are not just items. They are both Crypto and NFTs that have real market value while increasing your VCard's ATK and DEF.</p>
+            </article>
+            <article class="how2-growth-box">
+              <h3>📈 Market Growth <span class="how2-overview-money">SOL ↑</span></h3>
+              <p>Just like any normal NFT, as SOL increases in price, the SOL-backed value of your NFT increases! Which means even more rewards on burn.</p>
+            </article>
+            <article class="how2-growth-box">
+              <h3>🔥 VCard Burn</h3>
+              <p>Burning a VCard returns to your wallet all the money earned while interacting with VHouse using the VCard you're removing from play.</p>
+            </article>
+          </div>
         </div>
       </section>
     </div>
@@ -831,7 +933,7 @@ document.addEventListener("keydown", (event) => {
  const menu=document.getElementById("townNav"),ticker=document.getElementById("townMarketTicker");
  const stage=menu.closest(".map-container"),toggle=menu.querySelector(".tn-toggle"),reveal=menu.querySelector(".tn-reveal"),drop=menu.querySelector(".tn-dropdown"),buttons=[...menu.querySelectorAll("[data-menu]")];
  const entries={
-  how:[["Quick Overview",null,"how2Overview"]],
+  how:[["Quick Overview",null,"how2Overview"],["What Is a VCard?",null,"how2VCard"],["Growing an NFT",null,"how2Growth"]],
   earn:[["Mission Journeys",null,"journey"],["Raids","./TowerRaidInfo.html"],["Eggs","./TowerRaidInfo.html"]],
   vcard:[["Create",[["Mint VCard","./VCardCreator.html"],["Load NFT","./VCardCreator.html"],["Upgrade VCard","./VCardCreator.html"],["Burn VCard","./VCardCreator.html"]]],["Billboard",[["SOL","./Vhouse.html?billboard=1"],["Journey","./VCloset.html?stats=1"],["Raid","./RaidBoss.html"]]]],
   market:[["VMarket DEX",[["Coins","./VMarketDex.html"]]],["Shop",[["Items","./Vshop.html"]]]]
@@ -875,18 +977,18 @@ document.addEventListener("keydown", (event) => {
     drop.append(children);
     parent.addEventListener("click",()=>{children.hidden=!children.hidden;parent.setAttribute("aria-expanded",String(!children.hidden));arrow.textContent=children.hidden?"⌄":"⌃";});
    }else if(action==="journey"){parent.addEventListener("click",()=>{close();document.getElementById("journeyButton").click();});}
-   else if(action==="how2Overview"){parent.addEventListener("click",()=>{
-    close();document.getElementById("how2Overview").hidden=false;document.getElementById("how2OverviewClose").focus();
+   else if(["how2Overview","how2VCard","how2Growth"].includes(action)){parent.addEventListener("click",()=>{
+    close();document.getElementById(action).hidden=false;document.getElementById(action+"Close").focus();
    });}
   });
   drop.hidden=false;button.setAttribute("aria-expanded","true");alignDrop(button);
  }));
  document.addEventListener("click",e=>{if(menu.classList.contains("open")&&!menu.contains(e.target))close();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&menu.classList.contains("open")){close();toggle.focus();}});
- const overview=document.getElementById("how2Overview");
- function closeOverview(){overview.hidden=true;toggle.focus();}
- document.getElementById("how2OverviewClose").addEventListener("click",closeOverview);
- document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!overview.hidden)closeOverview();});
+ const how2Dialogs=["how2Overview","how2VCard","how2Growth"].map(id=>document.getElementById(id));
+ function closeHow2(dialog){dialog.hidden=true;toggle.focus();}
+ how2Dialogs.forEach(dialog=>document.getElementById(dialog.id+"Close").addEventListener("click",()=>closeHow2(dialog)));
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){const dialog=how2Dialogs.find(item=>!item.hidden);if(dialog)closeHow2(dialog);}});
  const observer=new ResizeObserver(position);observer.observe(stage);observer.observe(ticker);
  new MutationObserver(position).observe(ticker,{attributes:true,attributeFilter:["style","hidden"]});
  position();
